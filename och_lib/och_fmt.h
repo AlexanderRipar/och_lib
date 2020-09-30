@@ -55,10 +55,8 @@ namespace och
 	{
 		uint64_t val = in.i;
 
-		char buf[21];
+		char buf[20];
 		int i = 19;
-
-		buf[20] = '\0';
 
 		if (!val)
 			buf[i--] = '0';
@@ -76,7 +74,7 @@ namespace och
 			for (uint32_t j = 19 - i; j < width; ++j)
 				putc(filler, out);
 
-		fputs(buf + i + 1, out);
+		fwrite(buf + i + 1, 1, 19llu - i, out);
 
 		if (!rightadj)
 			for (uint32_t j = 19 - i; j < width; ++j)
@@ -87,10 +85,8 @@ namespace och
 	{
 		int64_t val = static_cast<int64_t>(in.i);
 
-		char buf[21];
+		char buf[20];
 		int i = 19;
-
-		buf[20] = '\0';
 
 		if (!val)
 			buf[i--] = '0';
@@ -121,7 +117,7 @@ namespace och
 			for (uint32_t j = 19 - i; j < width; ++j)
 				putc(filler, out);
 
-		fputs(buf + i + 1, out);
+		fwrite(buf + i + 1, 1, 19llu - i, out);
 
 		if (!rightadj)
 			for (uint32_t j = 19 - i; j < width; ++j)
@@ -178,37 +174,88 @@ namespace och
 
 	//Extended formatmode functions
 
-	//TODO
+	constexpr const char f_hex_symbols[2][16]{ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+	const char* f_curr_hex_symbols = f_hex_symbols[0];
+
 	FMT_FX(f_hexadecimal)
 	{
-		
+		uint64_t val = in.i;
+
+		char buf[16];
+		int i = 15;
+
+		if (!val)
+			buf[i--] = '0';
+
+		while (val)
+		{
+			buf[i--] = f_curr_hex_symbols[val & 0xF];
+
+			val >>= 4;
+		}
+
+		if (rightadj)
+			for (uint32_t j = 15 - i; j < width; ++j)
+				putc(filler, out);
+
+		fwrite(buf + i + 1, 1, 15llu - i, out);
+
+		if (!rightadj)
+			for (uint32_t j = 15 - i; j < width; ++j)
+				putc(filler, out);
 	}
 
 	FMT_FX(f_binary)
 	{
-		if (precision == -1)
-			precision = 4;										//Default of 4 bytes (int)
-
-		if (rightadj)
-			for (uint32_t j = precision * 8; j < width; ++j)
-				putc(filler, out);
-
 		uint64_t val = in.i;
 
 		char buf[64];
-		
-		for (size_t i = 0; i < precision * 8; ++i)
+		int i = 63;
+
+		if (!val)
+			buf[i--] = '0';
+
+		while (val)
 		{
-			buf[63 - i] = '0' + (val & 1);
+			buf[i--] = '0' + (val & 1);
 
 			val >>= 1;
 		}
 
-		fwrite(buf + 64 - precision * 8, 1, precision * 8, out);
+		if (rightadj)
+			for (uint32_t j = 63 - i; j < width; ++j)
+				putc(filler, out);
+
+		fwrite(buf + i + 1, 1, 63llu - i, out);
 
 		if (!rightadj)
-			for (uint32_t j = precision * 8; j < width; ++j)
+			for (uint32_t j = 63 - i; j < width; ++j)
 				putc(filler, out);
+
+		/*uint64_t val = in.i;
+
+		char buf[64];
+
+		uint32_t bits_written = 0;
+
+		while (val)
+		{
+			buf[64 - ++bits_written] = '0' + (val & 1);
+
+			val >>= 1;
+		}
+
+		uint32_t max_bits = bits_written < precision * 8 ? bits_written : precision * 8;
+
+		if (rightadj)
+			for (uint32_t j = max_bits; j < width; ++j)
+				putc(filler, out);
+
+		fwrite(buf + 64 - max_bits, 1, max_bits, out);
+
+		if (!rightadj)
+			for (uint32_t j = max_bits; j < width; ++j)
+				putc(filler, out);*/
 	}
 
 	FMT_FX(f_character)
@@ -281,11 +328,12 @@ namespace och
 				arg& curr_arg = argv[arg_idx];
 
 				uint32_t f_width = 0;
-				uint32_t f_precision = 0;
+				uint32_t f_precision = -1;
 				bool f_rightadj = false;
 				char f_filler = ' ';
 				uint8_t f_signmode = 0;
-				bool is_special_formatmode = true;
+
+				bool is_special_formatmode = false;
 
 				if (c == ':')						//Formato xxxtendo
 				{
@@ -342,25 +390,28 @@ namespace och
 					case 'x':
 						_ASSERT(curr_arg.type == arg::types::i || curr_arg.type == arg::types::u);
 						f_hexadecimal(curr_arg, out, f_precision, f_width, f_rightadj, f_filler, f_signmode);
+						is_special_formatmode = true;
 						break;
 
 					case 'c':
 						_ASSERT(curr_arg.type == arg::types::i || curr_arg.type == arg::types::u);
 						f_character(curr_arg, out, f_precision, f_width, f_rightadj, f_filler, f_signmode);
+						is_special_formatmode = true;
 						break;
 
 					case 'b':
 						_ASSERT(curr_arg.type == arg::types::i || curr_arg.type == arg::types::u || curr_arg.type == arg::types::f || curr_arg.type == arg::types::d);
 						f_binary(curr_arg, out, f_precision, f_width, f_rightadj, f_filler, f_signmode);
+						is_special_formatmode = true;
 						break;
 
 					case 'e':
 						_ASSERT(curr_arg.type == arg::types::f || curr_arg.type == arg::types::d);
 						f_scientific(curr_arg, out, f_precision, f_width, f_rightadj, f_filler, f_signmode);
+						is_special_formatmode = true;
 						break;
 
 					default:
-						is_special_formatmode = false;
 						--fmt;//Cludge to counteract increment below
 						break;
 					}
@@ -398,5 +449,18 @@ namespace och
 	void print(const char* const fmt)
 	{
 		fputs(fmt, stdout);
+	}
+
+	namespace fmt
+	{
+		void hex_lowercase()
+		{
+			f_curr_hex_symbols = f_hex_symbols[1];
+		}
+
+		void hex_uppercase()
+		{
+			f_curr_hex_symbols = f_hex_symbols[0];
+		}
 	}
 }
