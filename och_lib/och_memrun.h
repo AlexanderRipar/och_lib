@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
+
+#include "och_constexpr_util.h"
 
 namespace och
 {
@@ -22,6 +25,8 @@ namespace och
 		memrun(T* beg, T* end) : _beg{ beg }, _end{ end } {}
 
 		memrun(T* beg, size_t len) : _beg{ beg }, _end{ beg + len } {}
+
+		memrun(const char* cstr) : _beg{ cstr }, _end{ cstr + strlen(cstr) } { static_assert(och::cxp::is_same_t<const char, T>, "och::memrun<T>(const char*) may only be used with T = const char"); }
 
 		T* begin() const
 		{
@@ -49,6 +54,8 @@ namespace och
 		compressed_memrun(const memrun<T>& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run._beg) << 16) | run._end - run._beg } {}
 
 		compressed_memrun(memrun<T>&& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run._beg) << 16) | run._end - run._beg } {}
+
+		compressed_memrun(const char* cstr) : _ptr_len_u{ (reinterpret_cast<int64_t>(cstr) << 16) | _const_strlen_u16(cstr) } { static_assert(och::cxp::is_same_t<const char, T>, "och::compressed_memrun<T>(const char*) may only be used with T = const char"); }
 
 		T* begin() const
 		{
