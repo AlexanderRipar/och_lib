@@ -143,6 +143,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="och_fio.cpp" />
+    <ClCompile Include="och_fmt.cpp" />
     <ClCompile Include="och_rtv.cpp" />
     <ClCompile Include="och_tok.cpp" />
   </ItemGroup>
