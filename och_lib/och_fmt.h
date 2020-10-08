@@ -21,10 +21,9 @@ namespace och
 		union
 		{
 			uint64_t i;
-			const char* s;
 			double d;
 			float f;
-			och::ministring m;
+			och::ministring s;
 		};
 
 		enum class types : uint8_t
@@ -33,15 +32,14 @@ namespace och
 			i,	//signed integer
 			f,	//float
 			d,	//double
-			s,	//const char*
-			m,	//och::ministring
+			s,	//och::ministring
 		};
 
 		void set_width(uint16_t w) { width = w; }
 		void set_precision(uint16_t p) { precision = p; }
 		void set_rightadj() { flags |= 4; }
 		void set_signmode(uint16_t s) { flags |= s; }
-		void set_offset(uint8_t o) { offset = 0; }
+		void set_offset(uint8_t o) { offset = o; }
 		void set_filler(char f) { filler = f; }
 
 		uint16_t get_width() { return width; }
@@ -59,12 +57,11 @@ namespace och
 		arg(        int16_t i) : offset{ static_cast<uint8_t>(types::i) }, i{ static_cast<uint64_t>(i) } {}
 		arg(        int32_t i) : offset{ static_cast<uint8_t>(types::i) }, i{ static_cast<uint64_t>(i) } {}
 		arg(        int64_t i) : offset{ static_cast<uint8_t>(types::i) }, i{ static_cast<uint64_t>(i) } {}
-		arg(    const char* s) : offset{ static_cast<uint8_t>(types::s) }, s{                       s  } {}
-		arg(         double d) : offset{ static_cast<uint8_t>(types::d) }, d{                       d  } {}
 		arg(          float f) : offset{ static_cast<uint8_t>(types::f) }, f{                       f  } {}
-		arg(och::ministring m) : offset{ static_cast<uint8_t>(types::m) }, m{                       m  } {}
-		arg(    och::string m) : offset{ static_cast<uint8_t>(types::m) }, m{                       m  } {}
-
+		arg(         double d) : offset{ static_cast<uint8_t>(types::d) }, d{                       d  } {}
+		arg(    const char* s) : offset{ static_cast<uint8_t>(types::s) }, s{                       s  } {}
+		arg(    och::string s) : offset{ static_cast<uint8_t>(types::s) }, s{                       s  } {}
+		arg(och::ministring s) : offset{ static_cast<uint8_t>(types::s) }, s{                       s  } {}
 	};
 
 	using fmt_function = void (*) (arg in, FILE* out);
@@ -76,11 +73,11 @@ namespace och
 	void print(const char* const fmt, Args... args)
 	{
 		arg argv[]{ args... };
-
+	
 		vprint(fmt, argv, sizeof...(args), stdout);
 	}
 
-	void print(const char* const fmt);
+	void print(och::string fmt);
 
 	namespace fmt
 	{
@@ -90,6 +87,6 @@ namespace och
 
 		void set_default_precision(uint32_t precision);
 
-		bool add_format_function(och::fmt_function function, char specifier);
+		bool register_format_function(fmt_function function, char specifier);
 	}
 }

@@ -101,7 +101,7 @@ namespace och
 		}
 	}
 
-	void f_cstring(arg in, FILE* out)
+	/*void f_cstring(arg in, FILE* out)
 	{
 		size_t len = strlen(in.s);
 
@@ -122,11 +122,11 @@ namespace och
 			for (size_t j = len; j < in.get_width(); ++j)
 				putc(in.get_filler(), out);
 		}
-	}
+	}*/
 
 	void f_ministring(arg in, FILE* out)
 	{
-		size_t len = in.m.len();
+		size_t len = in.s.len();
 
 		if (in.get_precision() != -1 && len > in.get_precision())
 			len = in.get_precision();
@@ -136,11 +136,11 @@ namespace och
 			for (size_t j = len; j < in.get_width(); ++j)
 				putc(in.get_filler(), out);
 
-			fwrite(in.s, 1, len, out);
+			fwrite(in.s.begin(), 1, len, out);
 		}
 		else
 		{
-			fwrite(in.s, 1, len, out);
+			fwrite(in.s.begin(), 1, len, out);
 
 			for (size_t j = len; j < in.get_width(); ++j)
 				putc(in.get_filler(), out);
@@ -352,7 +352,6 @@ namespace och
 		f_int,
 		f_float,
 		f_double,
-		f_cstring,
 		f_ministring,
 		nullptr,			//a
 		f_binary,			//b
@@ -385,10 +384,11 @@ namespace och
 
 
 	// [argindex} [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]
-
 	void vprint(const char* fmt, arg argv[], uint32_t argc, FILE* out)
 	{
 		uint32_t arg_idx = 0;
+
+		uint32_t char_cnt = 0;
 
 		for (char c = *fmt; c; c = *(++fmt))
 		{
@@ -398,13 +398,17 @@ namespace och
 
 				if (c == '{')						//Exit for printing escape-character
 				{
-					putc('{', out);
+					++char_cnt;
 					continue;
 				}
 
+				fwrite(fmt - char_cnt - 1, 1, char_cnt, out);	//Output string before format
+
+				char_cnt = 0;
+
 				//Actual formatting encountered
 
-				if (c >= '0' && c <= '9')			//Index
+				if (c >= '0' && c <= '9')					//Index
 				{
 					arg_idx = c - '0';
 					c = *(++fmt);
@@ -414,7 +418,7 @@ namespace och
 
 				arg curr_arg = argv[arg_idx];
 
-				if (c == ':')						//Formato xxxtendo
+				if (c == ':')								//Formato xxxtendo
 				{
 					// [width] [precision] [rightadj] [filler] [signmode] [formatmode]
 					//
@@ -425,13 +429,11 @@ namespace och
 					//		signmode		'+' or '_', meaning positive signed ints are padded with a plus or space respectively
 					//		formatmode		o, x, X, b, c for (u)ints, e, b for float/double
 
-					//f_width
 					uint16_t f_width = 0;
 					while ((c = *(++fmt)) >= '0' && c <= '9')
 						f_width = f_width * 10 + c - '0';
 					curr_arg.set_width(f_width);
 
-					//f_precision
 					if (c == '.')
 					{
 						uint16_t f_precision = 0;
@@ -440,14 +442,12 @@ namespace och
 						curr_arg.set_precision(f_precision);
 					}
 
-					//f_rightadj
 					if (c == '>')
 					{
 						curr_arg.set_rightadj();
 						c = *(++fmt);
 					}
 
-					//f_filler
 					if (c == '~')
 					{
 						c = *(++fmt);
@@ -455,7 +455,6 @@ namespace och
 						c = *(++fmt);
 					}
 
-					//f_signmode
 					if (c == '+')
 					{
 						curr_arg.set_signmode(1);
@@ -469,7 +468,7 @@ namespace och
 
 					if (c >= 'a' && c <= 'z')
 					{
-						curr_arg.set_offset(c - 'a' + 6);
+						curr_arg.set_offset(c - 'a' + 5);
 						c = *(++fmt);
 					}
 				}
@@ -482,14 +481,22 @@ namespace och
 			}
 			else
 			{
-				putc(c, out);
+				++char_cnt;
 			}
 		}
+
+		if(char_cnt)
+			fwrite(fmt - char_cnt, 1, char_cnt, out);		//output remaining string
 	}
 
-	void print(const char* const fmt)
+	void print(const och::ministring fmt)
 	{
-		fputs(fmt, stdout);
+		fwrite(fmt.begin(), 1, fmt.len(), stdout);
+	}
+
+	void print(const och::string fmt)
+	{
+		fwrite(fmt.begin(), 1, fmt.end() - fmt.begin(), stdout);
 	}
 
 	namespace fmt
@@ -519,12 +526,14 @@ namespace och
 			f_default_precision_factor = precision_factor;
 		}
 
-		bool add_format_function(och::fmt_function function, char specifier)
+		bool register_format_function(och::fmt_function function, char specifier)
 		{
 			if (specifier <= 'a' && specifier >= 'z')
 				return false;
 
-			format_functions[specifier - 'a' - 6] = function;
+			uint8_t index = specifier - 'a' + 5;
+
+			format_functions[index] = function;
 
 			return true;
 		}
