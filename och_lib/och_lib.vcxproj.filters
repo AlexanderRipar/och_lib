@@ -56,5 +56,8 @@
     <ClInclude Include="och_lib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="och_timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
