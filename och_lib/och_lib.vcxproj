@@ -155,11 +155,9 @@
     <ClInclude Include="och_lib.h" />
     <ClInclude Include="och_memrun.h" />
     <ClInclude Include="och_rtv.h" />
+    <ClInclude Include="tests.h" />
     <ClInclude Include="och_timer.h" />
     <ClInclude Include="och_tok.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="testfile.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
