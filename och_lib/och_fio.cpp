@@ -63,6 +63,11 @@ namespace och
 		return file == INVALID_HANDLE_VALUE ? nullptr : file;
 	}
 
+	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode)
+	{
+		return open_file(filename.begin(), access_rights, existing_mode, new_mode, share_mode);
+	}
+
 	iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name)
 	{
 		if (!file._ptr)
@@ -115,6 +120,11 @@ namespace och
 	bool delete_file(const char* filename)
 	{
 		return DeleteFileA(filename);
+	}
+
+	bool delete_file(const och::string filename)
+	{
+		return delete_file(filename.begin());
 	}
 }
 

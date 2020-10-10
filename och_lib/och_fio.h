@@ -28,6 +28,8 @@ namespace och
 		constexpr uint32_t share_delete			= 4;
 	}
 
+	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none);
+
 	iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none);
 
 	iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr);
@@ -47,6 +49,8 @@ namespace och
 	bool close_file(iohandle file);
 
 	bool close_file_array(iohandle file_array);
+
+	bool delete_file(const och::string filename);
 
 	bool delete_file(const char* filename);
 

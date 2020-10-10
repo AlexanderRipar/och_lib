@@ -155,7 +155,6 @@
     <ClInclude Include="och_lib.h" />
     <ClInclude Include="och_memrun.h" />
     <ClInclude Include="och_rtv.h" />
-    <ClInclude Include="och_test.h" />
     <ClInclude Include="och_timer.h" />
     <ClInclude Include="och_tok.h" />
   </ItemGroup>
