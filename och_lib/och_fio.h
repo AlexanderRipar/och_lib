@@ -1,9 +1,17 @@
 #pragma once
 
 #include <cstdint>
+#include "och_memrun.h"
 
 namespace och
 {
+	struct iohandle
+	{
+		void* _ptr = nullptr;
+
+		iohandle(void* file_ptr) : _ptr{ file_ptr } {}
+	};
+
 	namespace fio
 	{
 		constexpr uint32_t open_normal			= 0;
@@ -20,17 +28,25 @@ namespace och
 		constexpr uint32_t share_delete			= 4;
 	}
 
-	void* open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none);
+	iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none);
 
-	void* create_file_mapper(void* file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr);
+	iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr);
 
-	void* file_as_array(void* file_mapper, uint32_t access_rights, uint64_t beg, uint64_t end);
+	iohandle file_as_array(iohandle file_mapper, uint32_t access_rights, uint64_t beg, uint64_t end);
 
-	int64_t get_filesize(void* file);
+	int64_t get_filesize(iohandle file);
 
-	bool close_file(void* file);
+	uint32_t readbytes(iohandle file, char* dst, uint32_t bytes);
 
-	bool close_file_array(void* file_array);
+	template<typename T>
+	och::memrun<T> read_from_file(iohandle file, och::memrun<T> dst)
+	{
+		return { dst.begin(), readbytes(file, reinterpret_cast<char*>(dst.begin()), static_cast<uint32_t>(dst.len())) };
+	}
+
+	bool close_file(iohandle file);
+
+	bool close_file_array(iohandle file_array);
 
 	bool delete_file(const char* filename);
 
@@ -39,9 +55,9 @@ namespace och
 	{
 	private:
 
-		void* file;
-		void* mapper;
-		void* data;
+		iohandle file;
+		iohandle mapper;
+		iohandle data;
 
 	public:
 

@@ -48,7 +48,7 @@ namespace och
 
 		if (fopen_s(&file, rtv.config_filename, "r"))
 		{
-			printf("\nCould not open config file for runtime-variables\n");
+			printf("\nCould not open config iohandle for runtime-variables\n");
 			return;
 		}
 
@@ -58,7 +58,7 @@ namespace och
 
 			if (!fgets(buf, sizeof buf, file))
 			{
-				printf("\nCould not read from runtime-configuration-file\n");
+				printf("\nCould not read from runtime-configuration-iohandle\n");
 				return;
 			}
 
@@ -98,7 +98,7 @@ namespace och
 
 		if (fopen_s(&file, config_filename, "w"))
 		{
-			printf("\nCould not open config file for runtime-variables\n");
+			printf("\nCould not open config iohandle for runtime-variables\n");
 			return;
 		}
 
@@ -138,7 +138,7 @@ namespace och
 	{
 		if (remove(rtv.config_filename))
 		{
-			printf("\nCould not remove rtv config-file\n");
+			printf("\nCould not remove rtv config-iohandle\n");
 		}
 	}
 

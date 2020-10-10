@@ -2,6 +2,19 @@
 
 int main()
 {
+	och::iohandle file = och::open_file("testfile.txt", och::fio::access_read, och::fio::open_normal, och::fio::open_fail);
+
+	if (!file._ptr)
+		return -1;
+
+	char dat[8];
+
+	och::memrun buf(dat);
+
+	for(och::memrun res = och::read_from_file(file, buf); res.len(); res = och::read_from_file(file, buf))
+		och::print("{}\n", res);
+	
+	/*
 	och::timer t;
 
 	for (int i = 0; i < 1024; ++i) printf("Hello\n");
@@ -18,4 +31,5 @@ int main()
 
 	och::print("\noch::print  {:7>} ms\n"
 		         "printf      {:7>} ms\n", t0, t1);
+	*/
 }

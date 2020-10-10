@@ -23,6 +23,9 @@ namespace och
 	{
 		T* _beg, * _end;
 
+		template<size_t Len>
+		memrun(T(&arr)[Len]) : _beg{ arr }, _end{ arr + Len } {}
+
 		memrun(T* beg, T* end) : _beg{ beg }, _end{ end } {}
 
 		memrun(T* beg, size_t len) : _beg{ beg }, _end{ beg + len } {}
@@ -49,6 +52,8 @@ namespace och
 	struct compressed_memrun
 	{
 		int64_t _ptr_len_u;
+
+		compressed_memrun(T* beg, T* end) : _ptr_len_u{ (reinterpret_cast<int64_t>(beg) << 16) | (beg - end) } {}
 
 		compressed_memrun(T* beg, uint16_t len) : _ptr_len_u{ (reinterpret_cast<int64_t>(beg) << 16) | len } {}
 

@@ -49,19 +49,20 @@ namespace och
 		uint8_t get_offset() { return offset; }
 		char get_filler() { return filler; }
 
-		arg(        uint8_t i) : offset{ static_cast<uint8_t>(types::u) }, i{ static_cast<uint64_t>(i) } {}
-		arg(       uint16_t i) : offset{ static_cast<uint8_t>(types::u) }, i{ static_cast<uint64_t>(i) } {}
-		arg(       uint32_t i) : offset{ static_cast<uint8_t>(types::u) }, i{ static_cast<uint64_t>(i) } {}
-		arg(       uint64_t i) : offset{ static_cast<uint8_t>(types::u) }, i{ static_cast<uint64_t>(i) } {}
-		arg(         int8_t i) : offset{ static_cast<uint8_t>(types::i) }, i{ static_cast<uint64_t>(i) } {}
-		arg(        int16_t i) : offset{ static_cast<uint8_t>(types::i) }, i{ static_cast<uint64_t>(i) } {}
-		arg(        int32_t i) : offset{ static_cast<uint8_t>(types::i) }, i{ static_cast<uint64_t>(i) } {}
-		arg(        int64_t i) : offset{ static_cast<uint8_t>(types::i) }, i{ static_cast<uint64_t>(i) } {}
-		arg(          float f) : offset{ static_cast<uint8_t>(types::f) }, f{                       f  } {}
-		arg(         double d) : offset{ static_cast<uint8_t>(types::d) }, d{                       d  } {}
-		arg(    const char* s) : offset{ static_cast<uint8_t>(types::s) }, s{                       s  } {}
-		arg(    och::string s) : offset{ static_cast<uint8_t>(types::s) }, s{                       s  } {}
-		arg(och::ministring s) : offset{ static_cast<uint8_t>(types::s) }, s{                       s  } {}
+		arg(           uint8_t i) : offset{ static_cast<uint8_t>(types::u) }, i{                                                 static_cast<uint64_t>(i) } {}
+		arg(          uint16_t i) : offset{ static_cast<uint8_t>(types::u) }, i{                                                 static_cast<uint64_t>(i) } {}
+		arg(          uint32_t i) : offset{ static_cast<uint8_t>(types::u) }, i{                                                 static_cast<uint64_t>(i) } {}
+		arg(          uint64_t i) : offset{ static_cast<uint8_t>(types::u) }, i{                                                 static_cast<uint64_t>(i) } {}
+		arg(            int8_t i) : offset{ static_cast<uint8_t>(types::i) }, i{                                                 static_cast<uint64_t>(i) } {}
+		arg(           int16_t i) : offset{ static_cast<uint8_t>(types::i) }, i{                                                 static_cast<uint64_t>(i) } {}
+		arg(           int32_t i) : offset{ static_cast<uint8_t>(types::i) }, i{                                                 static_cast<uint64_t>(i) } {}
+		arg(           int64_t i) : offset{ static_cast<uint8_t>(types::i) }, i{                                                 static_cast<uint64_t>(i) } {}
+		arg(             float f) : offset{ static_cast<uint8_t>(types::f) }, f{                                                                       f  } {}
+		arg(            double d) : offset{ static_cast<uint8_t>(types::d) }, d{                                                                       d  } {}
+		arg(       const char* s) : offset{ static_cast<uint8_t>(types::s) }, s{                                                                       s  } {}
+		arg(       och::string s) : offset{ static_cast<uint8_t>(types::s) }, s{                                                                       s  } {}
+		arg(   och::ministring s) : offset{ static_cast<uint8_t>(types::s) }, s{                                                                       s  } {}
+		arg( och::memrun<char> s) : offset{ static_cast<uint8_t>(types::s) }, s{ reinterpret_cast<const char*>(s.begin()), static_cast<uint16_t>(s.len()) } {}
 	};
 
 	using fmt_function = void (*) (arg in, FILE* out);

@@ -56,58 +56,66 @@ namespace och
 		return (access_rights - ((access_rights == 3) << 1)) << 1;
 	}
 
-	void* open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode)
+	iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode)
 	{
 		void* file = CreateFileA(filename, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), FILE_ATTRIBUTE_NORMAL, nullptr);
 
 		return file == INVALID_HANDLE_VALUE ? nullptr : file;
 	}
 
-	void* create_file_mapper(void* file, uint64_t size, uint32_t page_mode, const char* mapping_name)
+	iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name)
 	{
-		if (!file)
-			return nullptr;
+		if (!file._ptr)
+			return iohandle{ nullptr };
 
 		LARGE_INTEGER _size;
 
 		_size.QuadPart = size;
 
-		return CreateFileMappingA(file, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name);
+		return CreateFileMappingA(file._ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name);
 	}
 
-	void* file_as_array(void* file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end)
+	iohandle file_as_array(iohandle file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end)
 	{
 		LARGE_INTEGER _beg;
 
 		_beg.QuadPart = beg;
 
-		return MapViewOfFile(file_mapping, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, end - beg);
+		return MapViewOfFile(file_mapping._ptr, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, end - beg);
 	}
 
-	int64_t get_filesize(void* file)
+	uint32_t readbytes(iohandle file, char* dst, uint32_t bytes)
+	{
+		uint32_t bytes_read = 0;
+
+		ReadFile(file._ptr, dst, bytes, reinterpret_cast<LPDWORD>(&bytes_read), nullptr);
+
+		return bytes_read;
+	}
+
+	int64_t get_filesize(iohandle file)
 	{
 		LARGE_INTEGER filesize;
 
-		GetFileSizeEx(file, &filesize);
+		GetFileSizeEx(file._ptr, &filesize);
 
 		return filesize.QuadPart;
 	}
 
-	bool close_file(void* file)
+	bool close_file(iohandle file)
 	{
-		return CloseHandle(file);
+		return CloseHandle(file._ptr);
 	}
 
-	bool close_file_array(void* file_array)
+	bool close_file_array(iohandle file_array)
 	{
-		return UnmapViewOfFile(file_array);
+		return UnmapViewOfFile(file_array._ptr);
 	}
 
 	bool delete_file(const char* filename)
 	{
 		return DeleteFileA(filename);
 	}
-
 }
 
 #endif // _WIN32
