@@ -46,6 +46,11 @@ namespace och
 		{
 			return _end - _beg;
 		}
+
+		T& operator[](size_t i)
+		{
+			return _beg[i];
+		}
 	};
 
 	template<typename T>
