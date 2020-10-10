@@ -41,9 +41,9 @@ namespace och
 
 
 
-	tokenizer::tokenizer(const char* text, const char* delimiters) : text{ text }, delimiters{ delimiters } {}
+	cstr_tokenizer::cstr_tokenizer(const char* text, const char* delimiters) : text{ text }, delimiters{ delimiters } {}
 
-	bool tokenizer::is_delimiter(char c)
+	bool cstr_tokenizer::is_delimiter(char c)
 	{
 		for (int i = 0; delimiters[i]; ++i)
 		{
@@ -54,7 +54,7 @@ namespace och
 		return false;
 	}
 
-	och::string tokenizer::operator()()
+	och::string cstr_tokenizer::operator()()
 	{
 		while (is_delimiter(*text))
 			++text;
@@ -68,5 +68,34 @@ namespace och
 			++text;
 
 		return { beg, text++ };
+	}
+
+	tokenizer::tokenizer(och::string text, och::string delimiters) : text{ text }, delimiters{ delimiters } {}
+
+	bool tokenizer::is_delimiter(char c)
+	{
+		for (const char& d : delimiters)
+		{
+			if (c == d)
+				return true;
+		}
+
+		return false;
+	}
+
+	och::string tokenizer::operator()()
+	{
+		while (is_delimiter(*text.begin()))
+			++text._beg;
+
+		if (!text.len())
+			return { nullptr, nullptr };
+
+		const char* beg = text.begin();
+
+		while (*text.begin() && !is_delimiter(*text.begin()))
+			++text._beg;
+
+		return { beg, text._beg++ };
 	}
 }
