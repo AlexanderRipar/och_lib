@@ -4,16 +4,14 @@ int main()
 {
 	och::timer t;
 
-	for (int i = 0; i < 1024; ++i)
-		printf("Hello %5d\n", i);
+	for (int i = 0; i < 1024; ++i) printf("Hello\n");
 
 	uint64_t t1 = t.ms();
 	
 
 	t.restart();
 
-	for (int i = 0; i < 1024; ++i)
-		och::print("Hello {:5>}\n", i);
+	for (int i = 0; i < 1024; ++i) och::print("Hello\n");
 
 	uint64_t t0 = t.ms();
 	

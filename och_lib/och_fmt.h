@@ -69,15 +69,59 @@ namespace och
 	// [argindex} [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]
 	void vprint(const char* fmt, arg argv[], uint32_t argc, FILE* out);
 
+	void print(const char* fmt);
+
+	void print(const och::string fmt);
+
+	void print(const och::ministring fmt);
+
 	template<typename... Args>
-	void print(const char* const fmt, Args... args)
+	void print(const char* fmt, Args... args)
 	{
 		arg argv[]{ args... };
-	
+
 		vprint(fmt, argv, sizeof...(args), stdout);
 	}
 
-	void print(och::string fmt);
+	template<typename... Args>
+	void print(const och::string fmt, Args... args)
+	{
+		arg argv[]{ args... };
+
+		vprint(fmt.begin(), argv, sizeof...(args), stdout);
+	}
+
+	template<typename... Args>
+	void print(const och::ministring fmt, Args... args)
+	{
+		arg argv[]{ args... };
+
+		vprint(fmt.begin(), argv, sizeof...(args), stdout);
+	}
+
+	template<typename... Args>
+	void fprint(FILE* out, const char* fmt, Args... args)
+	{
+		arg argv[]{ args... };
+
+		vprint(fmt, argv, sizeof...(args), out);
+	}
+
+	template<typename... Args>
+	void fprint(FILE* out, const och::string fmt, Args... args)
+	{
+		arg argv[]{ args... };
+
+		vprint(fmt.begin(), argv, sizeof...(args), out);
+	}
+
+	template<typename... Args>
+	void fprint(FILE* out, const och::ministring fmt, Args... args)
+	{
+		arg argv[]{ args... };
+
+		vprint(fmt.begin(), argv, sizeof...(args), out);
+	}
 
 	namespace fmt
 	{
@@ -87,6 +131,6 @@ namespace och
 
 		void set_default_precision(uint32_t precision);
 
-		bool register_format_function(fmt_function function, char specifier);
+		bool register_formatfunction(fmt_function function, char specifier);
 	}
 }

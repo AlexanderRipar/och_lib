@@ -101,29 +101,6 @@ namespace och
 		}
 	}
 
-	/*void f_cstring(arg in, FILE* out)
-	{
-		size_t len = strlen(in.s);
-
-		if (in.get_precision() != -1 && len > in.get_precision())
-			len = in.get_precision();
-
-		if (in.get_rightadj())
-		{
-			for (size_t j = len; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-
-			fwrite(in.s, 1, len, out);
-		}
-		else
-		{
-			fwrite(in.s, 1, len, out);
-
-			for (size_t j = len; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-		}
-	}*/
-
 	void f_ministring(arg in, FILE* out)
 	{
 		size_t len = in.s.len();
@@ -249,10 +226,6 @@ namespace och
 
 	}
 
-
-
-	//Extended formatmode functions
-
 	void f_hexadecimal(arg in, FILE* out)
 	{
 		uint64_t val = in.i;
@@ -346,7 +319,6 @@ namespace och
 
 
 	//Format-function vtable
-
 	fmt_function format_functions[32]{
 		f_uint,
 		f_int,
@@ -489,14 +461,19 @@ namespace och
 			fwrite(fmt - char_cnt, 1, char_cnt, out);		//output remaining string
 	}
 
-	void print(const och::ministring fmt)
+	void print(const char* fmt)
 	{
-		fwrite(fmt.begin(), 1, fmt.len(), stdout);
+		fputs(fmt, stdout);
 	}
 
 	void print(const och::string fmt)
 	{
-		fwrite(fmt.begin(), 1, fmt.end() - fmt.begin(), stdout);
+		fwrite(fmt.begin(), 1, fmt.len(), stdout);
+	}
+
+	void print(const och::ministring fmt)
+	{
+		fwrite(fmt.begin(), 1, fmt.len(), stdout);
 	}
 
 	namespace fmt
@@ -526,7 +503,7 @@ namespace och
 			f_default_precision_factor = precision_factor;
 		}
 
-		bool register_format_function(och::fmt_function function, char specifier)
+		bool register_formatfunction(och::fmt_function function, char specifier)
 		{
 			if (specifier <= 'a' && specifier >= 'z')
 				return false;
