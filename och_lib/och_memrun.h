@@ -32,22 +32,22 @@ namespace och
 
 		memrun(const char* cstr) : _beg{ cstr }, _end{ cstr + strlen(cstr) } { static_assert(std::is_same<const char, T>::value, "och::memrun<T>(const char*) may only be used with T = const char"); }
 
-		T* begin() const
+		[[nodiscard]] T* begin() const
 		{
 			return _beg;
 		}
 
-		T* end() const
+		[[nodiscard]] T* end() const
 		{
 			return _end;
 		}
 
-		size_t len() const
+		[[nodiscard]] size_t len() const
 		{
 			return _end - _beg;
 		}
 
-		T& operator[](size_t i)
+		[[nodiscard]] T& operator[](size_t i)
 		{
 			return _beg[i];
 		}
@@ -68,22 +68,22 @@ namespace och
 
 		//compressed_memrun(const char* cstr) : _ptr_len_u{ (reinterpret_cast<int64_t>(cstr) << 16) | _const_strlen_u16(cstr) } { static_assert(std::is_same<const char, T>::value, "och::compressed_memrun<T>(const char*) may only be used with T = const char"); }
 
-		T* begin() const
+		[[nodiscard]] T* begin() const
 		{
 			return reinterpret_cast<T*>(_ptr_len_u >> 16);
 		}
 
-		T* end() const
+		[[nodiscard]] T* end() const
 		{
 			return reinterpret_cast<T*>(_ptr_len_u >> 16) + static_cast<uint16_t>(_ptr_len_u);
 		}
 
-		uint16_t len() const
+		[[nodiscard]] uint16_t len() const
 		{
 			return static_cast<uint16_t>(_ptr_len_u);
 		}
 
-		och::memrun<T> uncompress() const
+		[[nodiscard]] och::memrun<T> uncompress() const
 		{
 			return och::memrun(begin(), end());
 		}

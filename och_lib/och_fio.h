@@ -31,18 +31,19 @@ namespace och
 
 	using iohandle = void*;
 
-	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none);
+	
+	[[nodiscard]] iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none);
 
-	iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr);
+	[[nodiscard]] iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr);
 
-	iohandle file_as_array(const iohandle file_mapper, uint32_t access_rights, uint64_t beg, uint64_t end);
+	[[nodiscard]] iohandle file_as_array(const iohandle file_mapper, uint32_t access_rights, uint64_t beg, uint64_t end);
 
-	int64_t get_filesize(const iohandle file);
+	[[nodiscard]] int64_t get_filesize(const iohandle file);
 
-	uint32_t freadbytes(const iohandle file, char* dst, uint32_t bytes);
+	[[nodiscard]] uint32_t freadbytes(const iohandle file, char* dst, uint32_t bytes);
 
 	template<typename T>
-	och::memrun<T> read_from_file(const iohandle file, och::memrun<T> dst)
+	[[nodiscard]] och::memrun<T> read_from_file(const iohandle file, och::memrun<T> dst)
 	{
 		return och::memrun(dst.begin(), dst.begin() + freadbytes(file, reinterpret_cast<char*>(dst.begin()), static_cast<uint32_t>(dst.len() * sizeof(T))));
 	}
@@ -73,9 +74,16 @@ namespace och
 
 		~filehandle() { close_file(handle); }
 
-		template<typename T> och::memrun<T> read(och::memrun<T> dst) const { return read_from_file(handle, dst); }
+		template<typename T> 
+		[[nodiscard]] och::memrun<T> read(och::memrun<T> dst) const { return read_from_file(handle, dst); }
 
-		template<typename T> bool write(const och::memrun<T> src) const { return write_to_file(handle, src); }
+		template<typename T> 
+		bool write(const och::memrun<T> src) const { return write_to_file(handle, src); }
+
+		[[nodiscard]] uint64_t size()
+		{
+			return och::get_filesize(handle);
+		}
 
 		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const { return och::set_fileptr(handle, set_to, setptr_mode); }
 	};
@@ -88,9 +96,16 @@ namespace och
 
 		~tempfilehandle();
 
-		template<typename T> och::memrun<T> read(och::memrun<T> dst) const { return read_from_file(handle, dst); }
+		template<typename T> 
+		[[nodiscard]] och::memrun<T> read(och::memrun<T> dst) const { return read_from_file(handle, dst); }
 
-		template<typename T> bool write(const och::memrun<T> src) const { return write_to_file(handle, src); }
+		template<typename T> 
+		bool write(const och::memrun<T> src) const { return write_to_file(handle, src); }
+
+		[[nodiscard]] uint64_t size()
+		{
+			return och::get_filesize(handle);
+		}
 
 		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const { return och::set_fileptr(handle, set_to, setptr_mode); }
 	};
@@ -129,17 +144,17 @@ namespace och
 			och::close_file(file);
 		}
 
-		T& operator[](size_t i)
+		[[nodiscard]] T& operator[](size_t i)
 		{
 			return reinterpret_cast<T*>(data)[i];
 		}
 
-		const T& operator[](size_t i) const
+		[[nodiscard]] const T& operator[](size_t i) const
 		{
 			return reinterpret_cast<T*>(data)[i];
 		}
 
-		bool is_valid()
+		[[nodiscard]] bool is_valid()
 		{
 			return data;
 		}
