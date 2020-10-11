@@ -84,13 +84,19 @@ namespace och
 		return MapViewOfFile(file_mapping, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, end - beg);
 	}
 
-	bool set_fileptr(const iohandle file, int64_t set_to, uint32_t setptr_mode)
+	bool close_file(const iohandle file)
 	{
-		LARGE_INTEGER _set_to;
+		return CloseHandle(file);
+	}
 
-		_set_to.QuadPart = set_to;
+	bool close_file_array(const iohandle file_array)
+	{
+		return UnmapViewOfFile(file_array);
+	}
 
-		return SetFilePointerEx(file, _set_to, nullptr, static_cast<DWORD>(setptr_mode));
+	bool delete_file(const och::string filename)
+	{
+		return DeleteFileA(filename.begin());
 	}
 
 	uint32_t freadbytes(const iohandle file, char* dst, uint32_t bytes)
@@ -111,6 +117,15 @@ namespace och
 		return bytes_written;
 	}
 
+	bool set_fileptr(const iohandle file, int64_t set_to, uint32_t setptr_mode)
+	{
+		LARGE_INTEGER _set_to;
+
+		_set_to.QuadPart = set_to;
+
+		return SetFilePointerEx(file, _set_to, nullptr, static_cast<DWORD>(setptr_mode));
+	}
+
 	int64_t get_filesize(const iohandle file)
 	{
 		LARGE_INTEGER filesize;
@@ -120,19 +135,28 @@ namespace och
 		return filesize.QuadPart;
 	}
 
-	bool close_file(const iohandle file)
+	bool set_filesize(const iohandle file, uint64_t bytes)
 	{
-		return CloseHandle(file);
-	}
+		LARGE_INTEGER old_fileptr;
 
-	bool close_file_array(const iohandle file_array)
-	{
-		return UnmapViewOfFile(file_array);
-	}
+		LARGE_INTEGER _set_to;
 
-	bool delete_file(const och::string filename)
-	{
-		return DeleteFileA(filename.begin());
+		_set_to.QuadPart = 0;
+
+		if (!SetFilePointerEx(file, _set_to, &old_fileptr, FILE_CURRENT))//Save current file-pointer-position into old_fileptr
+			return false;
+
+		_set_to.QuadPart = bytes;
+
+		if (!SetFilePointerEx(file, _set_to, nullptr, FILE_BEGIN))//Set file-pointer to new EOF
+			return false;
+
+		SetEndOfFile(file);
+
+		if (!SetFilePointerEx(file, old_fileptr, nullptr, FILE_BEGIN))//Restore initial file-pointer-position
+			return false;
+
+		return true;
 	}
 
 	int32_t get_filepath(const iohandle file, och::memrun<char> buf)

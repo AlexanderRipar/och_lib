@@ -67,6 +67,8 @@ namespace och
 
 	bool set_fileptr(const iohandle file, int64_t set_to, uint32_t setptr_mode);
 
+	bool set_filesize(const iohandle file, uint64_t bytes);
+
 	int32_t get_filepath(const iohandle file, och::memrun<char> buf);
 
 	[[nodiscard]] uint64_t get_last_write_time(const iohandle file);
@@ -87,9 +89,14 @@ namespace och
 		template<typename T> 
 		bool write(const och::memrun<T> src) const { return write_to_file(handle, src); }
 
-		[[nodiscard]] uint64_t size()
+		[[nodiscard]] uint64_t get_size()
 		{
 			return get_filesize(handle);
+		}
+
+		bool set_size(uint64_t bytes)
+		{
+			return och::set_filesize(handle, bytes);
 		}
 
 		uint32_t path(och::memrun<char> buf)
@@ -114,9 +121,14 @@ namespace och
 		template<typename T> 
 		bool write(const och::memrun<T> src) const { return write_to_file(handle, src); }
 
-		[[nodiscard]] uint64_t size()
+		[[nodiscard]] uint64_t get_size()
 		{
 			return och::get_filesize(handle);
+		}
+
+		bool set_size(uint64_t bytes)
+		{
+			return och::set_filesize(handle, bytes);
 		}
 
 		uint32_t path(och::memrun<char> buf)
