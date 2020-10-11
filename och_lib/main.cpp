@@ -4,8 +4,6 @@
 
 int main()
 {
-	och::test();
-
 	/*och::iohandle file = och::open_file("testfile.txt", och::fio::access_read, och::fio::open_normal, och::fio::open_fail);
 
 	if (!file._ptr)

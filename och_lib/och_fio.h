@@ -139,8 +139,7 @@ namespace och
 		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const { return och::set_fileptr(handle, set_to, setptr_mode); }
 	};
 
-	template<typename T>
-	struct file_array
+	struct mapped_file
 	{
 	private:
 
@@ -150,45 +149,35 @@ namespace och
 
 	public:
 
-		const uint32_t size;
+		const uint32_t bytes;
 
-		file_array(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size, uint32_t mapping_offset = 0) :
+		mapped_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) :
 			file{ open_file(filename, access_rights, existing_mode, new_mode) },
 			mapper{ create_file_mapper(file, (uint64_t)mapping_size + mapping_offset, access_rights) },
 			data{ file_as_array(mapper, access_rights, mapping_offset, (uint64_t) mapping_offset + mapping_size) },
-			size{ mapping_size == 0 ? (uint32_t) get_filesize(file) : mapping_size }
+			bytes{ mapping_size == 0 ? (uint32_t) get_filesize(file) : mapping_size }
 		{}
 
-		file_array(const iohandle file, uint32_t access_rights, uint32_t mapping_size, uint32_t mapping_offset = 0) :
+		mapped_file(const iohandle file, uint32_t access_rights, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) :
 			file{ file },
 			mapper{ create_file_mapper(file, (uint64_t)mapping_size + mapping_offset, access_rights) },
 			data{ file_as_array(mapper, access_rights, mapping_offset, (uint64_t)mapping_offset + mapping_size) },
-			size{ mapping_size == 0 ? (uint32_t)get_filesize(file) : mapping_size }
+			bytes{ mapping_size == 0 ? (uint32_t)get_filesize(file) : mapping_size }
 		{}
 
-		~file_array()
+		~mapped_file()
 		{
 			och::close_file_array(data);
 			och::close_file(mapper);
 			och::close_file(file);
 		}
 
-		uint32_t path(och::memrun<char> buf)
+		uint32_t path(och::memrun<char> buf) const
 		{
 			return get_filepath(file, buf);
 		}
 
-		[[nodiscard]] T& operator[](size_t i)
-		{
-			return reinterpret_cast<T*>(data)[i];
-		}
-
-		[[nodiscard]] const T& operator[](size_t i) const
-		{
-			return reinterpret_cast<T*>(data)[i];
-		}
-
-		[[nodiscard]] bool is_valid()
+		[[nodiscard]] bool is_valid() const
 		{
 			return data;
 		}
