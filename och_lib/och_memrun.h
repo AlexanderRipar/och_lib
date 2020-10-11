@@ -32,6 +32,8 @@ namespace och
 
 		memrun(const char* cstr) : _beg{ cstr }, _end{ cstr + strlen(cstr) } { static_assert(std::is_same<const char, T>::value, "och::memrun<T>(const char*) may only be used with T = const char"); }
 
+		memrun() : _beg{ nullptr }, _end{ nullptr } {}
+
 		[[nodiscard]] T* begin() const
 		{
 			return _beg;

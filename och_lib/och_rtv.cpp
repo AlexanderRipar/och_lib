@@ -1,16 +1,17 @@
+#define OCH_RTV
+
+#include "och_rtv.h"
+#include "och_fio.h"
+#include "och_fmt.h"
+#include "och_memrun.h"
+
 #ifdef OCH_RTV
-
-#include "och_rt_variables.h"
-#include <cstdio>
-#include <cstring>
-#include <stdlib.h>
-
 
 namespace och
 {
 	constexpr size_t max_rtv_cnt = 256;
 
-	enum class rtv_type
+	enum class rtv_type : uint8_t
 	{
 		f32,
 		f64,
@@ -28,13 +29,13 @@ namespace och
 	{
 		int registered_var_cnt = 0;
 
-		const char* config_filename;
+		och::string config_filename;
 
 		void* pointers[och::max_rtv_cnt];
 
 		rtv_type types[och::max_rtv_cnt];
 
-		const char* names[och::max_rtv_cnt];
+		och::string names[och::max_rtv_cnt];
 	};
 
 	rtv_data rtv;
@@ -44,47 +45,45 @@ namespace och
 		if (rtv.registered_var_cnt == 0)
 			return;
 
-		FILE* file;
+		och::filehandle file(rtv.config_filename, och::fio::access_read, och::fio::open_normal, och::fio::open_fail);
 
-		if (fopen_s(&file, rtv.config_filename, "r"))
+		if(!file.handle)
 		{
-			printf("\nCould not open config iohandle for runtime-variables\n");
+			och::print("\nCould not open config iohandle for runtime-variables\n");
 			return;
 		}
 
-		for (int i = 0; i < rtv.registered_var_cnt; ++i)
-		{
-			char buf[128];
-
-			if (!fgets(buf, sizeof buf, file))
-			{
-				printf("\nCould not read from runtime-configuration-iohandle\n");
-				return;
-			}
-
-			int c = 0;
-
-			while (buf[c] != ':' && c != sizeof buf - 1)
-				++c;
-
-			c += 2;
-
-			switch (rtv.types[i])
-			{
-			case rtv_type::f32: *reinterpret_cast<float*>(rtv.pointers[i]) = strtof(buf + c, nullptr); break;
-			case rtv_type::f64: *reinterpret_cast<double*>(rtv.pointers[i]) = strtod(buf + c, nullptr); break;
-			case rtv_type::u8: *reinterpret_cast<uint8_t*>(rtv.pointers[i]) = atoi(buf + c); break;
-			case rtv_type::u16: *reinterpret_cast<uint16_t*>(rtv.pointers[i]) = atoi(buf + c); break;
-			case rtv_type::u32: *reinterpret_cast<uint32_t*>(rtv.pointers[i]) = atoi(buf + c); break;
-			case rtv_type::u64: *reinterpret_cast<uint64_t*>(rtv.pointers[i]) = atoi(buf + c); break;
-			case rtv_type::i8: *reinterpret_cast<int8_t*>(rtv.pointers[i]) = atoi(buf + c); break;
-			case rtv_type::i16: *reinterpret_cast<int16_t*>(rtv.pointers[i]) = atoi(buf + c); break;
-			case rtv_type::i32: *reinterpret_cast<int32_t*>(rtv.pointers[i]) = atoi(buf + c); break;
-			case rtv_type::i64: *reinterpret_cast<int64_t*>(rtv.pointers[i]) = atoi(buf + c); break;
-			}
-		}
-
-		fclose(file);
+		//for (int i = 0; i < rtv.registered_var_cnt; ++i)
+		//{
+		//	char buf[128];
+		//
+		//	if (!fgets(buf, sizeof buf, file))
+		//	{
+		//		och::print("\nCould not read from runtime-configuration-iohandle\n");
+		//		return;
+		//	}
+		//
+		//	int c = 0;
+		//
+		//	while (buf[c] != ':' && c != sizeof buf - 1)
+		//		++c;
+		//
+		//	c += 2;
+		//
+		//	switch (rtv.types[i])
+		//	{
+		//	case rtv_type::f32: *reinterpret_cast<float*>(rtv.pointers[i]) = strtof(buf + c, nullptr); break;
+		//	case rtv_type::f64: *reinterpret_cast<double*>(rtv.pointers[i]) = strtod(buf + c, nullptr); break;
+		//	case rtv_type::u8: *reinterpret_cast<uint8_t*>(rtv.pointers[i]) = atoi(buf + c); break;
+		//	case rtv_type::u16: *reinterpret_cast<uint16_t*>(rtv.pointers[i]) = atoi(buf + c); break;
+		//	case rtv_type::u32: *reinterpret_cast<uint32_t*>(rtv.pointers[i]) = atoi(buf + c); break;
+		//	case rtv_type::u64: *reinterpret_cast<uint64_t*>(rtv.pointers[i]) = atoi(buf + c); break;
+		//	case rtv_type::i8: *reinterpret_cast<int8_t*>(rtv.pointers[i]) = atoi(buf + c); break;
+		//	case rtv_type::i16: *reinterpret_cast<int16_t*>(rtv.pointers[i]) = atoi(buf + c); break;
+		//	case rtv_type::i32: *reinterpret_cast<int32_t*>(rtv.pointers[i]) = atoi(buf + c); break;
+		//	case rtv_type::i64: *reinterpret_cast<int64_t*>(rtv.pointers[i]) = atoi(buf + c); break;
+		//	}
+		//}
 	}
 
 	void rtv_init(const char* config_filename)
@@ -98,13 +97,13 @@ namespace och
 
 		if (fopen_s(&file, config_filename, "w"))
 		{
-			printf("\nCould not open config iohandle for runtime-variables\n");
+			och::print("\nCould not open config iohandle for runtime-variables\n");
 			return;
 		}
 
 		for (int i = 0; i < rtv.registered_var_cnt; ++i)
 		{
-			fputs(rtv.names[i], file);
+			fputs(rtv.names[i].begin(), file);
 			fputs(": ", file);
 
 			switch (rtv.types[i])
@@ -136,9 +135,9 @@ namespace och
 
 	void rtv_exit()
 	{
-		if (remove(rtv.config_filename))
+		if (och::delete_file(rtv.config_filename))
 		{
-			printf("\nCould not remove rtv config-iohandle\n");
+			och::print("\nCould not remove rtv config-iohandle\n");
 		}
 	}
 
@@ -146,7 +145,7 @@ namespace och
 	{
 		if (rtv.registered_var_cnt == och::max_rtv_cnt - 1)
 		{
-			printf("\nToo many runtime variables\n");
+			och::print("\nToo many runtime variables\n");
 			exit(-1);
 		}
 	}
@@ -283,7 +282,6 @@ namespace och
 			++rtv.registered_var_cnt;
 		}
 	}
-
 }
 
 #else
