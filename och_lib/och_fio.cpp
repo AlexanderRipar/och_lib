@@ -135,17 +135,32 @@ namespace och
 		return DeleteFileA(filename.begin());
 	}
 
-	iohandle create_tempfile()
+	int32_t get_filepath(const iohandle file, och::memrun<char> buf)
+	{
+		return GetFinalPathNameByHandleA(file, buf.begin(), (DWORD) buf.len(), 0);
+	}
+
+	uint64_t get_last_write_time(const iohandle file)
+	{
+		FILE_BASIC_INFO info;
+
+		if (!GetFileInformationByHandleEx(file, FileBasicInfo, &info, sizeof(info)))
+			return 0;
+
+		return info.LastWriteTime.QuadPart;
+	}
+
+	iohandle create_tempfile(uint32_t share_mode)
 	{
 		char filename[MAX_PATH];
 
 		if (!GetTempFileNameA(".", "och", 0, filename))
 			return nullptr;
 
-		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail);
+		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail, share_mode);
 	}
 
-	tempfilehandle::tempfilehandle() : handle{ create_tempfile() } {}
+	tempfilehandle::tempfilehandle(uint32_t share_mode) : handle{ create_tempfile(share_mode) } {}
 
 	tempfilehandle::~tempfilehandle()
 	{

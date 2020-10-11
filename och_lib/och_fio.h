@@ -21,12 +21,15 @@ namespace och
 			share_read = 1,
 			share_write = 2,
 			share_delete = 4,
+			share_read_write = 3,
+			share_read_delete = 5,
+			share_write_delete = 6,
+			share_read_write_delete = 7,
 
 			setptr_beg = 0,
 			setptr_cur = 1,
 			setptr_end = 2,
 		};
-
 	}
 
 	using iohandle = void*;
@@ -64,6 +67,10 @@ namespace och
 
 	bool set_fileptr(const iohandle file, int64_t set_to, uint32_t setptr_mode);
 
+	int32_t get_filepath(const iohandle file, och::memrun<char> buf);
+
+	[[nodiscard]] uint64_t get_last_write_time(const iohandle file);
+
 	struct filehandle
 	{
 		const iohandle handle;
@@ -82,7 +89,12 @@ namespace och
 
 		[[nodiscard]] uint64_t size()
 		{
-			return och::get_filesize(handle);
+			return get_filesize(handle);
+		}
+
+		uint32_t path(och::memrun<char> buf)
+		{
+			return get_filepath(handle, buf);
 		}
 
 		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const { return och::set_fileptr(handle, set_to, setptr_mode); }
@@ -92,7 +104,7 @@ namespace och
 	{
 		const iohandle handle;
 
-		tempfilehandle();
+		tempfilehandle(uint32_t share_mode = 0);
 
 		~tempfilehandle();
 
@@ -105,6 +117,11 @@ namespace och
 		[[nodiscard]] uint64_t size()
 		{
 			return och::get_filesize(handle);
+		}
+
+		uint32_t path(och::memrun<char> buf)
+		{
+			return get_filepath(handle, buf);
 		}
 
 		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const { return och::set_fileptr(handle, set_to, setptr_mode); }
@@ -142,6 +159,11 @@ namespace och
 			och::close_file_array(data);
 			och::close_file(mapper);
 			och::close_file(file);
+		}
+
+		uint32_t path(och::memrun<char> buf)
+		{
+			return get_filepath(file, buf);
 		}
 
 		[[nodiscard]] T& operator[](size_t i)
