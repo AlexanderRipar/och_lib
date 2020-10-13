@@ -85,17 +85,17 @@ namespace och
 
 	och::string tokenizer::operator()()
 	{
-		while (is_delimiter(*text.begin()))
-			++text._beg;
+		while (is_delimiter(*text.beg))
+			++text.beg;
 
 		if (!text.len())
 			return { nullptr, nullptr };
 
-		const char* beg = text.begin();
+		const char* beg = text.beg;
 
-		while (*text.begin() && !is_delimiter(*text.begin()))
-			++text._beg;
+		while (*text.beg && !is_delimiter(*text.beg))
+			++text.beg;
 
-		return { beg, text._beg++ };
+		return { beg, text.beg++ };
 	}
 }

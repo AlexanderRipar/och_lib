@@ -467,7 +467,7 @@ namespace och
 
 	void print(const och::string fmt)
 	{
-		fwrite(fmt.begin(), 1, fmt.len(), stdout);
+		fwrite(fmt.beg, 1, fmt.len(), stdout);
 	}
 
 	void print(const och::ministring fmt)

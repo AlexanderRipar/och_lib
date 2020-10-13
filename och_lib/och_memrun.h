@@ -21,38 +21,22 @@ namespace och
 	template<typename T>
 	struct memrun
 	{
-		T* _beg, * _end;
+		T* beg, * end;
 
 		template<size_t Len>
-		memrun(T(&arr)[Len]) : _beg{ arr }, _end{ arr + Len } {}
+		memrun(T(&arr)[Len]) : beg{ arr }, end{ arr + Len } {}
 
-		memrun(T* beg, T* end) : _beg{ beg }, _end{ end } {}
+		memrun(T* beg, T* end) : beg{ beg }, end{ end } {}
 
-		memrun(T* beg, size_t len) : _beg{ beg }, _end{ beg + len } {}
+		memrun(T* beg, size_t len) : beg{ beg }, end{ beg + len } {}
 
-		memrun(const char* cstr) : _beg{ cstr }, _end{ cstr + strlen(cstr) } { static_assert(std::is_same<const char, T>::value, "och::memrun<T>(const char*) may only be used with T = const char"); }
+		memrun(const char* cstr) : beg{ cstr }, end{ cstr + strlen(cstr) } { static_assert(std::is_same<const char, T>::value, "och::memrun<T>(const char*) may only be used with T = const char"); }
 
-		memrun() : _beg{ nullptr }, _end{ nullptr } {}
+		[[nodiscard]] size_t len() const { return end - beg; }
 
-		[[nodiscard]] T* begin() const
-		{
-			return _beg;
-		}
+		[[nodiscard]] size_t bytes() const { return end - beg * sizeof(T); }
 
-		[[nodiscard]] T* end() const
-		{
-			return _end;
-		}
-
-		[[nodiscard]] size_t len() const
-		{
-			return _end - _beg;
-		}
-
-		[[nodiscard]] T& operator[](size_t i)
-		{
-			return _beg[i];
-		}
+		[[nodiscard]] T& operator[](size_t i) { return beg[i]; }
 	};
 
 	template<typename T>
@@ -64,9 +48,9 @@ namespace och
 
 		compressed_memrun(T* beg, uint16_t len) : _ptr_len_u{ (reinterpret_cast<int64_t>(beg) << 16) | len } {}
 
-		compressed_memrun(const memrun<T>& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run._beg) << 16) | run._end - run._beg } {}
+		compressed_memrun(const memrun<T>& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run.beg) << 16) | run.end - run.beg } {}
 
-		compressed_memrun(memrun<T>&& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run._beg) << 16) | run._end - run._beg } {}
+		compressed_memrun(memrun<T>&& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run.beg) << 16) | run.end - run.beg } {}
 
 		//compressed_memrun(const char* cstr) : _ptr_len_u{ (reinterpret_cast<int64_t>(cstr) << 16) | _const_strlen_u16(cstr) } { static_assert(std::is_same<const char, T>::value, "och::compressed_memrun<T>(const char*) may only be used with T = const char"); }
 
@@ -90,6 +74,16 @@ namespace och
 			return och::memrun(begin(), end());
 		}
 	};
+
+	template<typename T> [[nodiscard]] T* begin(och::memrun<T>& r) { return r.beg; }
+	template<typename T> [[nodiscard]] T* end(och::memrun<T>& r) { return r.end; }
+	template<typename T> [[nodiscard]] const T* begin(const och::memrun<T>& r) { return r.beg; }
+	template<typename T> [[nodiscard]] const T* end(const och::memrun<T>& r) { return r.end; }
+
+	template<typename T> [[nodiscard]] T* begin(och::compressed_memrun<T>& r) { return r.begin(); }
+	template<typename T> [[nodiscard]] T* end(och::compressed_memrun<T>& r) { return r.end(); }
+	template<typename T> [[nodiscard]] const T* begin(const och::compressed_memrun<T>& r) { return r.begin(); }
+	template<typename T> [[nodiscard]] const T* end(const och::compressed_memrun<T>& r) { return r.end(); }
 
 	using string = memrun<const char>;
 

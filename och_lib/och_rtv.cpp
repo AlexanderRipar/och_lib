@@ -1,4 +1,3 @@
-#define OCH_RTV
 
 #include "och_rtv.h"
 #include "och_fio.h"
@@ -29,7 +28,7 @@ namespace och
 	{
 		int registered_var_cnt = 0;
 
-		och::string config_filename;
+		och::string config_filename{ nullptr, nullptr };
 
 		void* pointers[och::max_rtv_cnt];
 

@@ -58,7 +58,7 @@ namespace och
 
 	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode)
 	{
-		iohandle file = CreateFileA(filename.begin(), access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), FILE_ATTRIBUTE_NORMAL, nullptr);
+		iohandle file = CreateFileA(filename.beg, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), FILE_ATTRIBUTE_NORMAL, nullptr);
 
 		return file == INVALID_HANDLE_VALUE ? nullptr : file;
 	}
@@ -96,23 +96,23 @@ namespace och
 
 	bool delete_file(const och::string filename)
 	{
-		return DeleteFileA(filename.begin());
+		return DeleteFileA(filename.beg);
 	}
 
-	uint32_t freadbytes(const iohandle file, char* dst, uint32_t bytes)
+	och::memrun<char> read_from_file(const iohandle file, och::memrun<char> buf)
 	{
 		uint32_t bytes_read = 0;
 
-		ReadFile(file, dst, bytes, reinterpret_cast<LPDWORD>(&bytes_read), nullptr);
+		ReadFile(file, buf.beg, static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_read), nullptr);
 
-		return bytes_read;
+		return och::memrun<char>(buf.beg, bytes_read);
 	}
 
-	uint32_t fwritebytes(const iohandle file, const char* src, uint32_t bytes)
+	uint32_t write_to_file(const iohandle file, och::string buf)
 	{
 		uint32_t bytes_written = 0;
 
-		WriteFile(file, reinterpret_cast<const void*>(src), bytes, reinterpret_cast<LPDWORD>(&bytes_written), nullptr);
+		WriteFile(file, reinterpret_cast<const void*>(buf.beg), static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_written), nullptr);
 
 		return bytes_written;
 	}
@@ -159,9 +159,9 @@ namespace och
 		return true;
 	}
 
-	int32_t get_filepath(const iohandle file, och::memrun<char> buf)
+	och::memrun<char> get_filepath(const iohandle file, och::memrun<char> buf)
 	{
-		return GetFinalPathNameByHandleA(file, buf.begin(), (DWORD) buf.len(), 0);
+		return och::memrun<char>(buf.beg, GetFinalPathNameByHandleA(file, buf.beg, (DWORD) buf.len(), 0));
 	}
 
 	uint64_t get_last_write_time(const iohandle file)
@@ -184,13 +184,13 @@ namespace och
 		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail, share_mode);
 	}
 
-	tempfilehandle::tempfilehandle(uint32_t share_mode) : handle{ create_tempfile(share_mode) } {}
+	tempfilehandle::tempfilehandle(uint32_t share_mode) : filehandle{ create_tempfile(share_mode) } {}
 
 	tempfilehandle::~tempfilehandle()
 	{
-		char buf[MAX_PATH];
+		char buf[MAX_PATH + 1];
 
-		GetFinalPathNameByHandleA(handle, buf, MAX_PATH, 0);
+		GetFinalPathNameByHandleA(handle, buf, sizeof(buf), 0);
 
 		close_file(handle);
 
