@@ -10,9 +10,7 @@ int main()
 
 	char buf[256];
 
-	file.read(buf);
-
-	std::array<char, 256> arr;
+	auto fdata = file.read(buf);
 
 	/*och::iohandle file = och::open_file("testfile.txt", och::fio::access_read, och::fio::open_normal, och::fio::open_fail);
 

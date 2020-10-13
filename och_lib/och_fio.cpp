@@ -6,7 +6,7 @@
 
 namespace och
 {
-	uint32_t interp_openmode(uint32_t existing_mode, uint32_t new_mode)
+	uint32_t interp_openmode(uint32_t existing_mode, uint32_t new_mode) noexcept
 	{
 		switch (existing_mode)
 		{
@@ -41,29 +41,29 @@ namespace och
 		}
 	}
 
-	uint32_t access_interp_open(uint32_t access_rights)
+	uint32_t access_interp_open(uint32_t access_rights) noexcept
 	{
 		return access_rights << 30;
 	}
 
-	uint32_t access_interp_page(uint32_t access_rights)
+	uint32_t access_interp_page(uint32_t access_rights) noexcept
 	{
 		return ((access_rights ^ 3) + ((access_rights == 3) << 1)) << 1;
 	}
 
-	uint32_t access_interp_fmap(uint32_t access_rights)
+	uint32_t access_interp_fmap(uint32_t access_rights) noexcept
 	{
 		return (access_rights - ((access_rights == 3) << 1)) << 1;
 	}
 
-	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode)
+	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept
 	{
 		iohandle file = CreateFileA(filename.beg, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), FILE_ATTRIBUTE_NORMAL, nullptr);
 
 		return file == INVALID_HANDLE_VALUE ? nullptr : file;
 	}
 
-	iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name)
+	iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name) noexcept
 	{
 		if (!file)
 			return nullptr;
@@ -75,7 +75,7 @@ namespace och
 		return CreateFileMappingA(file, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name);
 	}
 
-	iohandle file_as_array(const iohandle file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end)
+	iohandle file_as_array(iohandle file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end) noexcept
 	{
 		LARGE_INTEGER _beg;
 
@@ -84,22 +84,22 @@ namespace och
 		return MapViewOfFile(file_mapping, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, end - beg);
 	}
 
-	bool close_file(const iohandle file)
+	bool close_file(iohandle file) noexcept
 	{
 		return CloseHandle(file);
 	}
 
-	bool close_file_array(const iohandle file_array)
+	bool close_file_array(iohandle file_array) noexcept
 	{
 		return UnmapViewOfFile(file_array);
 	}
 
-	bool delete_file(const och::string filename)
+	bool delete_file(const och::string filename) noexcept
 	{
 		return DeleteFileA(filename.beg);
 	}
 
-	och::memrun<char> read_from_file(const iohandle file, och::memrun<char> buf)
+	och::memrun<char> read_from_file(iohandle file, och::memrun<char> buf) noexcept
 	{
 		uint32_t bytes_read = 0;
 
@@ -108,7 +108,7 @@ namespace och
 		return och::memrun<char>(buf.beg, bytes_read);
 	}
 
-	uint32_t write_to_file(const iohandle file, och::string buf)
+	uint32_t write_to_file(iohandle file, const och::string buf) noexcept
 	{
 		uint32_t bytes_written = 0;
 
@@ -117,7 +117,7 @@ namespace och
 		return bytes_written;
 	}
 
-	bool set_fileptr(const iohandle file, int64_t set_to, uint32_t setptr_mode)
+	bool set_fileptr(iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept
 	{
 		LARGE_INTEGER _set_to;
 
@@ -126,7 +126,7 @@ namespace och
 		return SetFilePointerEx(file, _set_to, nullptr, static_cast<DWORD>(setptr_mode));
 	}
 
-	int64_t get_filesize(const iohandle file)
+	int64_t get_filesize(iohandle file) noexcept
 	{
 		LARGE_INTEGER filesize;
 
@@ -135,7 +135,7 @@ namespace och
 		return filesize.QuadPart;
 	}
 
-	bool set_filesize(const iohandle file, uint64_t bytes)
+	bool set_filesize(iohandle file, uint64_t bytes) noexcept
 	{
 		LARGE_INTEGER old_fileptr;
 
@@ -159,12 +159,12 @@ namespace och
 		return true;
 	}
 
-	och::memrun<char> get_filepath(const iohandle file, och::memrun<char> buf)
+	och::memrun<char> get_filepath(iohandle file, och::memrun<char> buf) noexcept
 	{
 		return och::memrun<char>(buf.beg, GetFinalPathNameByHandleA(file, buf.beg, (DWORD) buf.len(), 0));
 	}
 
-	uint64_t get_last_write_time(const iohandle file)
+	uint64_t get_last_write_time(iohandle file) noexcept
 	{
 		FILE_BASIC_INFO info;
 
@@ -174,7 +174,7 @@ namespace och
 		return info.LastWriteTime.QuadPart;
 	}
 
-	iohandle create_tempfile(uint32_t share_mode)
+	iohandle create_tempfile(uint32_t share_mode) noexcept
 	{
 		char filename[MAX_PATH];
 
@@ -184,9 +184,9 @@ namespace och
 		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail, share_mode);
 	}
 
-	tempfilehandle::tempfilehandle(uint32_t share_mode) : filehandle{ create_tempfile(share_mode) } {}
+	tempfilehandle::tempfilehandle(uint32_t share_mode) noexcept : filehandle{ create_tempfile(share_mode) } {}
 
-	tempfilehandle::~tempfilehandle()
+	tempfilehandle::~tempfilehandle() noexcept
 	{
 		char buf[MAX_PATH + 1];
 
