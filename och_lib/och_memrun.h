@@ -24,11 +24,11 @@ namespace och
 		T* beg, * end;
 
 		template<size_t Len>
-		memrun(T(&arr)[Len]) : beg{ arr }, end{ arr + Len } {}
+		constexpr memrun(T(&arr)[Len]) : beg{ arr }, end{ arr + Len } {}
 
-		memrun(T* beg, T* end) : beg{ beg }, end{ end } {}
+		constexpr memrun(T* beg, T* end) : beg{ beg }, end{ end } {}
 
-		memrun(T* beg, size_t len) : beg{ beg }, end{ beg + len } {}
+		constexpr memrun(T* beg, size_t len) : beg{ beg }, end{ beg + len } {}
 
 		memrun(const char* cstr) : beg{ cstr }, end{ cstr + strlen(cstr) } { static_assert(std::is_same<const char, T>::value, "och::memrun<T>(const char*) may only be used with T = const char"); }
 
@@ -88,4 +88,10 @@ namespace och
 	using string = memrun<const char>;
 
 	using ministring = compressed_memrun<const char>;
+
+}
+
+constexpr inline och::string operator""R(const char* str, size_t len)
+{
+	return och::string(str, len);
 }
