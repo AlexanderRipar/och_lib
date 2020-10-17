@@ -354,7 +354,7 @@ namespace och
 
 
 
-	// [argindex} [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]
+	// [argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]
 	void vprint(const char* fmt, arg argv[], uint32_t argc, FILE* out)
 	{
 		uint32_t arg_idx = 0;
@@ -468,11 +468,6 @@ namespace och
 	void print(const och::string fmt)
 	{
 		fwrite(fmt.beg, 1, fmt.len(), stdout);
-	}
-
-	void print(const och::ministring fmt)
-	{
-		fwrite(fmt.begin(), 1, fmt.len(), stdout);
 	}
 
 	namespace fmt
