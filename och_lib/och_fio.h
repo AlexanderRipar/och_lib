@@ -53,7 +53,7 @@ namespace och
 
 	bool delete_file(const och::string filename) noexcept;
 
-	bool set_fileptr(iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept;
+	bool file_seek(iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept;
 
 	bool set_filesize(iohandle file, uint64_t bytes) noexcept;
 
@@ -75,13 +75,15 @@ namespace och
 
 		uint32_t write(const och::string buf) const noexcept { return write_to_file(handle, buf); }
 
-		[[nodiscard]] uint64_t get_size() noexcept { return och::get_filesize(handle); }
+		[[nodiscard]] uint64_t get_size() noexcept { return get_filesize(handle); }
 
-		bool set_size(uint64_t bytes) const noexcept { return och::set_filesize(handle, bytes); }
+		bool set_size(uint64_t bytes) const noexcept { return set_filesize(handle, bytes); }
 
 		och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(handle, buf); }
 
-		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return och::set_fileptr(handle, set_to, setptr_mode); }
+		bool seek(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return file_seek(handle, set_to, setptr_mode); }
+
+		[[nodiscard]] bool operator!() { return !handle; }
 	};
 
 	struct tempfilehandle : public filehandle
@@ -100,7 +102,7 @@ namespace och
 
 		och::memrun<char> path(och::memrun<char> buf) noexcept { return get_filepath(handle, buf); }
 
-		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return och::set_fileptr(handle, set_to, setptr_mode); }
+		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return och::file_seek(handle, set_to, setptr_mode); }
 	};
 
 	struct mapped_file

@@ -117,7 +117,7 @@ namespace och
 		return bytes_written;
 	}
 
-	bool set_fileptr(iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept
+	bool file_seek(iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept
 	{
 		LARGE_INTEGER _set_to;
 
