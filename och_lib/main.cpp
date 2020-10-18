@@ -1,16 +1,23 @@
 #include "och_lib.h"
 
-#include <array>
-
 #include "tests.h"
 
 int main()
 {
-	och::filehandle file("Test", och::fio::access_read, och::fio::open_normal, och::fio::open_fail);
 
-	char buf[256];
-
-	auto fdata = file.read(buf);
+	//och::filehandle file("testfile.txt", och::fio::access_readwrite, och::fio::open_normal, och::fio::open_fail);
+	//
+	//if (!file)
+	//{
+	//	och::print("Uh Oh...\n");
+	//	return 1;
+	//}
+	//
+	//char buf[256];
+	//
+	//och::print("{}\n", file.read(buf));
+	//
+	//file.write("\n\nHaha...\n\nUnless...");
 
 	/*och::iohandle file = och::open_file("testfile.txt", och::fio::access_read, och::fio::open_normal, och::fio::open_fail);
 

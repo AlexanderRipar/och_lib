@@ -90,8 +90,3 @@ namespace och
 	using ministring = compressed_memrun<const char>;
 
 }
-
-constexpr inline och::string operator""R(const char* str, size_t len)
-{
-	return och::string(str, len);
-}
