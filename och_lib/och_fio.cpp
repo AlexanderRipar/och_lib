@@ -196,6 +196,22 @@ namespace och
 
 		delete_file(buf);
 	}
+
+	iohandle get_stdout()
+	{
+		return GetStdHandle(STD_OUTPUT_HANDLE);
+	}
+
+	iohandle get_stdin()
+	{
+		return GetStdHandle(STD_INPUT_HANDLE);
+	}
+
+	iohandle get_stderr()
+	{
+		return GetStdHandle(STD_ERROR_HANDLE);
+	}
+
 }
 
 #endif // _WIN32

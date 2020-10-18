@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+
 #include "och_memrun.h"
 
 namespace och
@@ -143,4 +144,12 @@ namespace och
 
 		[[nodiscard]] bool is_valid() const noexcept { return data; }
 	};
+
+	iohandle get_stdout();
+	iohandle get_stdin();
+	iohandle get_stderr();
+
+	const iohandle out = get_stdout();
+	const iohandle in = get_stdin();
+	const iohandle err = get_stderr();
 }
