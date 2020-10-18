@@ -62,6 +62,12 @@
     <ClInclude Include="tests.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="och_crlf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="och_page.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="testfile.txt">
