@@ -31,10 +31,9 @@ namespace och
 			setptr_end = 2,
 		};
 	}
-
+	
 	using iohandle = void*;
 
-	
 	[[nodiscard]] iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
 	[[nodiscard]] iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr) noexcept;
@@ -74,6 +73,8 @@ namespace och
 		[[nodiscard]] och::memrun<char> read(och::memrun<char> buf) const noexcept { return read_from_file(handle, buf); }
 
 		uint32_t write(const och::string buf) const noexcept { return write_to_file(handle, buf); }
+
+		uint32_t write(const och::memrun<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
 
 		[[nodiscard]] uint64_t get_size() noexcept { return get_filesize(handle); }
 
