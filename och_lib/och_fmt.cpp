@@ -20,7 +20,7 @@ namespace och
 		if (!vbuf.len())
 		{
 			och::write_to_file(out, { vbuf.end - vprint_buf_size, vbuf.end });
-			vbuf = { vbuf.end - vprint_buf_size, vprint_buf_size };
+			vbuf.beg = _vbuf;
 		}
 
 		*(vbuf.beg++) = c;
@@ -37,12 +37,11 @@ namespace och
 
 			len -= to_write;
 			
-			if (len)
-			{
-				och::write_to_file(out, { vbuf.end - vprint_buf_size, vbuf.beg });
-				vbuf = { vbuf.end - vprint_buf_size, vprint_buf_size };
-			}
-			return;
+			if (!len)
+				return;
+
+			och::write_to_file(out, { vbuf.end - vprint_buf_size, vbuf.beg });
+			vbuf.beg = _vbuf;
 		}
 	}
 
@@ -344,8 +343,6 @@ namespace och
 
 	}
 
-
-
 	//Format-function vtable
 	fmt_function format_functions[32]{
 		f_uint,
@@ -479,7 +476,10 @@ namespace och
 		}
 
 		if (vbuf.beg != _vbuf)
+		{
 			och::write_to_file(out, { _vbuf, vbuf.beg });
+			vbuf.beg = _vbuf;
+		}
 	}
 
 	void print(const och::string fmt)
