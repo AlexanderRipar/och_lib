@@ -1,23 +1,55 @@
 #include "och_fmt.h"
 
 #include <cstdint>
-#include <cstring>
-#include <cstdio>
-#include <cmath>
 
 #include "och_memrun.h"
+#include "och_fio.h"
 
 namespace och
 {
 	constexpr const char f_hex_symbols[2][16]{ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 	const char* f_curr_hex_symbols = f_hex_symbols[0];
 
+	constexpr int vprint_buf_size = 8192;
+
+	char _vbuf[vprint_buf_size];
+	och::memrun vbuf(_vbuf);
+
+	inline void to_vbuf(char c, iohandle out)
+	{
+		if (!vbuf.len())
+		{
+			och::write_to_file(out, { vbuf.end - vprint_buf_size, vbuf.end });
+			vbuf = { vbuf.end - vprint_buf_size, vprint_buf_size };
+		}
+
+		*(vbuf.beg++) = c;
+	}
+
+	inline void to_vbuf(const char* str, uint32_t len, iohandle out)
+	{
+		while (true)
+		{
+			uint32_t to_write = len < (uint32_t)vbuf.len() ? len : (uint32_t)vbuf.len();
+
+			for (uint32_t i = 0; i < to_write; ++i)
+				*(vbuf.beg++) = *(str++);
+
+			len -= to_write;
+			
+			if (len)
+			{
+				och::write_to_file(out, { vbuf.end - vprint_buf_size, vbuf.beg });
+				vbuf = { vbuf.end - vprint_buf_size, vprint_buf_size };
+			}
+			return;
+		}
+	}
+
 	uint32_t f_default_precision = 4;
 	float f_default_precision_factor = 10.0F * 10.0F * 10.0F * 10.0F;
 
-	using fmt_function = void (*) (arg in, FILE* out);
-
-	void f_uint(arg in, FILE* out)
+	void f_uint(arg in, och::iohandle out)
 	{
 		uint64_t val = in.i;
 
@@ -39,20 +71,20 @@ namespace och
 		if (in.get_rightadj())
 		{
 			for (uint32_t j = 19 - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-
-			fwrite(buf + i + 1, 1, 19llu - i, out);
+				to_vbuf(in.get_filler(), out);
+		
+			to_vbuf(buf + i + 1, 19 - i, out);
 		}
 		else
 		{
-			fwrite(buf + i + 1, 1, 19llu - i, out);
+			to_vbuf(buf + i + 1, 19 - i, out);
 
 			for (uint32_t j = 19 - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
+				to_vbuf(in.get_filler(), out);
 		}
 	}
 
-	void f_int(arg in, FILE* out)
+	void f_int(arg in, och::iohandle out)
 	{
 		int64_t val = static_cast<int64_t>(in.i);
 
@@ -87,22 +119,22 @@ namespace och
 		if (in.get_rightadj())
 		{
 			for (uint32_t j = 19 - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-
-			fwrite(buf + i + 1, 1, 19llu - i, out);
+				to_vbuf(in.get_filler(), out);
+		
+			to_vbuf(buf + i + 1, 19llu - i, out);
 		}
 		else
 		{
-			fwrite(buf + i + 1, 1, 19llu - i, out);
-
+			to_vbuf(buf + i + 1, 19llu - i, out);
+		
 			for (uint32_t j = 19 - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
+				to_vbuf(in.get_filler(), out);
 		}
 	}
 
-	void f_ministring(arg in, FILE* out)
+	void f_ministring(arg in, och::iohandle out)
 	{
-		size_t len = in.s.len();
+		uint16_t len = in.s.len();
 
 		if (in.get_precision() != -1 && len > in.get_precision())
 			len = in.get_precision();
@@ -110,207 +142,204 @@ namespace och
 		if (in.get_rightadj())
 		{
 			for (size_t j = len; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-
-			fwrite(in.s.begin(), 1, len, out);
+				to_vbuf(in.get_filler(), out);
+		
+			to_vbuf(in.s.begin(), len, out);
 		}
 		else
 		{
-			fwrite(in.s.begin(), 1, len, out);
-
+			to_vbuf(in.s.begin(), len, out);
+		
 			for (size_t j = len; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
+				to_vbuf(in.get_filler(), out);
 		}
 	}
 
-	//TODO
-	void f_float(arg in, FILE* out)
+	void f_float(arg in, och::iohandle out)
 	{
-		constexpr uint32_t bufsize = 32;
-
-		char buf[bufsize];
-
-		uint32_t i = bufsize;
-
-		float f = in.f;
-
-		if (f == INFINITY)
-		{
-			i -= 3;
-			memcpy(buf + 17, "inf", 3);
-
-			if (in.get_signmode() == 1)
-				buf[--i] = '+';
-			else if (in.get_signmode() == 2)
-				buf[--i] = ' ';
-
-		}
-		else if (f == -INFINITY)
-		{
-			i -= 4;
-			memcpy(buf + 16, "-inf", 4);
-		}
-		else
-		{
-			int64_t int_val = static_cast<int64_t>(f);
-
-			float precision_factor;
-
-			if (in.get_precision() == -1)
-			{
-				in.set_precision(f_default_precision);
-				precision_factor = f_default_precision_factor;
-			}
-			else
-				precision_factor = powf(in.get_precision(), 10.0F);
-
-			uint64_t dec_val = static_cast<uint64_t>((in.f - static_cast<float>(int_val)) * f_default_precision_factor);
-
-			while (dec_val && bufsize - i != in.get_precision())
-			{
-				buf[--i] = '0' + dec_val % 10;
-
-				dec_val /= 10;
-			}
-
-			while (bufsize - i != in.get_precision())
-				buf[--i] = '0';
-
-			if (in.get_precision())
-				buf[--i] = '.';
-
-			bool negative = false;
-			if (f < 0)
-			{
-				negative = true;
-				int_val = -int_val;
-			}
-			else if (!int_val)
-				buf[--i] = '0';
-			else
-				while (int_val)
-				{
-					buf[--i] = '0' + int_val % 10;
-
-					int_val /= 10;
-				}
-
-			if (negative)
-				buf[--i] = '-';
-			else if (in.get_signmode() == 1)
-				buf[--i] = '+';
-			else if (in.get_signmode() == 2)
-				buf[--i] = ' ';
-		}
-
-		if (in.get_rightadj())
-		{
-			for (uint32_t j = bufsize - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-
-			fwrite(buf + i, 1, bufsize - i, out);
-		}
-		else
-		{
-			fwrite(buf + i, 1, bufsize - i, out);
-
-			for (uint32_t j = bufsize - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-		}
+		//constexpr uint32_t bufsize = 32;
+		//
+		//char buf[bufsize];
+		//
+		//uint32_t i = bufsize;
+		//
+		//float f = in.f;
+		//
+		//if (f == INFINITY)
+		//{
+		//	i -= 3;
+		//	memcpy(buf + 17, "inf", 3);
+		//
+		//	if (in.get_signmode() == 1)
+		//		buf[--i] = '+';
+		//	else if (in.get_signmode() == 2)
+		//		buf[--i] = ' ';
+		//
+		//}
+		//else if (f == -INFINITY)
+		//{
+		//	i -= 4;
+		//	memcpy(buf + 16, "-inf", 4);
+		//}
+		//else
+		//{
+		//	int64_t int_val = static_cast<int64_t>(f);
+		//
+		//	float precision_factor;
+		//
+		//	if (in.get_precision() == -1)
+		//	{
+		//		in.set_precision(f_default_precision);
+		//		precision_factor = f_default_precision_factor;
+		//	}
+		//	else
+		//		precision_factor = powf(in.get_precision(), 10.0F);
+		//
+		//	uint64_t dec_val = static_cast<uint64_t>((in.f - static_cast<float>(int_val)) * f_default_precision_factor);
+		//
+		//	while (dec_val && bufsize - i != in.get_precision())
+		//	{
+		//		buf[--i] = '0' + dec_val % 10;
+		//
+		//		dec_val /= 10;
+		//	}
+		//
+		//	while (bufsize - i != in.get_precision())
+		//		buf[--i] = '0';
+		//
+		//	if (in.get_precision())
+		//		buf[--i] = '.';
+		//
+		//	bool negative = false;
+		//	if (f < 0)
+		//	{
+		//		negative = true;
+		//		int_val = -int_val;
+		//	}
+		//	else if (!int_val)
+		//		buf[--i] = '0';
+		//	else
+		//		while (int_val)
+		//		{
+		//			buf[--i] = '0' + int_val % 10;
+		//
+		//			int_val /= 10;
+		//		}
+		//
+		//	if (negative)
+		//		buf[--i] = '-';
+		//	else if (in.get_signmode() == 1)
+		//		buf[--i] = '+';
+		//	else if (in.get_signmode() == 2)
+		//		buf[--i] = ' ';
+		//}
+		//
+		//if (in.get_rightadj())
+		//{
+		//	for (uint32_t j = bufsize - i; j < in.get_width(); ++j)
+		//		putc(in.get_filler(), out);
+		//
+		//	fwrite(buf + i, 1, bufsize - i, out);
+		//}
+		//else
+		//{
+		//	fwrite(buf + i, 1, bufsize - i, out);
+		//
+		//	for (uint32_t j = bufsize - i; j < in.get_width(); ++j)
+		//		putc(in.get_filler(), out);
+		//}
 	}
 
-	//TODO
-	void f_double(arg in, FILE* out)
+	void f_double(arg in, och::iohandle out)
 	{
 
 	}
 
-	void f_hexadecimal(arg in, FILE* out)
+	void f_hexadecimal(arg in, och::iohandle out)
 	{
 		uint64_t val = in.i;
-
+		
 		char buf[16];
 		int i = 15;
-
+		
 		if (!val)
 			buf[i--] = '0';
-
+		
 		while (val)
 		{
 			buf[i--] = f_curr_hex_symbols[val & 0xF];
-
+		
 			val >>= 4;
 		}
-
+		
 		if (in.get_rightadj())
 		{
 			for (uint32_t j = 15 - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-
-			fwrite(buf + i + 1, 1, 15llu - i, out);
+				to_vbuf(in.get_filler(), out);
+		
+			to_vbuf(buf + i + 1, 15llu - i, out);
 		}
 		else
 		{
-			fwrite(buf + i + 1, 1, 15llu - i, out);
-
+			to_vbuf(buf + i + 1, 15llu - i, out);
+		
 			for (uint32_t j = 15 - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
+				to_vbuf(in.get_filler(), out);
 		}
 	}
 
-	void f_binary(arg in, FILE* out)
+	void f_binary(arg in, och::iohandle out)
 	{
 		uint64_t val = in.i;
-
+		
 		char buf[64];
 		int i = 63;
-
+		
 		if (!val)
 			buf[i--] = '0';
-
+		
 		while (val)
 		{
 			buf[i--] = '0' + (val & 1);
-
+		
 			val >>= 1;
 		}
-
+		
 		if (in.get_rightadj())
 		{
 			for (uint32_t j = 63 - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-
-			fwrite(buf + i + 1, 1, 63llu - i, out);
+				to_vbuf(in.get_filler(), out);
+		
+			to_vbuf(buf + i + 1, 63llu - i, out);
 		}
 		else
 		{
-			fwrite(buf + i + 1, 1, 63llu - i, out);
-
+			to_vbuf(buf + i + 1, 63llu - i, out);
+		
 			for (uint32_t j = 63 - i; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
+				to_vbuf(in.get_filler(), out);
 		}
 	}
 
-	void f_character(arg in, FILE* out)
+	void f_character(arg in, och::iohandle out)
 	{
 		if (in.get_rightadj())
 		{
 			for (uint32_t j = 1; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
-
-			putc(static_cast<char>(in.i), out);
+				to_vbuf(in.get_filler(), out);
+		
+			to_vbuf(static_cast<char>(in.i), out);
 		}
 		else
 		{
-			putc(static_cast<char>(in.i), out);
-
+			to_vbuf(static_cast<char>(in.i), out);
+		
 			for (uint32_t j = 1; j < in.get_width(); ++j)
-				putc(in.get_filler(), out);
+				to_vbuf(in.get_filler(), out);
 		}
 	}
 
-	//TODO
-	void f_scientific(arg in, FILE* out)
+	void f_scientific(arg in, och::iohandle out)
 	{
 
 	}
@@ -352,14 +381,10 @@ namespace och
 		nullptr,			//z
 	};
 
-
-
 	// [argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]
-	void vprint(const char* fmt, arg argv[], uint32_t argc, FILE* out)
+	void vprint(const char* fmt, arg argv[], uint32_t argc, och::iohandle out)
 	{
 		uint32_t arg_idx = 0;
-
-		uint32_t char_cnt = 0;
 
 		for (char c = *fmt; c; c = *(++fmt))
 		{
@@ -369,13 +394,10 @@ namespace och
 
 				if (c == '{')						//Exit for printing escape-character
 				{
-					++char_cnt;
+					to_vbuf(c, out);
+
 					continue;
 				}
-
-				fwrite(fmt - char_cnt - 1, 1, char_cnt, out);	//Output string before format
-
-				char_cnt = 0;
 
 				//Actual formatting encountered
 
@@ -452,22 +474,17 @@ namespace och
 			}
 			else
 			{
-				++char_cnt;
+				to_vbuf(c, out);
 			}
 		}
 
-		if(char_cnt)
-			fwrite(fmt - char_cnt, 1, char_cnt, out);		//output remaining string
-	}
-
-	void print(const char* fmt)
-	{
-		fputs(fmt, stdout);
+		if (vbuf.beg != _vbuf)
+			och::write_to_file(out, { _vbuf, vbuf.beg });
 	}
 
 	void print(const och::string fmt)
 	{
-		fwrite(fmt.beg, 1, fmt.len(), stdout);
+		och::write_to_file(och::out, fmt);
 	}
 
 	namespace fmt

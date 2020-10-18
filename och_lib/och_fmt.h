@@ -1,11 +1,9 @@
 #pragma once
 
 #include <cstdint>
-#include <cstring>
-#include <cstdio>
-#include <cmath>
 
 #include "och_memrun.h"
+#include "och_fio.h"
 
 namespace och
 {
@@ -65,12 +63,10 @@ namespace och
 		arg(  och::memrun<char> s) : offset{ static_cast<uint8_t>(types::_string) }, s{ reinterpret_cast<const char*>(s.beg), static_cast<uint16_t>(s.len()) } {}
 	};
 
-	using fmt_function = void (*) (arg in, FILE* out);
+	using fmt_function = void (*) (arg in, och::iohandle out);
 
 	// [argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]
-	void vprint(const char* fmt, arg argv[], uint32_t argc, FILE* out);
-
-	void print(const char* fmt);
+	void vprint(const char* fmt, arg argv[], uint32_t argc, och::iohandle);
 
 	void print(const och::string fmt);
 
@@ -79,11 +75,11 @@ namespace och
 	{
 		arg argv[]{ args... };
 
-		vprint(fmt.beg, argv, sizeof...(args), stdout);
+		vprint(fmt.beg, argv, sizeof...(args), och::out);
 	}
 
 	template<typename... Args>
-	void fprint(FILE* out, const och::string fmt, Args... args)
+	void print(och::iohandle out, const och::string fmt, Args... args)
 	{
 		arg argv[]{ args... };
 
