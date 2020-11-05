@@ -33,6 +33,9 @@
     <ClCompile Include="och_net.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="och_time.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="och_fio.h">
@@ -72,6 +75,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="och_net.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="och_time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

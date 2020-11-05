@@ -4,6 +4,5 @@
 
 int main()
 {
-
-	//och::test_net()
+	och::test_time();
 }
