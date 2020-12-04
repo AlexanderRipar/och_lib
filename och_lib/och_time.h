@@ -5,45 +5,63 @@
 
 namespace och
 {
-	void init_time();
+	struct timespan
+	{
+		int64_t val;
 
-	struct local_date;
+		timespan operator+(timespan rhs) const noexcept;
 
-	struct date;
+		timespan operator-(timespan rhs) const noexcept;
 
-	struct timediff
+		void operator+=(timespan rhs) noexcept;
+
+		void operator-=(timespan rhs) noexcept;
+
+		bool operator<(timespan rhs) const noexcept;
+
+		bool operator<=(timespan rhs) const noexcept;
+
+		bool operator>(timespan rhs) const noexcept;
+
+		bool operator>=(timespan rhs) const noexcept;
+
+		bool operator==(timespan rhs) const noexcept;
+
+		bool operator!=(timespan rhs) const noexcept;
+	};
+
+	struct time
 	{
 		uint64_t val;
 
-		uint64_t nanoseconds() const noexcept { return val * 100llu; }
+		static time now() noexcept;
 
-		uint64_t microseconds() const noexcept { return val / 10llu; }
+		time operator+(timespan rhs) const noexcept;
 
-		uint64_t milliseconds() const noexcept { return val / 10'000llu; }
+		time operator-(timespan rhs) const noexcept;
 
-		uint64_t seconds() const noexcept { return val / 10'000'000llu; }
+		timespan operator+(time rhs) const noexcept;
 
-		uint64_t hours() const noexcept { return val / 600'000'000llu; }
+		timespan operator-(time rhs) const noexcept;
 
-		uint64_t days() const noexcept { return val / 14'400'000'000llu; }
+		void operator+=(timespan rhs) noexcept;
+
+		void operator-=(timespan rhs) noexcept;
+
+		bool operator<(time rhs) const noexcept;
+
+		bool operator<=(time rhs) const noexcept;
+
+		bool operator>(time rhs) const noexcept;
+
+		bool operator>=(time rhs) const noexcept;
+
+		bool operator==(time rhs) const noexcept;
+
+		bool operator!=(time rhs) const noexcept;
 	};
 
-	struct timepoint
-	{
-		uint64_t val;
-
-		timepoint() noexcept {}
-
-		timepoint(const date& utc) noexcept;
-
-		static timepoint now() noexcept;
-
-		timediff since_epoch() const noexcept;
-
-		timediff operator-(timepoint rhs) const noexcept;
-	};
-
-	struct date
+	struct time_info
 	{
 		uint16_t year;
 		uint16_t month;
@@ -54,115 +72,16 @@ namespace och
 		uint16_t second;
 		uint16_t millisecond;
 
-		date() noexcept {}
+		time_info() = default;
 
-		date(const local_date& local) noexcept;
+		time_info(uint16_t year, uint16_t month, uint16_t weekday, uint16_t monthday, uint16_t hour, uint16_t minute, uint16_t second, uint16_t millisecond) noexcept;
 
-		date(timepoint tp) noexcept;
+		time_info(time t) noexcept;
 
-		static date now() noexcept;
+		static time_info utc_now() noexcept;
 
-		bool operator<(const date& rhs) const noexcept
-		{
-			return year < rhs.year || month < rhs.month || monthday < rhs.monthday || hour < rhs.hour || minute < rhs.minute || second < rhs.second || millisecond < rhs.millisecond;
-		}
-
-		bool operator>(const date& rhs) const noexcept
-		{
-			return year > rhs.year || month > rhs.month || monthday > rhs.monthday || hour > rhs.hour || minute > rhs.minute || second > rhs.second || millisecond > rhs.millisecond;
-		}
-
-		bool operator<=(const date& rhs) const noexcept
-		{
-			return !operator>(rhs);
-		}
-
-		bool operator>=(const date& rhs) const noexcept
-		{
-			return !operator<(rhs);
-		}
-
-		bool operator==(const date& rhs) const noexcept
-		{
-			return year == rhs.year && month == rhs.month && monthday == rhs.monthday && hour == rhs.hour && minute == rhs.minute && second == rhs.second && millisecond == rhs.millisecond;
-		}
-
-		bool operator!=(const date& rhs) const noexcept
-		{
-			return !operator==(rhs);
-		}
+		static time_info local_now() noexcept;
 	};
 
-	struct local_date
-	{
-		uint16_t year;
-		uint16_t month;
-		uint16_t weekday;
-		uint16_t monthday;
-		uint16_t hour;
-		uint16_t minute;
-		uint16_t second;
-		uint16_t millisecond;
-
-		local_date() noexcept {}
-
-		local_date(const date& utc) noexcept;
-
-		local_date(timepoint tp) noexcept;
-
-		static local_date now() noexcept;
-
-		bool operator<(const local_date& rhs) const noexcept
-		{
-			return year < rhs.year || month < rhs.month || monthday < rhs.monthday || hour < rhs.hour || minute < rhs.minute || second < rhs.second || millisecond < rhs.millisecond;
-		}
-
-		bool operator>(const local_date& rhs) const noexcept
-		{
-			return year > rhs.year || month > rhs.month || monthday > rhs.monthday || hour > rhs.hour || minute > rhs.minute || second > rhs.second || millisecond > rhs.millisecond;
-		}
-
-		bool operator<=(const local_date& rhs) const noexcept
-		{
-			return !operator>(rhs);
-		}
-
-		bool operator>=(const local_date& rhs) const noexcept
-		{
-			return !operator<(rhs);
-		}
-
-		bool operator==(const local_date& rhs) const noexcept
-		{
-			return year == rhs.year && month == rhs.month && monthday == rhs.monthday && hour == rhs.hour && minute == rhs.minute && second == rhs.second && millisecond == rhs.millisecond;
-		}
-
-		bool operator!=(const local_date& rhs) const noexcept
-		{
-			return !operator==(rhs);
-		}
-	};
-
-	struct highres_timepoint
-	{
-		uint64_t val;
-
-		highres_timepoint operator-(highres_timepoint rhs) const noexcept { return { val - rhs.val }; }
-
-		void operator-=(highres_timepoint rhs) noexcept { val -= rhs.val; }
-
-		bool operator<(highres_timepoint rhs) const noexcept { return val < rhs.val; }
-
-		bool operator>(highres_timepoint rhs) const noexcept { return val > rhs.val; }
-
-		bool operator<=(highres_timepoint rhs) const noexcept { return val <= rhs.val; }
-
-		bool operator>=(highres_timepoint rhs) const noexcept { return val >= rhs.val; }
-
-		bool operator==(highres_timepoint rhs) const noexcept { return val == rhs.val; }
-
-		bool operator!=(highres_timepoint rhs) const noexcept { return val != rhs.val; }
-
-		static highres_timepoint now() noexcept;
-	};
+	timespan timezone_offset() noexcept;
 }
