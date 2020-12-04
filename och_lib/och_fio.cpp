@@ -164,14 +164,14 @@ namespace och
 		return och::memrun<char>(buf.beg, GetFinalPathNameByHandleA(file, buf.beg, (DWORD) buf.len(), 0));
 	}
 
-	uint64_t get_last_write_time(iohandle file) noexcept
+	och::time get_last_write_time(iohandle file) noexcept
 	{
 		FILE_BASIC_INFO info;
 
 		if (!GetFileInformationByHandleEx(file, FileBasicInfo, &info, sizeof(info)))
-			return 0;
+			return { 0 };
 
-		return info.LastWriteTime.QuadPart;
+		return { static_cast<uint64_t>(info.LastWriteTime.QuadPart) };
 	}
 
 	iohandle create_tempfile(uint32_t share_mode) noexcept

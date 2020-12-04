@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "och_memrun.h"
+#include "och_time.h"
 
 namespace och
 {
@@ -59,7 +60,7 @@ namespace och
 
 	och::memrun<char> get_filepath(iohandle file, och::memrun<char> buf) noexcept;
 
-	[[nodiscard]] uint64_t get_last_write_time(iohandle file) noexcept;
+	[[nodiscard]] och::time get_last_write_time(iohandle file) noexcept;
 
 	struct filehandle
 	{
@@ -84,6 +85,8 @@ namespace och
 		och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(handle, buf); }
 
 		bool seek(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return file_seek(handle, set_to, setptr_mode); }
+
+		och::time last_write_time() const noexcept { return get_last_write_time(handle); }
 
 		[[nodiscard]] bool operator!() { return !handle; }
 	};
