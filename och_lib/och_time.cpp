@@ -9,63 +9,42 @@ namespace och
 
 	struct time_data_t
 	{
-		int64_t tz_bias;
-		uint64_t highres_clock_ticks_per_second;
+		const int64_t tz_bias;
+		const uint64_t highres_clock_ticks_per_second;
 
-		time_data_t()
+		int64_t query_tz_bias() const noexcept
 		{
 			DYNAMIC_TIME_ZONE_INFORMATION tz;
 
 			GetDynamicTimeZoneInformation(&tz);
 
-			tz_bias = tz.Bias * 600000000llu;
+			return tz.Bias * 600000000llu;
 		}
+
+		uint64_t query_highres_clock_ticks_per_second() const noexcept
+		{
+			uint64_t freq = 1;
+
+			QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&freq));
+
+			return freq;
+		}
+
+		time_data_t() : tz_bias{ query_tz_bias() }, highres_clock_ticks_per_second{ query_highres_clock_ticks_per_second() } {}
 	};
 
 	time_data_t time_data;
 
-	/*
-	int64_t g_timezone_offset;
-
-	uint64_t g_highres_clock_ticks_per_second;
-
-	void init_time()
-	{
-		DYNAMIC_TIME_ZONE_INFORMATION tz;
-
-		GetDynamicTimeZoneInformation(&tz);
-
-		g_timezone_offset = tz.Bias * 600000000llu;
-	}
-	*/
-
-	timespan timezone_offset() noexcept { return{ time_data.tz_bias }; }
-
-	//timespan
-
-	timespan timespan::operator+(timespan rhs) const noexcept { return { val + rhs.val }; }
-
-	timespan timespan::operator-(timespan rhs) const noexcept { return { val - rhs.val }; }
-
-	void timespan::operator+=(timespan rhs) noexcept { val += rhs.val; }
-
-	void timespan::operator-=(timespan rhs) noexcept { val -= rhs.val; }
-
-	bool timespan::operator<(timespan rhs) const noexcept { return val < rhs.val; }
-
-	bool timespan::operator<=(timespan rhs) const noexcept { return val <= rhs.val; }
-
-	bool timespan::operator>(timespan rhs) const noexcept { return val > rhs.val; }
-
-	bool timespan::operator>=(timespan rhs) const noexcept { return val >= rhs.val; }
-
-	bool timespan::operator==(timespan rhs) const noexcept { return val == rhs.val; }
-
-	bool timespan::operator!=(timespan rhs) const noexcept { return val != rhs.val; }
+	timespan timezone_bias() noexcept { return{ time_data.tz_bias }; }
 
 
 
 	//time
+
+	time::time(const time_info& date) noexcept
+	{
+		SystemTimeToFileTime(reinterpret_cast<const SYSTEMTIME*>(&date), reinterpret_cast<FILETIME*>(this));
+	}
 
 	time time::now() noexcept
 	{
@@ -75,30 +54,6 @@ namespace och
 
 		return t;
 	}
-
-	time time::operator+(timespan rhs) const noexcept { return { val + rhs.val }; }
-
-	time time::operator-(timespan rhs) const noexcept { return { val - rhs.val }; }
-
-	timespan time::operator+(time rhs) const noexcept { return { static_cast<int64_t>(val + rhs.val) }; }
-
-	timespan time::operator-(time rhs) const noexcept { return { static_cast<int64_t>(val - rhs.val) }; }
-
-	void time::operator+=(timespan rhs) noexcept { val += rhs.val; }
-
-	void time::operator-=(timespan rhs) noexcept { val -= rhs.val; }
-
-	bool time::operator<(time rhs) const noexcept { return val < rhs.val; }
-
-	bool time::operator<=(time rhs) const noexcept { return val <= rhs.val; }
-
-	bool time::operator>(time rhs) const noexcept { return val > rhs.val; }
-
-	bool time::operator>=(time rhs) const noexcept { return val >= rhs.val; }
-
-	bool time::operator==(time rhs) const noexcept { return val == rhs.val; }
-
-	bool time::operator!=(time rhs) const noexcept { return val != rhs.val; }
 
 
 
@@ -128,6 +83,39 @@ namespace och
 		GetLocalTime(reinterpret_cast<SYSTEMTIME*>(&date));
 
 		return date;
+	}
+
+
+
+	//highres_time
+
+	highres_time::highres_time() noexcept
+	{
+		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&val));
+	}
+
+
+
+	//highres_timespan
+
+	uint64_t highres_timespan::nanoseconds() const noexcept
+	{
+		return val * 1000'000'000 / time_data.highres_clock_ticks_per_second;
+	}
+
+	uint64_t highres_timespan::microseconds() const noexcept
+	{
+		return val * 1000'000 / time_data.highres_clock_ticks_per_second;
+	}
+
+	uint64_t highres_timespan::milliseconds() const noexcept
+	{
+		return val * 1000 / time_data.highres_clock_ticks_per_second;
+	}
+
+	uint64_t highres_timespan::seconds() const noexcept
+	{
+		return val / time_data.highres_clock_ticks_per_second;
 	}
 
 	/*
