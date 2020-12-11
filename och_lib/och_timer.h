@@ -1,28 +1,27 @@
 #pragma once
 
-#include <chrono>
-
+#include "och_time.h"
 namespace och
 {
 	struct timer
 	{
 	private:
-		std::chrono::steady_clock::time_point beg = std::chrono::steady_clock::now();
+		highres_time t = highres_time::now();
 
 	public:
-		[[nodiscard]] uint64_t ms()
+
+		highres_timespan read() const noexcept
 		{
-			return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - beg).count();
+			return highres_time::now() - t;
 		}
 
-		[[nodiscard]] uint64_t us()
+		highres_timespan reset() noexcept
 		{
-			return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - beg).count();
-		}
+			highres_time beg = t;
 
-		void restart()
-		{
-			beg = std::chrono::steady_clock::now();
+			t = highres_time::now();
+
+			return beg - t;
 		}
 	};
 }
