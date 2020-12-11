@@ -41,7 +41,7 @@ namespace och
 
 	//time
 
-	time::time(const time_info& date) noexcept
+	time::time(const date& date) noexcept
 	{
 		SystemTimeToFileTime(reinterpret_cast<const SYSTEMTIME*>(&date), reinterpret_cast<FILETIME*>(this));
 	}
@@ -59,26 +59,26 @@ namespace och
 
 	//time_info
 
-	time_info::time_info(uint16_t year, uint16_t month, uint16_t weekday, uint16_t monthday, uint16_t hour, uint16_t minute, uint16_t second, uint16_t millisecond) noexcept
+	date::date(uint16_t year, uint16_t month, uint16_t weekday, uint16_t monthday, uint16_t hour, uint16_t minute, uint16_t second, uint16_t millisecond) noexcept
 		: year{ year }, month{ month }, weekday{ weekday }, monthday{ monthday }, hour{ hour }, minute{ minute }, second{ second }, millisecond{ millisecond } {}
 
-	time_info::time_info(time t) noexcept
+	date::date(time t) noexcept
 	{
 		FileTimeToSystemTime(reinterpret_cast<FILETIME*>(&t), reinterpret_cast<SYSTEMTIME*>(this));
 	}
 
-	time_info time_info::utc_now() noexcept
+	date date::utc_now() noexcept
 	{
-		time_info date;
+		date date;
 
 		GetSystemTime(reinterpret_cast<SYSTEMTIME*>(&date));
 
 		return date;
 	}
 
-	time_info time_info::local_now() noexcept
+	date date::local_now() noexcept
 	{
-		time_info date;
+		date date;
 
 		GetLocalTime(reinterpret_cast<SYSTEMTIME*>(&date));
 
@@ -89,12 +89,14 @@ namespace och
 
 	//highres_time
 
-	highres_time::highres_time() noexcept
+	highres_time highres_time::now() noexcept
 	{
-		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&val));
+		highres_time t;
+
+		QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&t));
+
+		return t;
 	}
-
-
 
 	//highres_timespan
 

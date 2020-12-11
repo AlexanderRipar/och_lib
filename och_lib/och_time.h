@@ -5,7 +5,7 @@
 
 namespace och
 {
-	struct time_info;
+	struct date;
 
 	struct timespan
 	{
@@ -52,7 +52,7 @@ namespace och
 
 		time(uint64_t val) : val{ val } {}
 
-		explicit time(const time_info& date) noexcept;
+		explicit time(const date& date) noexcept;
 
 		static time now() noexcept;
 
@@ -79,7 +79,7 @@ namespace och
 		bool operator!=(time rhs) const noexcept { return val != rhs.val; }
 	};
 
-	struct time_info
+	struct date
 	{
 		uint16_t year;
 		uint16_t month;
@@ -90,15 +90,15 @@ namespace och
 		uint16_t second;
 		uint16_t millisecond;
 
-		time_info() = default;
+		date() = default;
 
-		time_info(uint16_t year, uint16_t month, uint16_t weekday, uint16_t monthday, uint16_t hour, uint16_t minute, uint16_t second, uint16_t millisecond) noexcept;
+		date(uint16_t year, uint16_t month, uint16_t weekday, uint16_t monthday, uint16_t hour, uint16_t minute, uint16_t second, uint16_t millisecond) noexcept;
 
-		time_info(time t) noexcept;
+		date(time t) noexcept;
 
-		static time_info utc_now() noexcept;
+		static date utc_now() noexcept;
 
-		static time_info local_now() noexcept;
+		static date local_now() noexcept;
 	};
 
 	struct highres_timespan
@@ -138,7 +138,7 @@ namespace och
 	{
 		uint64_t val;
 
-		highres_time() noexcept;
+		static highres_time now() noexcept;
 
 		highres_timespan operator-(highres_time rhs) const noexcept { return { static_cast<int64_t>(val - rhs.val) }; }
 
