@@ -58,7 +58,7 @@ namespace och
 
 	bool set_filesize(iohandle file, uint64_t bytes) noexcept;
 
-	och::memrun<char> get_filepath(iohandle file, och::memrun<char> buf) noexcept;
+	[[nodiscard]] och::memrun<char> get_filepath(iohandle file, och::memrun<char> buf) noexcept;
 
 	[[nodiscard]] och::time get_last_write_time(iohandle file) noexcept;
 
@@ -82,11 +82,11 @@ namespace och
 
 		bool set_size(uint64_t bytes) const noexcept { return set_filesize(handle, bytes); }
 
-		och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(handle, buf); }
+		[[nodiscard]] och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(handle, buf); }
 
 		bool seek(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return file_seek(handle, set_to, setptr_mode); }
 
-		och::time last_write_time() const noexcept { return get_last_write_time(handle); }
+		[[nodiscard]] och::time last_write_time() const noexcept { return get_last_write_time(handle); }
 
 		[[nodiscard]] bool operator!() { return !handle; }
 	};
@@ -110,6 +110,7 @@ namespace och
 		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return och::file_seek(handle, set_to, setptr_mode); }
 	};
 
+	template<typename T = uint8_t>
 	struct mapped_file
 	{
 	private:
@@ -143,14 +144,18 @@ namespace och
 			och::close_file(file);
 		}
 
-		och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(file, buf); }
+		[[nodiscard]] T* get_data() const { return reinterpret_cast<T*>(data); }
+
+		[[nodiscard]] T& operator[](uint32_t idx) { return get_data()[idx]; }
+
+		[[nodiscard]] och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(file, buf); }
 
 		[[nodiscard]] bool is_valid() const noexcept { return data; }
 	};
 
-	iohandle get_stdout();
-	iohandle get_stdin();
-	iohandle get_stderr();
+	[[nodiscard]] iohandle get_stdout();
+	[[nodiscard]] iohandle get_stdin();
+	[[nodiscard]] iohandle get_stderr();
 
 	const iohandle out = get_stdout();
 	const iohandle in = get_stdin();
