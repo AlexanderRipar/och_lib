@@ -31,12 +31,18 @@ namespace och
 			setptr_beg = 0,
 			setptr_cur = 1,
 			setptr_end = 2,
+
+			flag_normal = 128,
+			flag_directory = 16,
+			flag_hidden = 2,
+			flag_readonly = 1,
+			flag_temporary = 256,
 		};
 	}
 	
 	using iohandle = void*;
 
-	[[nodiscard]] iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+	[[nodiscard]] iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none, uint32_t flags = fio::flag_normal) noexcept;
 
 	[[nodiscard]] iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr) noexcept;
 
@@ -87,6 +93,8 @@ namespace och
 		bool seek(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return file_seek(handle, set_to, setptr_mode); }
 
 		[[nodiscard]] och::time last_write_time() const noexcept { return get_last_write_time(handle); }
+
+		void close() noexcept { close_file(handle); }
 
 		[[nodiscard]] bool operator!() { return !handle; }
 	};
@@ -151,6 +159,39 @@ namespace och
 		[[nodiscard]] och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(file, buf); }
 
 		[[nodiscard]] bool is_valid() const noexcept { return data; }
+	};
+
+	struct file_search
+	{
+		iohandle search_handle;
+
+		struct
+		{
+			uint32_t _padding;
+			uint32_t attributes;
+			och::time creation_time;
+			och::time last_access_time;
+			och::time last_write_time;
+			uint64_t size;
+			uint64_t _reserved;
+			char name[260];//MAX_PATH
+			char alt_name[14];
+		}
+		curr_data;
+
+		static constexpr int size = sizeof(curr_data);
+
+		bool next() noexcept;
+
+		file_search(const och::string path) noexcept;
+
+		~file_search() noexcept;
+
+		och::string name() const noexcept;
+
+		bool is_dir() const noexcept;
+
+		filehandle open(uint32_t access_rights, uint32_t share_mode = fio::share_none) const noexcept;
 	};
 
 	[[nodiscard]] iohandle get_stdout();

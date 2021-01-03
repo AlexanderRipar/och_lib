@@ -56,9 +56,9 @@ namespace och
 		return (access_rights - ((access_rights == 3) << 1)) << 1;
 	}
 
-	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept
+	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode, uint32_t flags) noexcept
 	{
-		iohandle file = CreateFileA(filename.beg, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), FILE_ATTRIBUTE_NORMAL, nullptr);
+		iohandle file = CreateFileA(filename.beg, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr);
 
 		return file == INVALID_HANDLE_VALUE ? nullptr : file;
 	}
@@ -81,7 +81,7 @@ namespace och
 
 		_beg.QuadPart = beg;
 
-		return MapViewOfFile(file_mapping, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, end - beg);
+		return MapViewOfFile(file_mapping, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg));
 	}
 
 	bool close_file(iohandle file) noexcept
@@ -181,7 +181,7 @@ namespace och
 		if (!GetTempFileNameA(".", "och", 0, filename))
 			return nullptr;
 
-		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail, share_mode);
+		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail, share_mode, fio::flag_temporary);
 	}
 
 	tempfilehandle::tempfilehandle(uint32_t share_mode) noexcept : filehandle{ create_tempfile(share_mode) } {}
@@ -196,6 +196,18 @@ namespace och
 
 		delete_file(buf);
 	}
+
+	file_search::file_search(const och::string path) noexcept : search_handle{FindFirstFileA(path.beg, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
+
+	file_search::~file_search() noexcept { FindClose(search_handle); }
+
+	bool file_search::next() noexcept { return FindNextFileA(search_handle, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4)); }
+
+	och::string file_search::name() const noexcept { return { curr_data.name }; }
+
+	bool file_search::is_dir() const noexcept { return curr_data.attributes & fio::flag_directory; }
+
+	filehandle file_search::open(uint32_t access_rights, uint32_t share_mode) const noexcept { return filehandle(curr_data.name, access_rights, fio::open_normal, fio::open_fail, share_mode); }
 
 	iohandle get_stdout()
 	{
