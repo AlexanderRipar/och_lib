@@ -39,4 +39,17 @@ namespace och
 
 		och::string operator()();
 	};
+
+	struct matcher
+	{
+		och::string text;
+		och::memrun<const och::string> targets;
+		uint8_t target_idx[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
+
+		matcher(och::string text, och::memrun<och::string> targets);
+
+		och::string operator()();
+
+		uint32_t count();
+	};
 }
