@@ -37,6 +37,8 @@ namespace och
 		[[nodiscard]] size_t bytes() const { return end - beg * sizeof(T); }
 
 		[[nodiscard]] T& operator[](size_t i) { return beg[i]; }
+
+		[[nodiscard]] const T& operator[](size_t i) const { return beg[i]; }
 	};
 
 	template<typename T>
