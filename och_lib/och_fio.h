@@ -40,7 +40,14 @@ namespace och
 		};
 	}
 	
-	using iohandle = void*;
+	struct iohandle
+	{
+		iohandle() = default;
+
+		iohandle(void* h) : ptr{ h } {}
+
+		void* ptr;
+	};
 
 	[[nodiscard]] iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none, uint32_t flags = fio::flag_normal) noexcept;
 
@@ -96,7 +103,7 @@ namespace och
 
 		void close() noexcept { close_file(handle); }
 
-		[[nodiscard]] bool operator!() { return !handle; }
+		[[nodiscard]] bool operator!() { return !handle.ptr; }
 	};
 
 	struct tempfilehandle : public filehandle
@@ -152,13 +159,13 @@ namespace och
 			och::close_file(file);
 		}
 
-		[[nodiscard]] T* get_data() const { return reinterpret_cast<T*>(data); }
+		[[nodiscard]] memrun<T> get_data() const { return memrun<T>(reinterpret_cast<T*>(data.ptr), bytes / sizeof(T)); }
 
-		[[nodiscard]] T& operator[](uint32_t idx) { return get_data()[idx]; }
+		[[nodiscard]] T& operator[](uint32_t idx) { return reinterpret_cast<T*>(data.ptr)[idx]; }
 
-		[[nodiscard]] och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(file, buf); }
+		[[nodiscard]] och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(file.ptr, buf); }
 
-		[[nodiscard]] bool is_valid() const noexcept { return data; }
+		[[nodiscard]] bool is_valid() const noexcept { return data.ptr; }
 	};
 
 	struct file_search

@@ -60,19 +60,19 @@ namespace och
 	{
 		iohandle file = CreateFileA(filename.beg, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr);
 
-		return file == INVALID_HANDLE_VALUE ? nullptr : file;
+		return file.ptr == INVALID_HANDLE_VALUE ? nullptr : file;
 	}
 
 	iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name) noexcept
 	{
-		if (!file)
+		if (!file.ptr)
 			return nullptr;
 
 		LARGE_INTEGER _size;
 
 		_size.QuadPart = size;
 
-		return CreateFileMappingA(file, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name);
+		return CreateFileMappingA(file.ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name);
 	}
 
 	iohandle file_as_array(iohandle file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end) noexcept
@@ -81,17 +81,17 @@ namespace och
 
 		_beg.QuadPart = beg;
 
-		return MapViewOfFile(file_mapping, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg));
+		return MapViewOfFile(file_mapping.ptr, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg));
 	}
 
 	bool close_file(iohandle file) noexcept
 	{
-		return CloseHandle(file);
+		return CloseHandle(file.ptr);
 	}
 
 	bool close_file_array(iohandle file_array) noexcept
 	{
-		return UnmapViewOfFile(file_array);
+		return UnmapViewOfFile(file_array.ptr);
 	}
 
 	bool delete_file(const och::string filename) noexcept
@@ -103,7 +103,7 @@ namespace och
 	{
 		uint32_t bytes_read = 0;
 
-		ReadFile(file, buf.beg, static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_read), nullptr);
+		ReadFile(file.ptr, buf.beg, static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_read), nullptr);
 
 		return och::memrun<char>(buf.beg, bytes_read);
 	}
@@ -112,7 +112,7 @@ namespace och
 	{
 		uint32_t bytes_written = 0;
 
-		WriteFile(file, reinterpret_cast<const void*>(buf.beg), static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_written), nullptr);
+		WriteFile(file.ptr, reinterpret_cast<const void*>(buf.beg), static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_written), nullptr);
 
 		return bytes_written;
 	}
@@ -123,14 +123,14 @@ namespace och
 
 		_set_to.QuadPart = set_to;
 
-		return SetFilePointerEx(file, _set_to, nullptr, static_cast<DWORD>(setptr_mode));
+		return SetFilePointerEx(file.ptr, _set_to, nullptr, static_cast<DWORD>(setptr_mode));
 	}
 
 	int64_t get_filesize(iohandle file) noexcept
 	{
 		LARGE_INTEGER filesize;
 
-		GetFileSizeEx(file, &filesize);
+		GetFileSizeEx(file.ptr, &filesize);
 
 		return filesize.QuadPart;
 	}
@@ -143,17 +143,17 @@ namespace och
 
 		_set_to.QuadPart = 0;
 
-		if (!SetFilePointerEx(file, _set_to, &old_fileptr, FILE_CURRENT))//Save current file-pointer-position into old_fileptr
+		if (!SetFilePointerEx(file.ptr, _set_to, &old_fileptr, FILE_CURRENT))//Save current file-pointer-position into old_fileptr
 			return false;
 
 		_set_to.QuadPart = bytes;
 
-		if (!SetFilePointerEx(file, _set_to, nullptr, FILE_BEGIN))//Set file-pointer to new EOF
+		if (!SetFilePointerEx(file.ptr, _set_to, nullptr, FILE_BEGIN))//Set file-pointer to new EOF
 			return false;
 
-		SetEndOfFile(file);
+		SetEndOfFile(file.ptr);
 
-		if (!SetFilePointerEx(file, old_fileptr, nullptr, FILE_BEGIN))//Restore initial file-pointer-position
+		if (!SetFilePointerEx(file.ptr, old_fileptr, nullptr, FILE_BEGIN))//Restore initial file-pointer-position
 			return false;
 
 		return true;
@@ -161,14 +161,14 @@ namespace och
 
 	och::memrun<char> get_filepath(iohandle file, och::memrun<char> buf) noexcept
 	{
-		return och::memrun<char>(buf.beg, GetFinalPathNameByHandleA(file, buf.beg, (DWORD) buf.len(), 0));
+		return och::memrun<char>(buf.beg, GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD) buf.len(), 0));
 	}
 
 	och::time get_last_write_time(iohandle file) noexcept
 	{
 		FILE_BASIC_INFO info;
 
-		if (!GetFileInformationByHandleEx(file, FileBasicInfo, &info, sizeof(info)))
+		if (!GetFileInformationByHandleEx(file.ptr, FileBasicInfo, &info, sizeof(info)))
 			return { 0 };
 
 		return { static_cast<uint64_t>(info.LastWriteTime.QuadPart) };
@@ -190,7 +190,7 @@ namespace och
 	{
 		char buf[MAX_PATH + 1];
 
-		GetFinalPathNameByHandleA(handle, buf, sizeof(buf), 0);
+		GetFinalPathNameByHandleA(handle.ptr, buf, sizeof(buf), 0);
 
 		close_file(handle);
 
@@ -199,9 +199,9 @@ namespace och
 
 	file_search::file_search(const och::string path) noexcept : search_handle{FindFirstFileA(path.beg, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
 
-	file_search::~file_search() noexcept { FindClose(search_handle); }
+	file_search::~file_search() noexcept { FindClose(search_handle.ptr); }
 
-	bool file_search::next() noexcept { return FindNextFileA(search_handle, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4)); }
+	bool file_search::next() noexcept { return FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4)); }
 
 	och::string file_search::name() const noexcept { return { curr_data.name }; }
 
