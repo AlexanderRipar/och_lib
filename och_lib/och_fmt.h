@@ -11,7 +11,7 @@ namespace och
 	{
 	private:
 		uint16_t width = 0;
-		uint16_t precision = -1;
+		uint16_t precision = static_cast<uint16_t>(-1);
 		uint16_t flags = 0;
 		uint8_t offset;
 		char filler = ' ';
