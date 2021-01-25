@@ -29,8 +29,9 @@ namespace och
 		constexpr memrun(T* beg, T* end) : beg{ beg }, end{ end } {}
 
 		constexpr memrun(T* beg, size_t len) : beg{ beg }, end{ beg + len } {}
-
-		memrun(const char* cstr) : beg{ cstr }, end{ cstr + strlen(cstr) } { static_assert(std::is_same<const char, T>::value, "och::memrun<T>(const char*) may only be used with T = const char"); }
+		
+		template<typename U = T>
+		memrun(std::enable_if_t<std::is_same<U, const char*>::value, const char*> cstr) : beg{ cstr }, end{ cstr + strlen(cstr) } { }
 
 		[[nodiscard]] size_t len() const { return end - beg; }
 
@@ -73,7 +74,7 @@ namespace och
 
 		[[nodiscard]] och::memrun<T> uncompress() const
 		{
-			return och::memrun(begin(), end());
+			return och::memrun<T>(begin(), end());
 		}
 	};
 
