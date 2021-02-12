@@ -47,9 +47,6 @@
     <ClInclude Include="och_fmt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="och_memrun.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="och_rtv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -68,15 +65,6 @@
     <ClInclude Include="och_timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="tests.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="och_crlf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="och_page.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="och_net.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -84,6 +72,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="och_wnd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="och_range.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

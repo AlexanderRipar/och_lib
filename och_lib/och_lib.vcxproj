@@ -228,18 +228,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="och_constexpr_util.h" />
-    <ClInclude Include="och_crlf.h" />
     <ClInclude Include="och_debug.h" />
     <ClInclude Include="och_fio.h" />
     <ClInclude Include="och_fmt.h" />
     <ClInclude Include="och_lib.h" />
-    <ClInclude Include="och_memrun.h" />
+    <ClInclude Include="och_range.h" />
     <ClInclude Include="och_net.h" />
-    <ClInclude Include="och_page.h" />
     <ClInclude Include="och_rtv.h" />
     <ClInclude Include="och_time.h" />
     <ClInclude Include="och_wnd.h" />
-    <ClInclude Include="tests.h" />
     <ClInclude Include="och_timer.h" />
     <ClInclude Include="och_tok.h" />
   </ItemGroup>
