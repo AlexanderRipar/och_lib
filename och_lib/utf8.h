@@ -2,181 +2,184 @@
 
 #include <cstdint>
 
-struct utf8_view
+namespace och
 {
-	const char* m_ptr;
-	uint32_t m_codeunits;
-	uint32_t m_codepoints;
-};
-
-struct utf8_iterator
-{
-	const char* cstring;
-
-	utf8_iterator(const char* cstring);
-
-	char32_t operator*();
-
-	void operator++();
-
-	bool operator!=(const utf8_iterator& rhs);
-};
-
-struct utf8_string
-{
-	union
+	struct utf8_view
 	{
-		struct
-		{
-			char* m_ptr;
-			uint32_t m_codeunits;
-			uint32_t m_capacity;
-			uint32_t m_codepoints;
-			uint32_t reserved;
-		} ls;
-
-		struct
-		{
-			char m_internal_buf[sizeof(ls) - 1];	//Internal storage for sso
-			uint8_t m_internal_cap;					//number of chars left available in sso
-		} ss;
+		const char* m_ptr;
+		uint32_t m_codeunits;
+		uint32_t m_codepoints;
 	};
 
-	static constexpr uint32_t min_heap_cap = 128;
-	static constexpr uint32_t internal_buf_max = sizeof(ss.m_internal_buf);
-	static constexpr uint8_t long_string_id = 0xFF;
+	struct utf8_iterator
+	{
+		const char* cstring;
 
-	////////////////////////////////////////////////////Constructor////////////////////////////////////////////////////////////
+		utf8_iterator(const char* cstring);
 
-	utf8_string();
+		char32_t operator*();
 
-	utf8_string(const utf8_view& view);
+		void operator++();
 
-	utf8_string(const utf8_string& str);
+		bool operator!=(const utf8_iterator& rhs);
+	};
 
-	utf8_string(const char* cstr);
+	struct utf8_string
+	{
+		union
+		{
+			struct
+			{
+				char* m_ptr;
+				uint32_t m_codeunits;
+				uint32_t m_capacity;
+				uint32_t m_codepoints;
+				uint32_t reserved;
+			} ls;
 
-	~utf8_string();
+			struct
+			{
+				char m_internal_buf[sizeof(ls) - 1];	//Internal storage for sso
+				uint8_t m_internal_cap;					//number of chars left available in sso
+			} ss;
+		};
 
-	///////////////////////////////////////////////////Iterators///////////////////////////////////////////////////////////////
+		static constexpr uint32_t min_heap_cap = 128;
+		static constexpr uint32_t internal_buf_max = sizeof(ss.m_internal_buf);
+		static constexpr uint8_t long_string_id = 0xFF;
 
-	char* raw_begin();
+		////////////////////////////////////////////////////Constructor////////////////////////////////////////////////////////////
 
-	const char* raw_cbegin() const;
+		utf8_string();
 
-	char* raw_end();
+		utf8_string(const utf8_view& view);
 
-	const char* raw_cend() const;
+		utf8_string(const utf8_string& str);
 
-	utf8_iterator begin() const;
+		utf8_string(const char* cstr);
 
-	utf8_iterator end() const;
+		~utf8_string();
 
-	/////////////////////////////////////////////////////Size//////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////Iterators///////////////////////////////////////////////////////////////
 
-	uint32_t get_codeunits() const;
+		char* raw_begin();
 
-	uint32_t get_codepoints() const;
+		const char* raw_cbegin() const;
 
-	uint32_t get_capacity() const;
+		char* raw_end();
 
-	uint32_t shrink_to_fit();
+		const char* raw_cend() const;
 
-	bool reserve(uint32_t n);
+		utf8_iterator begin() const;
 
-	bool resize(uint32_t n);
+		utf8_iterator end() const;
 
-	bool empty() const;
+		/////////////////////////////////////////////////////Size//////////////////////////////////////////////////////////////////
 
-	bool is_sso() const;
+		uint32_t get_codeunits() const;
 
-	//////////////////////////////////////////////////Element Acess///////////////////////////////////////////////////////////////
+		uint32_t get_codepoints() const;
 
-	char32_t at(uint32_t pos) const;
+		uint32_t get_capacity() const;
 
-	char32_t front() const;
+		uint32_t shrink_to_fit();
 
-	char32_t back() const;
+		bool reserve(uint32_t n);
 
-	///////////////////////////////////////////////////Modifiers///////////////////////////////////////////////////////////////
+		bool resize(uint32_t n);
 
-	void operator=(const utf8_view& view) noexcept;
+		bool empty() const;
 
-	void operator=(const utf8_string& string) noexcept;
+		bool is_sso() const;
 
-	void operator=(utf8_string&& string) noexcept;
+		//////////////////////////////////////////////////Element Acess///////////////////////////////////////////////////////////////
 
-	void operator=(const char* cstr);
+		char32_t at(uint32_t pos) const;
 
-	void operator+=(char32_t codept);
+		char32_t front() const;
 
-	void operator+=(const utf8_view& view);
+		char32_t back() const;
 
-	void operator+=(const utf8_string& str);
+		///////////////////////////////////////////////////Modifiers///////////////////////////////////////////////////////////////
 
-	void operator+=(const char* cstr);
+		void operator=(const utf8_view& view) noexcept;
 
-	uint32_t pop(uint32_t n);
+		void operator=(const utf8_string& string) noexcept;
 
-	void clear();
+		void operator=(utf8_string&& string) noexcept;
 
-	void erase(uint32_t pos, uint32_t len);
+		void operator=(const char* cstr);
 
-	bool insert(uint32_t pos, char32_t codept);
+		void operator+=(char32_t codept);
 
-	bool insert(uint32_t pos, const utf8_view& view);
+		void operator+=(const utf8_view& view);
 
-	bool insert(uint32_t pos, const char* cstr);
+		void operator+=(const utf8_string& str);
 
-	bool replace(uint32_t pos, char32_t codept);
+		void operator+=(const char* cstr);
 
-	bool replace(uint32_t pos, const utf8_view& view);
+		uint32_t pop(uint32_t n);
 
-	bool replace(uint32_t pos, const char* cstr);
+		void clear();
 
-	bool operator==(const utf8_string& rhs) const;
+		void erase(uint32_t pos, uint32_t len);
 
-	bool operator!=(const utf8_string& rhs) const;
+		bool insert(uint32_t pos, char32_t codept);
 
-	bool operator>(const utf8_string& rhs) const;
+		bool insert(uint32_t pos, const utf8_view& view);
 
-	bool operator>=(const utf8_string& rhs) const;
+		bool insert(uint32_t pos, const char* cstr);
 
-	bool operator<(const utf8_string& rhs) const;
+		bool replace(uint32_t pos, char32_t codept);
 
-	bool operator<=(const utf8_string& rhs) const;
+		bool replace(uint32_t pos, const utf8_view& view);
 
-	//////////////////////////////////////////////////Operations///////////////////////////////////////////////////////////////
+		bool replace(uint32_t pos, const char* cstr);
 
-	utf8_string substr(uint32_t pos, uint32_t len = static_cast<uint32_t>(-1)) const;
+		bool operator==(const utf8_string& rhs) const;
 
-private:
+		bool operator!=(const utf8_string& rhs) const;
 
-	utf8_string(const char* cstr, uint32_t wds, uint32_t cps);
+		bool operator>(const utf8_string& rhs) const;
 
-	void construct_ss(const char* cstring, uint32_t words);
+		bool operator>=(const utf8_string& rhs) const;
 
-	void construct_ls(const char* cstring, uint32_t words, uint32_t codepoints);
+		bool operator<(const utf8_string& rhs) const;
 
-	bool set_to(const char* cstring, uint32_t words, uint32_t codepts);
+		bool operator<=(const utf8_string& rhs) const;
 
-	bool append(const char* cstring, uint32_t words, uint32_t codepts);
+		//////////////////////////////////////////////////Operations///////////////////////////////////////////////////////////////
 
-	bool insert(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos);
+		utf8_string substr(uint32_t pos, uint32_t len = static_cast<uint32_t>(-1)) const;
 
-	bool replace(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos);
+	private:
 
-	void step(uint32_t& wd_idx, uint32_t& cp_idx, uint32_t last_cp_idx) const;
+		utf8_string(const char* cstr, uint32_t wds, uint32_t cps);
 
-	bool deactivate_sso(uint32_t alloc_size);
+		void construct_ss(const char* cstring, uint32_t words);
 
-	bool try_activate_sso();
+		void construct_ls(const char* cstring, uint32_t words, uint32_t codepoints);
 
-	bool change_heap_cap(uint32_t new_cap);
+		bool set_to(const char* cstring, uint32_t words, uint32_t codepts);
 
-	uint32_t least_bigger_cap(uint32_t required);
+		bool append(const char* cstring, uint32_t words, uint32_t codepts);
 
-	void set_codeunits(uint32_t wds);
+		bool insert(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos);
 
-	void set_codepoints(uint32_t cps);
-};
+		bool replace(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos);
+
+		void step(uint32_t& wd_idx, uint32_t& cp_idx, uint32_t last_cp_idx) const;
+
+		bool deactivate_sso(uint32_t alloc_size);
+
+		bool try_activate_sso();
+
+		bool change_heap_cap(uint32_t new_cap);
+
+		uint32_t least_bigger_cap(uint32_t required);
+
+		void set_codeunits(uint32_t wds);
+
+		void set_codepoints(uint32_t cps);
+	};
+}
