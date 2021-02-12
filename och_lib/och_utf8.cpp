@@ -15,35 +15,35 @@ namespace och
 		}
 	}
 
-	uint32_t _utf8_from_codepoint(char* out, char32_t codept)
+	uint32_t _utf8_from_codepoint(char* out, char32_t cpoint)
 	{
-		if (codept > 0xFFFF)
+		if (cpoint > 0xFFFF)
 		{
-			out[0] = static_cast<char>(0xF0 | codept >> 18);
-			out[1] = static_cast<char>(0x80 | ((codept >> 12) & 0x3F));
-			out[2] = static_cast<char>(0x80 | ((codept >> 6) & 0x3F));
-			out[3] = static_cast<char>(0x80 | (codept & 0x3F));
+			out[0] = static_cast<char>(0xF0 |   cpoint >> 18         );
+			out[1] = static_cast<char>(0x80 | ((cpoint >> 12) & 0x3F));
+			out[2] = static_cast<char>(0x80 | ((cpoint >>  6) & 0x3F));
+			out[3] = static_cast<char>(0x80 |  (cpoint        & 0x3F));
 
 			return 4;
 		}
 
-		if (codept > 0x07FF)
+		if (cpoint > 0x07FF)
 		{
-			out[0] = static_cast<char>(0xE0 | codept >> 12);
-			out[1] = static_cast<char>(0x80 | ((codept >> 6) & 0x3F));
-			out[2] = static_cast<char>(0x80 | (codept & 0x3F));
+			out[0] = static_cast<char>(0xE0 |   cpoint >> 12         );
+			out[1] = static_cast<char>(0x80 | ((cpoint >>  6) & 0x3F));
+			out[2] = static_cast<char>(0x80 |  (cpoint        & 0x3F));
 
 			return 3;
 		}
-		if (codept > 0x007F)
+		if (cpoint > 0x007F)
 		{
-			out[0] = static_cast<char>(0xC0 | codept >> 6);
-			out[1] = static_cast<char>(0x80 | (codept & 0x3F));
+			out[0] = static_cast<char>(0xC0 |   cpoint >> 6          );
+			out[1] = static_cast<char>(0x80 |  (cpoint        & 0x3F));
 
 			return 2;
 		}
 
-		out[0] = static_cast<char>(codept);
+		out[0] = static_cast<char>(cpoint);
 
 		return 1;
 	}
