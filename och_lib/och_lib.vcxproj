@@ -224,6 +224,7 @@
     <ClCompile Include="och_rtv.cpp" />
     <ClCompile Include="och_time.cpp" />
     <ClCompile Include="och_tok.cpp" />
+    <ClCompile Include="och_wnd.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="och_constexpr_util.h" />
@@ -237,6 +238,7 @@
     <ClInclude Include="och_page.h" />
     <ClInclude Include="och_rtv.h" />
     <ClInclude Include="och_time.h" />
+    <ClInclude Include="och_wnd.h" />
     <ClInclude Include="tests.h" />
     <ClInclude Include="och_timer.h" />
     <ClInclude Include="och_tok.h" />
