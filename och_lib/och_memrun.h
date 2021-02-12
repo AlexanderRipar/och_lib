@@ -91,5 +91,4 @@ namespace och
 	using string = range<const char>;
 
 	using ministring = compressed_range<const char>;
-
 }
