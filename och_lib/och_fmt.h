@@ -9,11 +9,12 @@ namespace och
 {
 	struct arg
 	{
-		uint16_t width = 0;
 		uint16_t precision = static_cast<uint16_t>(-1);
 		uint16_t flags = 0;
-		uint8_t offset;
+		uint8_t width = 0;
 		char filler = ' ';
+		uint8_t fmt_specifier = '\0';
+		uint8_t offset;
 
 		union
 		{
@@ -21,6 +22,8 @@ namespace och
 			double d;
 			float f;
 			och::mini_stringview s;
+			char32_t c;
+			och::time t;
 		};
 
 		enum class types : uint8_t
@@ -30,14 +33,17 @@ namespace och
 			_float,
 			_double,
 			_string,
+			_char,
+			_time,
 		};
 
-		void set_width(uint16_t w) { width = w; }
+		void set_width(uint8_t w) { width = w; }
 		void set_precision(uint16_t p) { precision = p; }
 		void set_rightadj() { flags |= 4; }
 		void set_signmode(uint16_t s) { flags |= s; }
 		void set_offset(uint8_t o) { offset = o; }
 		void set_filler(char f) { filler = f; }
+		void set_fmt_specifier(char s) { fmt_specifier = s; }
 
 		uint16_t get_width() { return width; }
 		uint16_t get_precision() { return precision; }
@@ -45,21 +51,26 @@ namespace och
 		uint16_t get_signmode() { return  flags & 3; }
 		uint8_t get_offset() { return offset; }
 		char get_filler() { return filler; }
+		char get_fmt_specifier() { return fmt_specifier; }
 
-		arg(            uint8_t i) : offset{ static_cast<uint8_t>(types::_uint  ) }, i{                                             static_cast<uint64_t>(i) } {}
-		arg(           uint16_t i) : offset{ static_cast<uint8_t>(types::_uint  ) }, i{                                             static_cast<uint64_t>(i) } {}
-		arg(           uint32_t i) : offset{ static_cast<uint8_t>(types::_uint  ) }, i{                                             static_cast<uint64_t>(i) } {}
-		arg(           uint64_t i) : offset{ static_cast<uint8_t>(types::_uint  ) }, i{                                             static_cast<uint64_t>(i) } {}
-		arg(             int8_t i) : offset{ static_cast<uint8_t>(types::_int   ) }, i{                                             static_cast<uint64_t>(i) } {}
-		arg(            int16_t i) : offset{ static_cast<uint8_t>(types::_int   ) }, i{                                             static_cast<uint64_t>(i) } {}
-		arg(            int32_t i) : offset{ static_cast<uint8_t>(types::_int   ) }, i{                                             static_cast<uint64_t>(i) } {}
-		arg(            int64_t i) : offset{ static_cast<uint8_t>(types::_int   ) }, i{                                             static_cast<uint64_t>(i) } {}
-		arg(              float f) : offset{ static_cast<uint8_t>(types::_float ) }, f{                                                                   f  } {}
-		arg(             double d) : offset{ static_cast<uint8_t>(types::_double) }, d{                                                                   d  } {}
-		arg(        const char* s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                              s, _const_strlen_u16(s) } {}
+		arg(                uint8_t i) : offset{ static_cast<uint8_t>(types::_uint  ) }, i{                                             static_cast<uint64_t>(i) } {}
+		arg(               uint16_t i) : offset{ static_cast<uint8_t>(types::_uint  ) }, i{                                             static_cast<uint64_t>(i) } {}
+		arg(               uint32_t i) : offset{ static_cast<uint8_t>(types::_uint  ) }, i{                                             static_cast<uint64_t>(i) } {}
+		arg(               uint64_t i) : offset{ static_cast<uint8_t>(types::_uint  ) }, i{                                             static_cast<uint64_t>(i) } {}
+		arg(                 int8_t i) : offset{ static_cast<uint8_t>(types::_int   ) }, i{                                             static_cast<uint64_t>(i) } {}
+		arg(                int16_t i) : offset{ static_cast<uint8_t>(types::_int   ) }, i{                                             static_cast<uint64_t>(i) } {}
+		arg(                int32_t i) : offset{ static_cast<uint8_t>(types::_int   ) }, i{                                             static_cast<uint64_t>(i) } {}
+		arg(                int64_t i) : offset{ static_cast<uint8_t>(types::_int   ) }, i{                                             static_cast<uint64_t>(i) } {}
+		arg(                  float f) : offset{ static_cast<uint8_t>(types::_float ) }, f{                                                                   f  } {}
+		arg(                 double d) : offset{ static_cast<uint8_t>(types::_double) }, d{                                                                   d  } {}
+		arg(            const char* s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                              s, _const_strlen_u16(s) } {}
 		arg(        och::stringview s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
-		arg(    och::mini_stringview s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
-		arg(  och::range<char> s) : offset{ static_cast<uint8_t>(types::_string) }, s{ reinterpret_cast<const char*>(s.beg), static_cast<uint16_t>(s.len()) } {}
+		arg(   och::mini_stringview s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
+		arg(       och::range<char> s) : offset{ static_cast<uint8_t>(types::_string) }, s{ reinterpret_cast<const char*>(s.beg), static_cast<uint16_t>(s.len()) } {}
+		arg(const och::utf8_string& s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                   s.raw_cbegin(), s.get_codeunits()  } {}
+		arg(                   char c) : offset{ static_cast<uint8_t>(types::_string) }, c{                                            static_cast<char32_t>(c)  } {}
+		arg(               char32_t c) : offset{ static_cast<uint8_t>(types::_string) }, c{                                                                   c  } {}
+		arg(              och::time t) : offset{ static_cast<uint8_t>(types::_time  ) }, t{                                                                   t  } {}
 	};
 
 	using fmt_function = void (*) (arg in, och::iohandle out);

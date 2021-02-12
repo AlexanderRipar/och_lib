@@ -55,10 +55,7 @@ namespace och
 		char buf[20];
 		int i = 19;
 
-		if (!val)
-			buf[i--] = '0';
-
-		while (val)
+		while (val >= 10)
 		{
 			buf[i] = '0' + val % 10;
 
@@ -66,6 +63,8 @@ namespace och
 
 			--i;
 		}
+
+		buf[i--] = '0' + static_cast<char>(val);
 
 		if (in.get_rightadj())
 		{
@@ -90,9 +89,6 @@ namespace och
 		char buf[20];
 		int i = 19;
 
-		if (!val)
-			buf[i--] = '0';
-
 		bool negative = false;
 
 		if (val < 0)
@@ -101,12 +97,14 @@ namespace och
 			val = -val;
 		}
 
-		while (val)
+		while (val >= 10)
 		{
 			buf[i--] = '0' + val % 10;
 
 			val /= 10;
 		}
+
+		buf[i--] = '0' + static_cast<char>(val);
 
 		if (negative)
 			buf[i--] = '-';
@@ -129,6 +127,16 @@ namespace och
 			for (uint32_t j = 19 - i; j < in.get_width(); ++j)
 				to_vbuf(in.get_filler(), out);
 		}
+	}
+
+	void f_float(arg in, och::iohandle out)
+	{
+
+	}
+
+	void f_double(arg in, och::iohandle out)
+	{
+
 	}
 
 	void f_ministring(arg in, och::iohandle out)
@@ -154,104 +162,131 @@ namespace och
 		}
 	}
 
-	void f_float(arg in, och::iohandle out)
+	void f_character(arg in, och::iohandle out)
 	{
-		//constexpr uint32_t bufsize = 32;
-		//
-		//char buf[bufsize];
-		//
-		//uint32_t i = bufsize;
-		//
-		//float f = in.f;
-		//
-		//if (f == INFINITY)
-		//{
-		//	i -= 3;
-		//	memcpy(buf + 17, "inf", 3);
-		//
-		//	if (in.get_signmode() == 1)
-		//		buf[--i] = '+';
-		//	else if (in.get_signmode() == 2)
-		//		buf[--i] = ' ';
-		//
-		//}
-		//else if (f == -INFINITY)
-		//{
-		//	i -= 4;
-		//	memcpy(buf + 16, "-inf", 4);
-		//}
-		//else
-		//{
-		//	int64_t int_val = static_cast<int64_t>(f);
-		//
-		//	float precision_factor;
-		//
-		//	if (in.get_precision() == -1)
-		//	{
-		//		in.set_precision(f_default_precision);
-		//		precision_factor = f_default_precision_factor;
-		//	}
-		//	else
-		//		precision_factor = powf(in.get_precision(), 10.0F);
-		//
-		//	uint64_t dec_val = static_cast<uint64_t>((in.f - static_cast<float>(int_val)) * f_default_precision_factor);
-		//
-		//	while (dec_val && bufsize - i != in.get_precision())
-		//	{
-		//		buf[--i] = '0' + dec_val % 10;
-		//
-		//		dec_val /= 10;
-		//	}
-		//
-		//	while (bufsize - i != in.get_precision())
-		//		buf[--i] = '0';
-		//
-		//	if (in.get_precision())
-		//		buf[--i] = '.';
-		//
-		//	bool negative = false;
-		//	if (f < 0)
-		//	{
-		//		negative = true;
-		//		int_val = -int_val;
-		//	}
-		//	else if (!int_val)
-		//		buf[--i] = '0';
-		//	else
-		//		while (int_val)
-		//		{
-		//			buf[--i] = '0' + int_val % 10;
-		//
-		//			int_val /= 10;
-		//		}
-		//
-		//	if (negative)
-		//		buf[--i] = '-';
-		//	else if (in.get_signmode() == 1)
-		//		buf[--i] = '+';
-		//	else if (in.get_signmode() == 2)
-		//		buf[--i] = ' ';
-		//}
-		//
-		//if (in.get_rightadj())
-		//{
-		//	for (uint32_t j = bufsize - i; j < in.get_width(); ++j)
-		//		putc(in.get_filler(), out);
-		//
-		//	fwrite(buf + i, 1, bufsize - i, out);
-		//}
-		//else
-		//{
-		//	fwrite(buf + i, 1, bufsize - i, out);
-		//
-		//	for (uint32_t j = bufsize - i; j < in.get_width(); ++j)
-		//		putc(in.get_filler(), out);
-		//}
+		uint32_t cunits = 1;
+		char32_t cpoint = in.c;
+
+		char buf[4];
+
+		if (cpoint > 0xFFFF)
+		{
+			buf[0] = static_cast<char>(0xF0 |   cpoint >> 18         );
+			buf[1] = static_cast<char>(0x80 | ((cpoint >> 12) & 0x3F));
+			buf[2] = static_cast<char>(0x80 | ((cpoint >>  6) & 0x3F));
+			buf[3] = static_cast<char>(0x80 |  (cpoint        & 0x3F));
+
+			cunits = 4;
+		}
+		else if (cpoint > 0x07FF)
+		{
+			buf[0] = static_cast<char>(0xE0 |   cpoint >> 12         );
+			buf[1] = static_cast<char>(0x80 | ((cpoint >>  6) & 0x3F));
+			buf[2] = static_cast<char>(0x80 |  (cpoint        & 0x3F));
+
+			cunits = 3;
+		}
+		else if (cpoint > 0x007F)
+		{
+			buf[0] = static_cast<char>(0xC0 |   cpoint >> 6          );
+			buf[1] = static_cast<char>(0x80 |  (cpoint        & 0x3F));
+
+			cunits = 2;
+		}
+		else
+			buf[0] = static_cast<char>(cpoint);
+
+		if (in.get_rightadj())
+		{
+			for (uint32_t j = 1; j < in.get_width(); ++j)
+				to_vbuf(in.get_filler(), out);
+
+			to_vbuf(buf, cunits, out);
+		}
+		else
+		{
+			to_vbuf(buf, cunits, out);
+
+			for (uint32_t j = 1; j < in.get_width(); ++j)
+				to_vbuf(in.get_filler(), out);
+		}
 	}
 
-	void f_double(arg in, och::iohandle out)
+	void f_time(arg in, och::iohandle out)
 	{
+		char buf[] {50};
 
+		date d(in.t);
+
+		uint16_t year = d.year;
+
+		int i = 0;
+
+		if (year < 1000)
+			i = 3;
+		else if (year < 10000)
+			i = 4;
+		else
+			i = 5;
+
+		uint32_t idx = i + 1;
+
+		while (year >= 10)
+		{
+			buf[i] = '0' + year % 10;
+
+			year /= 10;
+
+			--i;
+		}
+
+		buf[i] = '0' + year;
+
+		buf[idx++] = '-';
+
+		buf[idx++] = '0' + (d.month >= 10);
+
+		buf[idx++] = '0' + (d.month >= 10 ? d.month - 10: d.month);
+
+		buf[idx++] = '-';
+
+		buf[idx++] = '0' + d.monthday / 10;
+
+		buf[idx++] = '0' + d.monthday % 10;
+
+		buf[idx++] = ',';
+
+		buf[idx++] = ' ';
+
+		buf[idx++] = '0' + d.hour / 10;
+
+		buf[idx++] = '0' + d.hour % 10;
+
+		buf[idx++] = ':';
+
+		buf[idx++] = '0' + d.minute / 10;
+
+		buf[idx++] = '0' + d.minute % 10;
+
+		buf[idx++] = ':';
+
+		buf[idx++] = '0' + d.second / 10;
+
+		buf[idx++] = '0' + d.second % 10;
+
+		buf[idx++] = '.';
+
+		uint32_t ms = d.millisecond;
+
+		buf[idx++] = '0' + ms / 100;
+
+		ms %= 100;
+
+		buf[idx++] = '0' + ms / 10;
+
+		buf[idx] = '0' + ms % 10;
+
+		to_vbuf(buf + (year < 10000), idx, out);
 	}
 
 	void f_hexadecimal(arg in, och::iohandle out)
@@ -320,39 +355,23 @@ namespace och
 		}
 	}
 
-	void f_character(arg in, och::iohandle out)
-	{
-		if (in.get_rightadj())
-		{
-			for (uint32_t j = 1; j < in.get_width(); ++j)
-				to_vbuf(in.get_filler(), out);
-		
-			to_vbuf(static_cast<char>(in.i), out);
-		}
-		else
-		{
-			to_vbuf(static_cast<char>(in.i), out);
-		
-			for (uint32_t j = 1; j < in.get_width(); ++j)
-				to_vbuf(in.get_filler(), out);
-		}
-	}
-
 	void f_scientific(arg in, och::iohandle out)
 	{
 
 	}
 
 	//Format-function vtable
-	fmt_function format_functions[32]{
+	fmt_function format_functions[33] alignas(64) {
 		f_uint,
 		f_int,
 		f_float,
 		f_double,
 		f_ministring,
+		f_character,
+		f_time,
 		nullptr,			//a
 		f_binary,			//b
-		f_character,		//c
+		nullptr,			//c
 		nullptr,			//d
 		f_scientific,		//e
 		nullptr,			//f
@@ -419,7 +438,7 @@ namespace och
 					//		signmode		'+' or '_', meaning positive signed ints are padded with a plus or space respectively
 					//		formatmode		o, x, X, b, c for (u)ints, e, b for float/double
 
-					uint16_t f_width = 0;
+					uint8_t f_width = 0;
 					while ((c = *(++fmt)) >= '0' && c <= '9')
 						f_width = f_width * 10 + c - '0';
 					curr_arg.set_width(f_width);
@@ -456,9 +475,9 @@ namespace och
 						c = *(++fmt);
 					}
 
-					if (c >= 'a' && c <= 'z')
+					if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
 					{
-						curr_arg.set_offset(c - 'a' + 5);
+						curr_arg.set_fmt_specifier(c);
 						c = *(++fmt);
 					}
 				}
