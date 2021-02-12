@@ -16,7 +16,6 @@ namespace och
 			case(fio::open_normal):		return  4;
 			case fio::open_truncate:	return  4;
 			case fio::open_fail:		return  3;
-			default:					__assume(0);
 			}
 			break;
 
@@ -26,7 +25,6 @@ namespace och
 			case(fio::open_normal):		return  2;
 			case fio::open_truncate:	return  2;
 			case fio::open_fail:		return  5;
-			default:					__assume(0);
 			}
 
 		case fio::open_fail:
@@ -35,9 +33,7 @@ namespace och
 			case(fio::open_normal):		return  1;
 			case fio::open_truncate:	return  1;
 			case fio::open_fail:		return -1;
-			default:					__assume(0);
 			}
-		default:					__assume(0);
 		}
 	}
 
@@ -223,7 +219,6 @@ namespace och
 	{
 		return GetStdHandle(STD_ERROR_HANDLE);
 	}
-
 }
 
 #endif // _WIN32
