@@ -225,8 +225,8 @@
     <ClCompile Include="och_time.cpp" />
     <ClCompile Include="och_tok.cpp" />
     <ClCompile Include="och_wnd.cpp" />
-    <ClCompile Include="utf16.cpp" />
-    <ClCompile Include="utf8.cpp" />
+    <ClCompile Include="och_utf16.cpp" />
+    <ClCompile Include="och_utf8.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="och_constexpr_util.h" />
@@ -241,8 +241,8 @@
     <ClInclude Include="och_wnd.h" />
     <ClInclude Include="och_timer.h" />
     <ClInclude Include="och_tok.h" />
-    <ClInclude Include="utf16.h" />
-    <ClInclude Include="utf8.h" />
+    <ClInclude Include="och_utf16.h" />
+    <ClInclude Include="och_utf8.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,8 +1,6 @@
 #pragma once
-#include "utf16.h"
 
 #include <cstdint>
-#include <cstdlib>
 
 namespace och
 {
@@ -43,9 +41,9 @@ namespace och
 			struct
 			{
 				char16_t* m_ptr;
-				uint32_t m_codeunits;											//char16_ts used in string (excluding terminating u'\0'
+				uint32_t m_codeunits;										//char16_ts used in string (excluding terminating u'\0'
 				uint32_t m_capacity;										//char16_ts currently storable without reallocating
-				uint32_t m_codepoints;											//number of actual unicode-codepoints encoded in string
+				uint32_t m_codepoints;										//number of actual unicode-codepoints encoded in string
 				int32_t m_resesrved;										//Gets String to 3*8 bytes, and allows storing up to 11 characters in internal buffer, while also serving to distinguish sso
 			} ls;
 
