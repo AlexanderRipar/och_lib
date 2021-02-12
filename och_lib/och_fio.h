@@ -44,66 +44,66 @@ namespace och
 	{
 		iohandle() = default;
 
-		iohandle(void* h) : ptr{ h } {}
+		iohandle(void* h);
 
 		void* ptr;
 	};
 
 	[[nodiscard]] iohandle open_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none, uint32_t flags = fio::flag_normal) noexcept;
 
-	[[nodiscard]] iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr) noexcept;
+	[[nodiscard]] iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr) noexcept;
 
-	[[nodiscard]] iohandle file_as_array(iohandle file_mapper, uint32_t access_rights, uint64_t beg, uint64_t end) noexcept;
+	[[nodiscard]] iohandle file_as_array(const iohandle file_mapper, uint32_t access_rights, uint64_t beg, uint64_t end) noexcept;
 
-	[[nodiscard]] int64_t get_filesize(iohandle file) noexcept;
+	[[nodiscard]] int64_t get_filesize(const iohandle file) noexcept;
 
-	[[nodiscard]] och::range<char> read_from_file(iohandle file, och::range<char> buf) noexcept;
+	[[nodiscard]] och::range<char> read_from_file(const iohandle file, och::range<char> buf) noexcept;
 
-	uint32_t write_to_file(iohandle file, const och::stringview buf) noexcept;
+	uint32_t write_to_file(const iohandle file, const och::stringview buf) noexcept;
 
-	bool close_file(iohandle file) noexcept;
+	bool close_file(const iohandle file) noexcept;
 
-	bool close_file_array(iohandle file_array) noexcept;
+	bool close_file_array(const iohandle file_array) noexcept;
 
 	bool delete_file(const och::stringview filename) noexcept;
 
-	bool file_seek(iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept;
+	bool file_seek(const iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept;
 
-	bool set_filesize(iohandle file, uint64_t bytes) noexcept;
+	bool set_filesize(const iohandle file, uint64_t bytes) noexcept;
 
-	[[nodiscard]] och::range<char> get_filepath(iohandle file, och::range<char> buf) noexcept;
+	[[nodiscard]] och::range<char> get_filepath(const iohandle file, och::range<char> buf) noexcept;
 
-	[[nodiscard]] och::time get_last_write_time(iohandle file) noexcept;
+	[[nodiscard]] och::time get_last_write_time(const iohandle file) noexcept;
 
 	struct filehandle
 	{
 		const iohandle handle;
 
-		filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
+		filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
-		filehandle(iohandle handle) noexcept : handle{ handle } {}
+		filehandle(iohandle handle) noexcept;
 
-		~filehandle() noexcept { close_file(handle); }
+		~filehandle() noexcept;
 
-		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
+		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept;
 
-		uint32_t write(const och::stringview buf) const noexcept { return write_to_file(handle, buf); }
+		uint32_t write(const och::stringview buf) const noexcept;
 
-		uint32_t write(const och::range<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
+		uint32_t write(const och::range<char> buf) const noexcept;
 
-		[[nodiscard]] uint64_t get_size() noexcept { return get_filesize(handle); }
+		[[nodiscard]] uint64_t get_size() const noexcept;
 
-		bool set_size(uint64_t bytes) const noexcept { return set_filesize(handle, bytes); }
+		bool set_size(uint64_t bytes) const noexcept;
 
-		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(handle, buf); }
+		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept;
 
-		bool seek(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return file_seek(handle, set_to, setptr_mode); }
+		bool seek(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept;
 
-		[[nodiscard]] och::time last_write_time() const noexcept { return get_last_write_time(handle); }
+		[[nodiscard]] och::time last_write_time() const noexcept;
 
-		void close() noexcept { close_file(handle); }
+		void close() const noexcept;
 
-		[[nodiscard]] bool operator!() { return !handle.ptr; }
+		[[nodiscard]] bool operator!() const noexcept;
 	};
 
 	struct tempfilehandle : public filehandle
@@ -112,17 +112,17 @@ namespace och
 
 		~tempfilehandle() noexcept;
 
-		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
+		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept;
 
-		uint32_t write(const och::stringview buf) const noexcept { return write_to_file(handle, buf); }
+		uint32_t write(const och::stringview buf) const noexcept;
 
-		[[nodiscard]] uint64_t get_size() noexcept { return och::get_filesize(handle); }
+		[[nodiscard]] uint64_t get_size() const noexcept;
 
-		bool set_size(uint64_t bytes) noexcept { return och::set_filesize(handle, bytes); }
+		bool set_size(uint64_t bytes) const noexcept;
 
-		och::range<char> path(och::range<char> buf) noexcept { return get_filepath(handle, buf); }
+		och::range<char> path(och::range<char> buf) const noexcept;
 
-		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return och::file_seek(handle, set_to, setptr_mode); }
+		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept;
 	};
 
 	template<typename T = uint8_t>
@@ -159,7 +159,7 @@ namespace och
 			och::close_file(file);
 		}
 
-		[[nodiscard]] range<T> get_data() const { return range<T>(reinterpret_cast<T*>(data.ptr), bytes / sizeof(T)); }
+		[[nodiscard]] range<T> get_data() const noexcept { return range<T>(reinterpret_cast<T*>(data.ptr), bytes / sizeof(T)); }
 
 		[[nodiscard]] T& operator[](uint32_t idx) { return reinterpret_cast<T*>(data.ptr)[idx]; }
 
@@ -188,11 +188,11 @@ namespace och
 
 		static constexpr int size = sizeof(curr_data);
 
-		bool next() noexcept;
-
 		file_search(const och::stringview path) noexcept;
 
 		~file_search() noexcept;
+
+		bool next() noexcept;
 
 		och::stringview name() const noexcept;
 

@@ -6,6 +6,12 @@
 
 namespace och
 {
+	iohandle::iohandle(void* h) : ptr{ h } {}
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*////////////////////////////////////////////////Free functions/////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 	uint32_t interp_openmode(uint32_t existing_mode, uint32_t new_mode) noexcept
 	{
 		switch (existing_mode)
@@ -59,7 +65,7 @@ namespace och
 		return file.ptr == INVALID_HANDLE_VALUE ? nullptr : file;
 	}
 
-	iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name) noexcept
+	iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name) noexcept
 	{
 		if (!file.ptr)
 			return nullptr;
@@ -71,7 +77,7 @@ namespace och
 		return CreateFileMappingA(file.ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name);
 	}
 
-	iohandle file_as_array(iohandle file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end) noexcept
+	iohandle file_as_array(const iohandle file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end) noexcept
 	{
 		LARGE_INTEGER _beg;
 
@@ -80,12 +86,12 @@ namespace och
 		return MapViewOfFile(file_mapping.ptr, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg));
 	}
 
-	bool close_file(iohandle file) noexcept
+	bool close_file(const iohandle file) noexcept
 	{
 		return CloseHandle(file.ptr);
 	}
 
-	bool close_file_array(iohandle file_array) noexcept
+	bool close_file_array(const iohandle file_array) noexcept
 	{
 		return UnmapViewOfFile(file_array.ptr);
 	}
@@ -95,7 +101,7 @@ namespace och
 		return DeleteFileA(filename.beg);
 	}
 
-	och::range<char> read_from_file(iohandle file, och::range<char> buf) noexcept
+	och::range<char> read_from_file(const iohandle file, och::range<char> buf) noexcept
 	{
 		uint32_t bytes_read = 0;
 
@@ -104,7 +110,7 @@ namespace och
 		return och::range<char>(buf.beg, bytes_read);
 	}
 
-	uint32_t write_to_file(iohandle file, const och::stringview buf) noexcept
+	uint32_t write_to_file(const iohandle file, const och::stringview buf) noexcept
 	{
 		uint32_t bytes_written = 0;
 
@@ -113,7 +119,7 @@ namespace och
 		return bytes_written;
 	}
 
-	bool file_seek(iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept
+	bool file_seek(const iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept
 	{
 		LARGE_INTEGER _set_to;
 
@@ -122,7 +128,7 @@ namespace och
 		return SetFilePointerEx(file.ptr, _set_to, nullptr, static_cast<DWORD>(setptr_mode));
 	}
 
-	int64_t get_filesize(iohandle file) noexcept
+	int64_t get_filesize(const iohandle file) noexcept
 	{
 		LARGE_INTEGER filesize;
 
@@ -131,7 +137,7 @@ namespace och
 		return filesize.QuadPart;
 	}
 
-	bool set_filesize(iohandle file, uint64_t bytes) noexcept
+	bool set_filesize(const iohandle file, uint64_t bytes) noexcept
 	{
 		LARGE_INTEGER old_fileptr;
 
@@ -155,12 +161,12 @@ namespace och
 		return true;
 	}
 
-	och::range<char> get_filepath(iohandle file, och::range<char> buf) noexcept
+	och::range<char> get_filepath(const iohandle file, och::range<char> buf) noexcept
 	{
 		return och::range<char>(buf.beg, GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD) buf.len(), 0));
 	}
 
-	och::time get_last_write_time(iohandle file) noexcept
+	och::time get_last_write_time(const iohandle file) noexcept
 	{
 		FILE_BASIC_INFO info;
 
@@ -180,6 +186,44 @@ namespace och
 		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail, share_mode, fio::flag_temporary);
 	}
 
+
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*//////////////////////////////////////////////////filehandle///////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+	filehandle::filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
+
+	filehandle::filehandle(iohandle handle) noexcept : handle{ handle } {}
+
+	filehandle::~filehandle() noexcept { close_file(handle); }
+
+	[[nodiscard]] och::range<char> filehandle::read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
+
+	uint32_t filehandle::write(const och::stringview buf) const noexcept { return write_to_file(handle, buf); }
+
+	uint32_t filehandle::write(const och::range<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
+
+	[[nodiscard]] uint64_t filehandle::get_size() const noexcept { return get_filesize(handle); }
+
+	bool filehandle::set_size(uint64_t bytes) const noexcept { return set_filesize(handle, bytes); }
+
+	[[nodiscard]] och::range<char> filehandle::path(och::range<char> buf) const noexcept { return get_filepath(handle, buf); }
+
+	bool filehandle::seek(int64_t set_to, uint32_t setptr_mode) const noexcept { return file_seek(handle, set_to, setptr_mode); }
+
+	[[nodiscard]] och::time filehandle::last_write_time() const noexcept { return get_last_write_time(handle); }
+
+	void filehandle::close() const noexcept { close_file(handle); }
+
+	[[nodiscard]] bool filehandle::operator!() const noexcept { return !handle.ptr; }
+
+
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*////////////////////////////////////////////////tempfilehandle/////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 	tempfilehandle::tempfilehandle(uint32_t share_mode) noexcept : filehandle{ create_tempfile(share_mode) } {}
 
 	tempfilehandle::~tempfilehandle() noexcept
@@ -193,6 +237,24 @@ namespace och
 		delete_file(buf);
 	}
 
+	[[nodiscard]] och::range<char> tempfilehandle::read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
+
+	uint32_t tempfilehandle::write(const och::stringview buf) const noexcept { return write_to_file(handle, buf); }
+
+	[[nodiscard]] uint64_t tempfilehandle::get_size() const noexcept { return och::get_filesize(handle); }
+
+	bool tempfilehandle::set_size(uint64_t bytes) const noexcept { return och::set_filesize(handle, bytes); }
+
+	och::range<char> tempfilehandle::path(och::range<char> buf) const noexcept { return get_filepath(handle, buf); }
+
+	bool tempfilehandle::set_fileptr(int64_t set_to, uint32_t setptr_mode) const noexcept { return och::file_seek(handle, set_to, setptr_mode); }
+
+
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*/////////////////////////////////////////////////file_search///////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 	file_search::file_search(const och::stringview path) noexcept : search_handle{FindFirstFileA(path.beg, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
 
 	file_search::~file_search() noexcept { FindClose(search_handle.ptr); }
@@ -204,6 +266,12 @@ namespace och
 	bool file_search::is_dir() const noexcept { return curr_data.attributes & fio::flag_directory; }
 
 	filehandle file_search::open(uint32_t access_rights, uint32_t share_mode) const noexcept { return filehandle(curr_data.name, access_rights, fio::open_normal, fio::open_fail, share_mode); }
+
+
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*/////////////////////////////////////////////Standard I/O interop//////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 	iohandle get_stdout()
 	{
