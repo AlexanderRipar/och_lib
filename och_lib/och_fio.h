@@ -49,7 +49,7 @@ namespace och
 		void* ptr;
 	};
 
-	[[nodiscard]] iohandle open_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none, uint32_t flags = fio::flag_normal) noexcept;
+	[[nodiscard]] iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none, uint32_t flags = fio::flag_normal) noexcept;
 
 	[[nodiscard]] iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr) noexcept;
 
@@ -65,7 +65,7 @@ namespace och
 
 	bool close_file_array(const iohandle file_array) noexcept;
 
-	bool delete_file(const och::stringview filename) noexcept;
+	bool delete_file(const char* filename) noexcept;
 
 	bool file_seek(const iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept;
 
@@ -79,7 +79,7 @@ namespace och
 	{
 		const iohandle handle;
 
-		filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+		filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
 		filehandle(iohandle handle) noexcept;
 
@@ -138,7 +138,7 @@ namespace och
 
 		const uint32_t bytes;
 
-		mapped_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
+		mapped_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
 			file{ open_file(filename, access_rights, existing_mode, new_mode) },
 			mapper{ create_file_mapper(file, (uint64_t)mapping_size + mapping_offset, access_rights) },
 			data{ file_as_array(mapper, access_rights, mapping_offset, (uint64_t) mapping_offset + mapping_size) },
@@ -188,7 +188,7 @@ namespace och
 
 		static constexpr int size = sizeof(curr_data);
 
-		file_search(const och::stringview path) noexcept;
+		file_search(const char* path) noexcept;
 
 		~file_search() noexcept;
 

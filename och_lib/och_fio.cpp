@@ -58,9 +58,9 @@ namespace och
 		return (access_rights - ((access_rights == 3) << 1)) << 1;
 	}
 
-	iohandle open_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode, uint32_t flags) noexcept
+	iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode, uint32_t flags) noexcept
 	{
-		iohandle file = CreateFileA(filename.beg, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr);
+		iohandle file = CreateFileA(filename, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr);
 
 		return file.ptr == INVALID_HANDLE_VALUE ? nullptr : file;
 	}
@@ -96,9 +96,9 @@ namespace och
 		return UnmapViewOfFile(file_array.ptr);
 	}
 
-	bool delete_file(const och::stringview filename) noexcept
+	bool delete_file(const char* filename) noexcept
 	{
-		return DeleteFileA(filename.beg);
+		return DeleteFileA(filename);
 	}
 
 	och::range<char> read_from_file(const iohandle file, och::range<char> buf) noexcept
@@ -192,7 +192,7 @@ namespace och
 	/*//////////////////////////////////////////////////filehandle///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	filehandle::filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
+	filehandle::filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
 
 	filehandle::filehandle(iohandle handle) noexcept : handle{ handle } {}
 
@@ -255,7 +255,7 @@ namespace och
 	/*/////////////////////////////////////////////////file_search///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	file_search::file_search(const och::stringview path) noexcept : search_handle{FindFirstFileA(path.beg, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
+	file_search::file_search(const char* path) noexcept : search_handle{FindFirstFileA(path, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
 
 	file_search::~file_search() noexcept { FindClose(search_handle.ptr); }
 
