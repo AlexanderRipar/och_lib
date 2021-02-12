@@ -4,6 +4,7 @@
 
 #include "och_range.h"
 #include "och_time.h"
+#include "och_utf8.h"
 
 namespace och
 {
@@ -81,6 +82,12 @@ namespace och
 
 		filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
+		filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+
+		filehandle(const och::utf8_view& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+
+		filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+
 		filehandle(iohandle handle) noexcept;
 
 		~filehandle() noexcept;
@@ -145,6 +152,15 @@ namespace och
 			bytes{ mapping_size == 0 ? (uint32_t) get_filesize(file) : mapping_size }
 		{}
 
+		mapped_file(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
+			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
+
+		mapped_file(const och::utf8_view& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
+			mapped_file(filename.m_ptr, access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
+
+		mapped_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
+			mapped_file(filename.beg, access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
+
 		mapped_file(const iohandle file, uint32_t access_rights, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
 			file{ file },
 			mapper{ create_file_mapper(file, (uint64_t)mapping_size + mapping_offset, access_rights) },
@@ -189,6 +205,12 @@ namespace och
 		static constexpr int size = sizeof(curr_data);
 
 		file_search(const char* path) noexcept;
+
+		file_search(const och::utf8_string& path) noexcept;
+		
+		file_search(const och::utf8_view& path) noexcept;
+		
+		file_search(const och::stringview& path) noexcept;
 
 		~file_search() noexcept;
 

@@ -1,5 +1,7 @@
 #include "och_fio.h"
 
+#include "och_utf8.h"
+
 #ifdef _WIN32
 
 #include <Windows.h>
@@ -194,6 +196,12 @@ namespace och
 
 	filehandle::filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
 
+	filehandle::filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
+
+	filehandle::filehandle(const och::utf8_view& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.m_ptr, access_rights, existing_mode, new_mode, share_mode) {};
+
+	filehandle::filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.beg, access_rights, existing_mode, new_mode, share_mode) {};
+
 	filehandle::filehandle(iohandle handle) noexcept : handle{ handle } {}
 
 	filehandle::~filehandle() noexcept { close_file(handle); }
@@ -256,6 +264,12 @@ namespace och
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 	file_search::file_search(const char* path) noexcept : search_handle{FindFirstFileA(path, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
+
+	file_search::file_search(const och::utf8_string& path) noexcept : file_search(path.raw_cbegin()) {}
+
+	file_search::file_search(const och::utf8_view& path) noexcept : file_search(path.m_ptr) {}
+
+	file_search::file_search(const och::stringview& path) noexcept : file_search(path.beg) {}
 
 	file_search::~file_search() noexcept { FindClose(search_handle.ptr); }
 
