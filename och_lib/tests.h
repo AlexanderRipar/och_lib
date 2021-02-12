@@ -22,9 +22,9 @@ namespace och
 
 		char dat[255];
 
-		och::memrun buf(dat);
+		och::range buf(dat);
 
-		och::memrun<char> ret = file.read(buf);
+		och::range<char> ret = file.read(buf);
 
 		for (int i = 0; i < ret.len(); ++i)
 		{

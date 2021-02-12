@@ -143,7 +143,7 @@ namespace och
 		target_idx = 0;
 	}
 
-	multi_matcher::multi_matcher(och::string text, och::memrun<och::string> targets) : text{ text }, targets{ targets.beg, targets.end } {}
+	multi_matcher::multi_matcher(och::string text, och::range<och::string> targets) : text{ text }, targets{ targets.beg, targets.end } {}
 
 	och::string multi_matcher::operator()()
 	{

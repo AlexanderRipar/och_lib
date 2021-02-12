@@ -19,19 +19,19 @@ namespace och
 	}
 
 	template<typename T>
-	struct memrun
+	struct range
 	{
 		T* beg, * end;
 
 		template<size_t Len>
-		constexpr memrun(T(&arr)[Len]) : beg{ arr }, end{ arr + Len } {}
+		constexpr range(T(&arr)[Len]) : beg{ arr }, end{ arr + Len } {}
 
-		constexpr memrun(T* beg, T* end) : beg{ beg }, end{ end } {}
+		constexpr range(T* beg, T* end) : beg{ beg }, end{ end } {}
 
-		constexpr memrun(T* beg, size_t len) : beg{ beg }, end{ beg + len } {}
+		constexpr range(T* beg, size_t len) : beg{ beg }, end{ beg + len } {}
 		
 		template<typename U = T>
-		memrun(std::enable_if_t<std::is_same<U, const char*>::value, const char*> cstr) : beg{ cstr }, end{ cstr + strlen(cstr) } { }
+		range(std::enable_if_t<std::is_same<U, const char*>::value, const char*> cstr) : beg{ cstr }, end{ cstr + strlen(cstr) } { }
 
 		[[nodiscard]] size_t len() const { return end - beg; }
 
@@ -43,17 +43,17 @@ namespace och
 	};
 
 	template<typename T>
-	struct compressed_memrun
+	struct compressed_range
 	{
 		int64_t _ptr_len_u;
 
-		compressed_memrun(T* beg, T* end) : _ptr_len_u{ (reinterpret_cast<int64_t>(beg) << 16) | (beg - end) } {}
+		compressed_range(T* beg, T* end) : _ptr_len_u{ (reinterpret_cast<int64_t>(beg) << 16) | (beg - end) } {}
 
-		compressed_memrun(T* beg, uint16_t len) : _ptr_len_u{ (reinterpret_cast<int64_t>(beg) << 16) | len } {}
+		compressed_range(T* beg, uint16_t len) : _ptr_len_u{ (reinterpret_cast<int64_t>(beg) << 16) | len } {}
 
-		compressed_memrun(const memrun<T>& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run.beg) << 16) | run.end - run.beg } {}
+		compressed_range(const range<T>& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run.beg) << 16) | run.end - run.beg } {}
 
-		compressed_memrun(memrun<T>&& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run.beg) << 16) | run.end - run.beg } {}
+		compressed_range(range<T>&& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run.beg) << 16) | run.end - run.beg } {}
 
 		//compressed_memrun(const char* cstr) : _ptr_len_u{ (reinterpret_cast<int64_t>(cstr) << 16) | _const_strlen_u16(cstr) } { static_assert(std::is_same<const char, T>::value, "och::compressed_memrun<T>(const char*) may only be used with T = const char"); }
 
@@ -72,24 +72,24 @@ namespace och
 			return static_cast<uint16_t>(_ptr_len_u);
 		}
 
-		[[nodiscard]] och::memrun<T> uncompress() const
+		[[nodiscard]] och::range<T> uncompress() const
 		{
-			return och::memrun<T>(begin(), end());
+			return och::range<T>(begin(), end());
 		}
 	};
 
-	template<typename T> [[nodiscard]] T* begin(och::memrun<T>& r) { return r.beg; }
-	template<typename T> [[nodiscard]] T* end(och::memrun<T>& r) { return r.end; }
-	template<typename T> [[nodiscard]] const T* begin(const och::memrun<T>& r) { return r.beg; }
-	template<typename T> [[nodiscard]] const T* end(const och::memrun<T>& r) { return r.end; }
+	template<typename T> [[nodiscard]] T* begin(och::range<T>& r) { return r.beg; }
+	template<typename T> [[nodiscard]] T* end(och::range<T>& r) { return r.end; }
+	template<typename T> [[nodiscard]] const T* begin(const och::range<T>& r) { return r.beg; }
+	template<typename T> [[nodiscard]] const T* end(const och::range<T>& r) { return r.end; }
 
-	template<typename T> [[nodiscard]] T* begin(och::compressed_memrun<T>& r) { return r.begin(); }
-	template<typename T> [[nodiscard]] T* end(och::compressed_memrun<T>& r) { return r.end(); }
-	template<typename T> [[nodiscard]] const T* begin(const och::compressed_memrun<T>& r) { return r.begin(); }
-	template<typename T> [[nodiscard]] const T* end(const och::compressed_memrun<T>& r) { return r.end(); }
+	template<typename T> [[nodiscard]] T* begin(och::compressed_range<T>& r) { return r.begin(); }
+	template<typename T> [[nodiscard]] T* end(och::compressed_range<T>& r) { return r.end(); }
+	template<typename T> [[nodiscard]] const T* begin(const och::compressed_range<T>& r) { return r.begin(); }
+	template<typename T> [[nodiscard]] const T* end(const och::compressed_range<T>& r) { return r.end(); }
 
-	using string = memrun<const char>;
+	using string = range<const char>;
 
-	using ministring = compressed_memrun<const char>;
+	using ministring = compressed_range<const char>;
 
 }

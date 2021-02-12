@@ -13,7 +13,7 @@ namespace och
 	constexpr int vprint_buf_size = 8192;
 
 	char _vbuf[vprint_buf_size];
-	och::memrun vbuf(_vbuf);
+	och::range vbuf(_vbuf);
 
 	inline void to_vbuf(char c, iohandle out)
 	{

@@ -59,10 +59,10 @@ namespace och
 	struct multi_matcher
 	{
 		och::string text;
-		och::memrun<const och::string> targets;
+		och::range<const och::string> targets;
 		uint8_t target_idx[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
 
-		multi_matcher(och::string text, och::memrun<och::string> targets);
+		multi_matcher(och::string text, och::range<och::string> targets);
 
 		och::string operator()();
 

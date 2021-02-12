@@ -92,7 +92,7 @@ namespace och
 			if (bytes_recv > 0)
 			{
 				och::print("\n\nbytes received: {}\n\n", bytes_recv);
-				och::print("{}", och::memrun(recv_buf, sizeof(recv_buf)));
+				och::print("{}", och::range(recv_buf, sizeof(recv_buf)));
 			}
 			else if (!bytes_recv)
 			{

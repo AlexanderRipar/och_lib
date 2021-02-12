@@ -59,7 +59,7 @@ namespace och
 		arg(        const char* s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                              s, _const_strlen_u16(s) } {}
 		arg(        och::string s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
 		arg(    och::ministring s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
-		arg(  och::memrun<char> s) : offset{ static_cast<uint8_t>(types::_string) }, s{ reinterpret_cast<const char*>(s.beg), static_cast<uint16_t>(s.len()) } {}
+		arg(  och::range<char> s) : offset{ static_cast<uint8_t>(types::_string) }, s{ reinterpret_cast<const char*>(s.beg), static_cast<uint16_t>(s.len()) } {}
 	};
 
 	using fmt_function = void (*) (arg in, och::iohandle out);

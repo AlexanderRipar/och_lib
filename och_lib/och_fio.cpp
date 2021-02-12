@@ -95,13 +95,13 @@ namespace och
 		return DeleteFileA(filename.beg);
 	}
 
-	och::memrun<char> read_from_file(iohandle file, och::memrun<char> buf) noexcept
+	och::range<char> read_from_file(iohandle file, och::range<char> buf) noexcept
 	{
 		uint32_t bytes_read = 0;
 
 		ReadFile(file.ptr, buf.beg, static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_read), nullptr);
 
-		return och::memrun<char>(buf.beg, bytes_read);
+		return och::range<char>(buf.beg, bytes_read);
 	}
 
 	uint32_t write_to_file(iohandle file, const och::string buf) noexcept
@@ -155,9 +155,9 @@ namespace och
 		return true;
 	}
 
-	och::memrun<char> get_filepath(iohandle file, och::memrun<char> buf) noexcept
+	och::range<char> get_filepath(iohandle file, och::range<char> buf) noexcept
 	{
-		return och::memrun<char>(buf.beg, GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD) buf.len(), 0));
+		return och::range<char>(buf.beg, GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD) buf.len(), 0));
 	}
 
 	och::time get_last_write_time(iohandle file) noexcept

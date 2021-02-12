@@ -57,7 +57,7 @@ namespace och
 
 	[[nodiscard]] int64_t get_filesize(iohandle file) noexcept;
 
-	[[nodiscard]] och::memrun<char> read_from_file(iohandle file, och::memrun<char> buf) noexcept;
+	[[nodiscard]] och::range<char> read_from_file(iohandle file, och::range<char> buf) noexcept;
 
 	uint32_t write_to_file(iohandle file, const och::string buf) noexcept;
 
@@ -71,7 +71,7 @@ namespace och
 
 	bool set_filesize(iohandle file, uint64_t bytes) noexcept;
 
-	[[nodiscard]] och::memrun<char> get_filepath(iohandle file, och::memrun<char> buf) noexcept;
+	[[nodiscard]] och::range<char> get_filepath(iohandle file, och::range<char> buf) noexcept;
 
 	[[nodiscard]] och::time get_last_write_time(iohandle file) noexcept;
 
@@ -85,17 +85,17 @@ namespace och
 
 		~filehandle() noexcept { close_file(handle); }
 
-		[[nodiscard]] och::memrun<char> read(och::memrun<char> buf) const noexcept { return read_from_file(handle, buf); }
+		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
 
 		uint32_t write(const och::string buf) const noexcept { return write_to_file(handle, buf); }
 
-		uint32_t write(const och::memrun<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
+		uint32_t write(const och::range<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
 
 		[[nodiscard]] uint64_t get_size() noexcept { return get_filesize(handle); }
 
 		bool set_size(uint64_t bytes) const noexcept { return set_filesize(handle, bytes); }
 
-		[[nodiscard]] och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(handle, buf); }
+		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(handle, buf); }
 
 		bool seek(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return file_seek(handle, set_to, setptr_mode); }
 
@@ -112,7 +112,7 @@ namespace och
 
 		~tempfilehandle() noexcept;
 
-		[[nodiscard]] och::memrun<char> read(och::memrun<char> buf) const noexcept { return read_from_file(handle, buf); }
+		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
 
 		uint32_t write(const och::string buf) const noexcept { return write_to_file(handle, buf); }
 
@@ -120,7 +120,7 @@ namespace och
 
 		bool set_size(uint64_t bytes) noexcept { return och::set_filesize(handle, bytes); }
 
-		och::memrun<char> path(och::memrun<char> buf) noexcept { return get_filepath(handle, buf); }
+		och::range<char> path(och::range<char> buf) noexcept { return get_filepath(handle, buf); }
 
 		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept { return och::file_seek(handle, set_to, setptr_mode); }
 	};
@@ -159,11 +159,11 @@ namespace och
 			och::close_file(file);
 		}
 
-		[[nodiscard]] memrun<T> get_data() const { return memrun<T>(reinterpret_cast<T*>(data.ptr), bytes / sizeof(T)); }
+		[[nodiscard]] range<T> get_data() const { return range<T>(reinterpret_cast<T*>(data.ptr), bytes / sizeof(T)); }
 
 		[[nodiscard]] T& operator[](uint32_t idx) { return reinterpret_cast<T*>(data.ptr)[idx]; }
 
-		[[nodiscard]] och::memrun<char> path(och::memrun<char> buf) const noexcept { return get_filepath(file.ptr, buf); }
+		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(file.ptr, buf); }
 
 		[[nodiscard]] bool is_valid() const noexcept { return data.ptr; }
 	};
