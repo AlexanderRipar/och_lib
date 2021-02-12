@@ -88,7 +88,7 @@ namespace och
 	template<typename T> [[nodiscard]] const T* begin(const och::compressed_range<T>& r) { return r.begin(); }
 	template<typename T> [[nodiscard]] const T* end(const och::compressed_range<T>& r) { return r.end(); }
 
-	using string = range<const char>;
+	using stringview = range<const char>;
 
-	using ministring = compressed_range<const char>;
+	using mini_stringview = compressed_range<const char>;
 }

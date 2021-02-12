@@ -25,31 +25,31 @@ namespace och
 
 		bool is_delimiter(char c);
 
-		och::string operator()();
+		och::stringview operator()();
 	};
 
 	struct tokenizer
 	{
-		och::string text;
-		och::string delimiters;
+		och::stringview text;
+		och::stringview delimiters;
 
-		tokenizer(och::string text, och::string delimiters);
+		tokenizer(och::stringview text, och::stringview delimiters);
 
 		bool is_delimiter(char c);
 
-		och::string operator()();
+		och::stringview operator()();
 	};
 
 	struct matcher
 	{
-		och::string text;
-		och::string target;
+		och::stringview text;
+		och::stringview target;
 		uint32_t target_idx = 0;
 		uint32_t text_idx = 0;
 
-		matcher(och::string text, och::string target);
+		matcher(och::stringview text, och::stringview target);
 
-		och::string operator()();
+		och::stringview operator()();
 
 		uint32_t count();
 
@@ -58,13 +58,13 @@ namespace och
 
 	struct multi_matcher
 	{
-		och::string text;
-		och::range<const och::string> targets;
+		och::stringview text;
+		och::range<const och::stringview> targets;
 		uint8_t target_idx[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
 
-		multi_matcher(och::string text, och::range<och::string> targets);
+		multi_matcher(och::stringview text, och::range<och::stringview> targets);
 
-		och::string operator()();
+		och::stringview operator()();
 
 		uint32_t count();
 	};

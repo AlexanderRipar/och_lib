@@ -4,7 +4,7 @@
 
 namespace och
 {
-	och::range<char> lf_to_cr(och::string src, och::range<char> dst)
+	och::range<char> lf_to_cr(och::stringview src, och::range<char> dst)
 	{
 		char* w = dst.beg;
 
@@ -14,7 +14,7 @@ namespace och
 		return{ dst.beg, w };
 	}
 
-	och::range<char> lf_to_crlf(och::string src, och::range<char> dst)
+	och::range<char> lf_to_crlf(och::stringview src, och::range<char> dst)
 	{
 		char* w = dst.beg;
 
@@ -34,7 +34,7 @@ namespace och
 		return{ dst.beg, w };
 	}
 
-	och::range<char> cr_to_lf(och::string src, och::range<char> dst)
+	och::range<char> cr_to_lf(och::stringview src, och::range<char> dst)
 	{
 		char* w = dst.beg;
 
@@ -44,7 +44,7 @@ namespace och
 		return{ dst.beg, w };
 	}
 
-	och::range<char> cr_to_crlf(och::string src, och::range<char> dst)
+	och::range<char> cr_to_crlf(och::stringview src, och::range<char> dst)
 	{
 		char* w = dst.beg;
 
@@ -64,7 +64,7 @@ namespace och
 		return{ dst.beg, w };
 	}
 
-	och::range<char> crlf_to_lf(och::string src, och::range<char> dst)
+	och::range<char> crlf_to_lf(och::stringview src, och::range<char> dst)
 	{
 		char* w = dst.beg;
 
@@ -78,7 +78,7 @@ namespace och
 		return{ dst.beg, w };
 	}
 
-	och::range<char> crlf_to_cr(och::string src, och::range<char> dst)
+	och::range<char> crlf_to_cr(och::stringview src, och::range<char> dst)
 	{
 		char* w = dst.beg;
 
@@ -96,31 +96,31 @@ namespace och
 
 	och::range<char> lf_to_cr(och::range<char> src, och::range<char> dst)
 	{
-		return lf_to_cr(och::string(src.beg, src.end), dst);
+		return lf_to_cr(och::stringview(src.beg, src.end), dst);
 	}
 
 	och::range<char> lf_to_crlf(och::range<char> src, och::range<char> dst)
 	{
-		return lf_to_crlf(och::string(src.beg, src.end), dst);
+		return lf_to_crlf(och::stringview(src.beg, src.end), dst);
 	}
 
 	och::range<char> cr_to_lf(och::range<char> src, och::range<char> dst)
 	{
-		return cr_to_lf(och::string(src.beg, src.end), dst);
+		return cr_to_lf(och::stringview(src.beg, src.end), dst);
 	}
 
 	och::range<char> cr_to_crlf(och::range<char> src, och::range<char> dst)
 	{
-		return cr_to_crlf(och::string(src.beg, src.end), dst);
+		return cr_to_crlf(och::stringview(src.beg, src.end), dst);
 	}
 
 	och::range<char> crlf_to_lf(och::range<char> src, och::range<char> dst)
 	{
-		return crlf_to_lf(och::string(src.beg, src.end), dst);
+		return crlf_to_lf(och::stringview(src.beg, src.end), dst);
 	}
 
 	och::range<char> crlf_to_cr(och::range<char> src, och::range<char> dst)
 	{
-		return crlf_to_cr(och::string(src.beg, src.end), dst);
+		return crlf_to_cr(och::stringview(src.beg, src.end), dst);
 	}
 }

@@ -52,7 +52,7 @@ namespace och
 		return (access_rights - ((access_rights == 3) << 1)) << 1;
 	}
 
-	iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode, uint32_t flags) noexcept
+	iohandle open_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode, uint32_t flags) noexcept
 	{
 		iohandle file = CreateFileA(filename.beg, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr);
 
@@ -90,7 +90,7 @@ namespace och
 		return UnmapViewOfFile(file_array.ptr);
 	}
 
-	bool delete_file(const och::string filename) noexcept
+	bool delete_file(const och::stringview filename) noexcept
 	{
 		return DeleteFileA(filename.beg);
 	}
@@ -104,7 +104,7 @@ namespace och
 		return och::range<char>(buf.beg, bytes_read);
 	}
 
-	uint32_t write_to_file(iohandle file, const och::string buf) noexcept
+	uint32_t write_to_file(iohandle file, const och::stringview buf) noexcept
 	{
 		uint32_t bytes_written = 0;
 
@@ -193,13 +193,13 @@ namespace och
 		delete_file(buf);
 	}
 
-	file_search::file_search(const och::string path) noexcept : search_handle{FindFirstFileA(path.beg, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
+	file_search::file_search(const och::stringview path) noexcept : search_handle{FindFirstFileA(path.beg, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
 
 	file_search::~file_search() noexcept { FindClose(search_handle.ptr); }
 
 	bool file_search::next() noexcept { return FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4)); }
 
-	och::string file_search::name() const noexcept { return { curr_data.name }; }
+	och::stringview file_search::name() const noexcept { return { curr_data.name }; }
 
 	bool file_search::is_dir() const noexcept { return curr_data.attributes & fio::flag_directory; }
 

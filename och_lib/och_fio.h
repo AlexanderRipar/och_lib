@@ -49,7 +49,7 @@ namespace och
 		void* ptr;
 	};
 
-	[[nodiscard]] iohandle open_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none, uint32_t flags = fio::flag_normal) noexcept;
+	[[nodiscard]] iohandle open_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none, uint32_t flags = fio::flag_normal) noexcept;
 
 	[[nodiscard]] iohandle create_file_mapper(iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr) noexcept;
 
@@ -59,13 +59,13 @@ namespace och
 
 	[[nodiscard]] och::range<char> read_from_file(iohandle file, och::range<char> buf) noexcept;
 
-	uint32_t write_to_file(iohandle file, const och::string buf) noexcept;
+	uint32_t write_to_file(iohandle file, const och::stringview buf) noexcept;
 
 	bool close_file(iohandle file) noexcept;
 
 	bool close_file_array(iohandle file_array) noexcept;
 
-	bool delete_file(const och::string filename) noexcept;
+	bool delete_file(const och::stringview filename) noexcept;
 
 	bool file_seek(iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept;
 
@@ -79,7 +79,7 @@ namespace och
 	{
 		const iohandle handle;
 
-		filehandle(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
+		filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
 
 		filehandle(iohandle handle) noexcept : handle{ handle } {}
 
@@ -87,7 +87,7 @@ namespace och
 
 		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
 
-		uint32_t write(const och::string buf) const noexcept { return write_to_file(handle, buf); }
+		uint32_t write(const och::stringview buf) const noexcept { return write_to_file(handle, buf); }
 
 		uint32_t write(const och::range<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
 
@@ -114,7 +114,7 @@ namespace och
 
 		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
 
-		uint32_t write(const och::string buf) const noexcept { return write_to_file(handle, buf); }
+		uint32_t write(const och::stringview buf) const noexcept { return write_to_file(handle, buf); }
 
 		[[nodiscard]] uint64_t get_size() noexcept { return och::get_filesize(handle); }
 
@@ -138,7 +138,7 @@ namespace och
 
 		const uint32_t bytes;
 
-		mapped_file(const och::string filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
+		mapped_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
 			file{ open_file(filename, access_rights, existing_mode, new_mode) },
 			mapper{ create_file_mapper(file, (uint64_t)mapping_size + mapping_offset, access_rights) },
 			data{ file_as_array(mapper, access_rights, mapping_offset, (uint64_t) mapping_offset + mapping_size) },
@@ -190,11 +190,11 @@ namespace och
 
 		bool next() noexcept;
 
-		file_search(const och::string path) noexcept;
+		file_search(const och::stringview path) noexcept;
 
 		~file_search() noexcept;
 
-		och::string name() const noexcept;
+		och::stringview name() const noexcept;
 
 		bool is_dir() const noexcept;
 

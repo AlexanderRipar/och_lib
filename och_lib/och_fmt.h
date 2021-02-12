@@ -20,7 +20,7 @@ namespace och
 			uint64_t i;
 			double d;
 			float f;
-			och::ministring s;
+			och::mini_stringview s;
 		};
 
 		enum class types : uint8_t
@@ -57,8 +57,8 @@ namespace och
 		arg(              float f) : offset{ static_cast<uint8_t>(types::_float ) }, f{                                                                   f  } {}
 		arg(             double d) : offset{ static_cast<uint8_t>(types::_double) }, d{                                                                   d  } {}
 		arg(        const char* s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                              s, _const_strlen_u16(s) } {}
-		arg(        och::string s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
-		arg(    och::ministring s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
+		arg(        och::stringview s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
+		arg(    och::mini_stringview s) : offset{ static_cast<uint8_t>(types::_string) }, s{                                                                   s  } {}
 		arg(  och::range<char> s) : offset{ static_cast<uint8_t>(types::_string) }, s{ reinterpret_cast<const char*>(s.beg), static_cast<uint16_t>(s.len()) } {}
 	};
 
@@ -67,20 +67,20 @@ namespace och
 	// [argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]
 	void vprint(const char* fmt, arg argv[], uint32_t argc, och::iohandle);
 
-	void print(const och::string fmt);
+	void print(const och::stringview fmt);
 
 	template<typename... Args>
-	void print(const och::string fmt, Args... args)
+	void print(const och::stringview fmt, Args... args)
 	{
 		arg argv[]{ args... };
 
 		vprint(fmt.beg, argv, sizeof...(args), och::out);
 	}
 
-	void print(och::iohandle out, const och::string fmt);
+	void print(och::iohandle out, const och::stringview fmt);
 
 	template<typename... Args>
-	void print(och::iohandle out, const och::string fmt, Args... args)
+	void print(och::iohandle out, const och::stringview fmt, Args... args)
 	{
 		arg argv[]{ args... };
 

@@ -14,7 +14,7 @@ namespace och
 
 		OCH_TEST(file.handle);
 
-		och::string data("This should be written to a test-file");
+		och::stringview data("This should be written to a test-file");
 
 		file.write(data);
 

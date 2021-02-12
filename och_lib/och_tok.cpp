@@ -54,7 +54,7 @@ namespace och
 		return false;
 	}
 
-	och::string cstr_tokenizer::operator()()
+	och::stringview cstr_tokenizer::operator()()
 	{
 		while (is_delimiter(*text))
 			++text;
@@ -70,7 +70,7 @@ namespace och
 		return { beg, text++ };
 	}
 
-	tokenizer::tokenizer(och::string text, och::string delimiters) : text{ text }, delimiters{ delimiters } {}
+	tokenizer::tokenizer(och::stringview text, och::stringview delimiters) : text{ text }, delimiters{ delimiters } {}
 
 	bool tokenizer::is_delimiter(char c)
 	{
@@ -83,7 +83,7 @@ namespace och
 		return false;
 	}
 
-	och::string tokenizer::operator()()
+	och::stringview tokenizer::operator()()
 	{
 		while (is_delimiter(*text.beg))
 			++text.beg;
@@ -99,9 +99,9 @@ namespace och
 		return { beg, text.beg++ };
 	}
 
-	matcher::matcher(och::string text, och::string target) : text{ text }, target{ target } {}
+	matcher::matcher(och::stringview text, och::stringview target) : text{ text }, target{ target } {}
 
-	och::string matcher::operator()()
+	och::stringview matcher::operator()()
 	{
 		for (; text_idx != text.len(); ++text_idx)
 				if (target[target_idx] == text[text_idx])
@@ -143,9 +143,9 @@ namespace och
 		target_idx = 0;
 	}
 
-	multi_matcher::multi_matcher(och::string text, och::range<och::string> targets) : text{ text }, targets{ targets.beg, targets.end } {}
+	multi_matcher::multi_matcher(och::stringview text, och::range<och::stringview> targets) : text{ text }, targets{ targets.beg, targets.end } {}
 
-	och::string multi_matcher::operator()()
+	och::stringview multi_matcher::operator()()
 	{
 		for (char c = *(text.beg++); text.beg <= text.end; c = *(text.beg++))
 			for (int i = 0; i != targets.len(); ++i)

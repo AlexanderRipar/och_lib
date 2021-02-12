@@ -482,12 +482,12 @@ namespace och
 		}
 	}
 
-	void print(const och::string fmt)
+	void print(const och::stringview fmt)
 	{
 		och::write_to_file(och::out, { fmt.beg, fmt.end - 1 });
 	}
 
-	void print(och::iohandle out, const och::string fmt)
+	void print(och::iohandle out, const och::stringview fmt)
 	{
 		och::write_to_file(out, { fmt.beg, fmt.end - 1 });
 	}
