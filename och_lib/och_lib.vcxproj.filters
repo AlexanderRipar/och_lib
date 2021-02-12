@@ -39,6 +39,12 @@
     <ClCompile Include="och_wnd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="utf8.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="utf16.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="och_fio.h">
@@ -75,6 +81,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="och_range.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utf16.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utf8.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
