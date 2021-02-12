@@ -484,7 +484,12 @@ namespace och
 
 	void print(const och::string fmt)
 	{
-		och::write_to_file(och::out, fmt);
+		och::write_to_file(och::out, { fmt.beg, fmt.end - 1 });
+	}
+
+	void print(och::iohandle out, const och::string fmt)
+	{
+		och::write_to_file(out, { fmt.beg, fmt.end - 1 });
 	}
 
 	namespace fmt
