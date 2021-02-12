@@ -9,13 +9,12 @@ namespace och
 {
 	struct arg
 	{
-	private:
 		uint16_t width = 0;
 		uint16_t precision = static_cast<uint16_t>(-1);
 		uint16_t flags = 0;
 		uint8_t offset;
 		char filler = ' ';
-	public:
+
 		union
 		{
 			uint64_t i;
@@ -77,6 +76,8 @@ namespace och
 
 		vprint(fmt.beg, argv, sizeof...(args), och::out);
 	}
+
+	void print(och::iohandle out, const och::string fmt);
 
 	template<typename... Args>
 	void print(och::iohandle out, const och::string fmt, Args... args)
