@@ -48,7 +48,7 @@ namespace och
 		return 1;
 	}
 
-	char32_t _utf8_to_codepoint(const char* str)
+	char32_t _utf8_to_utf32(const char* str)
 	{
 		if (!(*str & 0x80))
 			return static_cast<char32_t>(*str);
@@ -84,6 +84,38 @@ namespace och
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*/////////////////////////////////////////////////////utf8_codepoint////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+	utf8_codepoint::utf8_codepoint(const char* cstring) noexcept
+	{
+		uint32_t cunits = 0;
+
+		while (cunits != 4 && (cstring[cunits] & 0x80))
+		{
+			utf8[cunits] = cstring[cunits];
+			++cunits;
+		}
+	}
+
+	utf8_codepoint::utf8_codepoint(char32_t codepoint) noexcept
+	{
+		uint32_t cunits = _utf8_from_codepoint(utf8, codepoint);
+	}
+
+	uint32_t utf8_codepoint::get_codeunits() const noexcept
+	{
+		uint32_t cunits = 0;
+
+		while (cunits != 4 && _is_utf8_surr(utf8[cunits]))
+			++cunits;
+
+		return cunits + 1;
+	}
+
+
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*/////////////////////////////////////////////////////utf8_iterator/////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -91,7 +123,7 @@ namespace och
 
 	char32_t utf8_iterator::operator*()
 	{
-		return _utf8_to_codepoint(cstring);
+		return _utf8_to_utf32(cstring);
 	}
 
 	void utf8_iterator::operator++()
@@ -253,7 +285,7 @@ namespace och
 
 	char32_t utf8_string::front() const
 	{
-		return _utf8_to_codepoint(raw_cbegin());
+		return _utf8_to_utf32(raw_cbegin());
 	}
 
 	char32_t utf8_string::back() const
@@ -263,7 +295,7 @@ namespace och
 		while ((*end & 0xC0) == 0x80)
 			--end;
 
-		return _utf8_to_codepoint(end);
+		return _utf8_to_utf32(end);
 
 	}
 

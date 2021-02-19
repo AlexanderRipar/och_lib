@@ -4,6 +4,29 @@
 
 namespace och
 {
+	void _utf8_len(const char* cstring, uint32_t& cunits, uint32_t& cpoints);
+
+	uint32_t _utf8_from_codepoint(char* out, char32_t cpoint);
+
+	char32_t _utf8_to_utf32(const char* cstring);
+
+	uint32_t _utf8_codepoint_bytes(const char* cstring);
+
+	bool _is_utf8_surr(char c);
+
+	struct utf8_codepoint
+	{
+		char utf8[4] alignas(char32_t) { 0, 0, 0, 0 };
+
+		utf8_codepoint(const char* cstring) noexcept;
+
+		utf8_codepoint(char32_t codepoint) noexcept;
+
+		utf8_codepoint() = default;
+
+		uint32_t get_codeunits() const noexcept;
+	};
+	
 	struct utf8_view
 	{
 		const char* m_ptr;
