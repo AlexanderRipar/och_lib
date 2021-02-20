@@ -16,12 +16,12 @@ namespace och
 		char* operator()();
 	};
 
-	struct cstr_tokenizer
+	struct cstring_tokenizer
 	{
 		const char* text;
 		const char* delimiters;
 
-		cstr_tokenizer(const char* text, const char* delimiters);
+		cstring_tokenizer(const char* text, const char* delimiters);
 
 		bool is_delimiter(char c);
 
