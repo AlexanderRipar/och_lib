@@ -30,6 +30,8 @@ namespace och
 
 		constexpr range(T* beg, size_t len) : beg{ beg }, end{ beg + len } {}
 		
+		constexpr range() = default;
+
 		template<typename U = T>
 		range(std::enable_if_t<std::is_same<U, const char*>::value, const char*> cstr) : beg{ cstr }, end{ cstr + strlen(cstr) } { }
 
@@ -54,6 +56,8 @@ namespace och
 		compressed_range(const range<T>& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run.beg) << 16) | run.end - run.beg } {}
 
 		compressed_range(range<T>&& run) : _ptr_len_u{ (reinterpret_cast<int64_t>(run.beg) << 16) | run.end - run.beg } {}
+
+		constexpr compressed_range() = default;
 
 		//compressed_memrun(const char* cstr) : _ptr_len_u{ (reinterpret_cast<int64_t>(cstr) << 16) | _const_strlen_u16(cstr) } { static_assert(std::is_same<const char, T>::value, "och::compressed_memrun<T>(const char*) may only be used with T = const char"); }
 
