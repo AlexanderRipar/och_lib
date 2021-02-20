@@ -18,10 +18,12 @@ namespace och
 	{
 		switch (existing_mode)
 		{
-		case(fio::open_normal):
+		case fio::open_normal:
+		case fio::open_append:
 			switch (new_mode)
 			{
-			case(fio::open_normal):		return  4;
+			case fio::open_normal:		return  4;
+			case fio::open_append:		return  4;
 			case fio::open_truncate:	return  4;
 			case fio::open_fail:		return  3;
 			}
@@ -30,7 +32,8 @@ namespace och
 		case fio::open_truncate:
 			switch (new_mode)
 			{
-			case(fio::open_normal):		return  2;
+			case fio::open_normal:		return  2;
+			case fio::open_append:		return  2;
 			case fio::open_truncate:	return  2;
 			case fio::open_fail:		return  5;
 			}
@@ -38,11 +41,14 @@ namespace och
 		case fio::open_fail:
 			switch (new_mode)
 			{
-			case(fio::open_normal):		return  1;
+			case fio::open_normal:		return  1;
+			case fio::open_append:		return  1;
 			case fio::open_truncate:	return  1;
 			case fio::open_fail:		return -1;
 			}
 		}
+
+		return -1;
 	}
 
 	uint32_t access_interp_open(uint32_t access_rights) noexcept
@@ -63,6 +69,9 @@ namespace och
 	iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode, uint32_t flags) noexcept
 	{
 		iohandle file = CreateFileA(filename, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr);
+
+		if (existing_mode == fio::open_append)
+			file_seek(file, 0, fio::setptr_end);
 
 		return file.ptr == INVALID_HANDLE_VALUE ? nullptr : file;
 	}

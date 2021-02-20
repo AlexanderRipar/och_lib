@@ -15,6 +15,7 @@ namespace och
 			open_normal = 0,
 			open_truncate = 1,
 			open_fail = 2,
+			open_append = 4,
 
 			access_read = 2,
 			access_write = 1,
