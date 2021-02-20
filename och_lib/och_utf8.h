@@ -4,7 +4,7 @@
 
 namespace och
 {
-	void _utf8_len(const char* cstring, uint32_t& cunits, uint32_t& cpoints);
+	void _utf8_len(const char* cstring, uint32_t& cunits, uint32_t& cpoints, uint32_t max_cunits = ~0);
 
 	uint32_t _utf8_from_codepoint(char* out, char32_t cpoint);
 
@@ -55,8 +55,8 @@ namespace och
 			{
 				char* m_ptr;
 				uint32_t m_codeunits;
-				uint32_t m_capacity;
 				uint32_t m_codepoints;
+				uint32_t m_capacity;
 				uint32_t reserved;
 			} ls;
 

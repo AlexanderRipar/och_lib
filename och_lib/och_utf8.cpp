@@ -5,9 +5,9 @@
 
 namespace och
 {
-	void _utf8_len(const char* str, uint32_t& cunits, uint32_t& cpoints)
+	void _utf8_len(const char* str, uint32_t& cunits, uint32_t& cpoints, uint32_t max_cpoints)
 	{
-		while (str[cunits])
+		while (cpoints < max_cpoints && str[cunits])
 		{
 			++cunits;
 
@@ -89,9 +89,11 @@ namespace och
 
 	utf8_codepoint::utf8_codepoint(const char* cstring) noexcept
 	{
-		uint32_t cunits = 0;
+		*utf8 = *cstring;
 
-		while (cunits != 4 && (cstring[cunits] & 0x80))
+		uint32_t cunits = 1;
+
+		while (cunits != 4 && _is_utf8_surr(cstring[cunits]))
 		{
 			utf8[cunits] = cstring[cunits];
 			++cunits;
@@ -107,10 +109,10 @@ namespace och
 	{
 		uint32_t cunits = 0;
 
-		while (cunits != 4 && _is_utf8_surr(utf8[cunits]))
+		while (cunits != 4 && utf8[cunits])
 			++cunits;
 
-		return cunits + 1;
+		return cunits;
 	}
 
 
