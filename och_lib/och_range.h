@@ -10,7 +10,7 @@ namespace och
 {
 	constexpr uint16_t _const_strlen_u16(const char* str)
 	{
-		int len = 0;
+		uint16_t len = 0;
 
 		while (*(str++))
 			++len;

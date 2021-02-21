@@ -102,7 +102,7 @@ namespace och
 
 	utf8_codepoint::utf8_codepoint(char32_t codepoint) noexcept
 	{
-		uint32_t cunits = _utf8_from_codepoint(utf8, codepoint);
+		_utf8_from_codepoint(utf8, codepoint);
 	}
 
 	uint32_t utf8_codepoint::get_codeunits() const noexcept

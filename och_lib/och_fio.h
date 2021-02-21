@@ -228,7 +228,7 @@ namespace och
 	[[nodiscard]] iohandle get_stdin();
 	[[nodiscard]] iohandle get_stderr();
 
-	const iohandle out = get_stdout();
-	const iohandle in = get_stdin();
-	const iohandle err = get_stderr();
+	const iohandle standard_out = get_stdout();
+	const iohandle standard_in = get_stdin();
+	const iohandle standard_err = get_stderr();
 }

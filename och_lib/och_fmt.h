@@ -118,28 +118,30 @@ namespace och
 		print(out, och::stringview(format.m_ptr, format.m_codeunits), args...);
 	}
 	
+
+
 	template<typename... Args>
 	void print(const och::stringview& format, Args... args)
 	{
-		print(och::out, format, args...);
+		print(och::standard_out, format, args...);
 	}
 
 	template<typename... Args>
 	void print(const char* format, Args... args)
 	{
-		print(och::out, och::stringview(format, strlen(format)), args...);
+		print(och::standard_out, och::stringview(format, strlen(format)), args...);
 	}
 
 	template<typename... Args>
 	void print(const och::utf8_string& format, Args... args)
 	{
-		print(och::out, och::stringview(format.raw_cbegin(), format.raw_cend()), args...);
+		print(och::standard_out, och::stringview(format.raw_cbegin(), format.raw_cend()), args...);
 	}
 
 	template<typename... Args>
 	void print(const och::utf8_view& format, Args... args)
 	{
-		print(och::out, och::stringview(format.m_ptr, format.m_codeunits), args...);
+		print(och::standard_out, och::stringview(format.m_ptr, format.m_codeunits), args...);
 	}
 
 

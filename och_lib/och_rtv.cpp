@@ -289,7 +289,7 @@ namespace och
 {
 	void rtv_update() {}
 
-	void rtv_init(const char* config_filename) {}
+	void rtv_init(const char* config_filename) { config_filename; }
 
 	void rtv_exit() {}
 }

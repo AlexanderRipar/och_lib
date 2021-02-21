@@ -162,7 +162,7 @@ namespace och
 					och::write_to_file(out, filler);
 		}
 	}
-
+	
 	void fmt_utf8_view(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
 		och::write_to_file(out, "[[fmt_utf8_view is not yet implemented]]");
@@ -177,7 +177,7 @@ namespace och
 
 	void fmt_date(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
-		const och::date& value = *reinterpret_cast<const och::date*>(arg_value.p);
+		//const och::date& value = *reinterpret_cast<const och::date*>(arg_value.p);
 
 		och::write_to_file(out, "[[fmt_date is not yet implemented]]");
 	}
@@ -296,7 +296,7 @@ namespace och
 			}
 		}
 		else
-			precision = ~0;
+			precision = (uint16_t)~0;
 
 		flags = 0;
 
@@ -419,7 +419,7 @@ namespace och
 
 	void print(och::iohandle out, const och::utf8_view& format)
 	{
-		print(och::out, och::stringview(format.m_ptr, format.m_codeunits));
+		print(out, och::stringview(format.m_ptr, format.m_codeunits));
 	}
 
 
@@ -448,21 +448,21 @@ namespace och
 
 	void print(const och::stringview& format)
 	{
-		print(och::out, format);
+		print(och::standard_out, format);
 	}
 
 	void print(const char* format)
 	{
-		print(och::out, format);
+		print(och::standard_out, format);
 	}
 
 	void print(const och::utf8_string& format)
 	{
-		print(och::out, format);
+		print(och::standard_out, format);
 	}
 
 	void print(const och::utf8_view& format)
 	{
-		print(och::out, format);
+		print(och::standard_out, format);
 	}
 }

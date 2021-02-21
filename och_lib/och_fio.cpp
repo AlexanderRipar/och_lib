@@ -44,11 +44,11 @@ namespace och
 			case fio::open_normal:		return  1;
 			case fio::open_append:		return  1;
 			case fio::open_truncate:	return  1;
-			case fio::open_fail:		return -1;
+			case fio::open_fail:		return ~0u;
 			}
 		}
 
-		return -1;
+		return ~0u;
 	}
 
 	uint32_t access_interp_open(uint32_t access_rights) noexcept
