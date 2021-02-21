@@ -5,17 +5,17 @@
 
 namespace och
 {
-	void _utf8_len(const char* str, uint32_t& cunits, uint32_t& cpoints, uint32_t max_cpoints)
+	void _utf8_len(const char* str, uint32_t& cunits, uint32_t& cpoints, uint32_t max_cpoints) noexcept
 	{
 		while (cpoints < max_cpoints && str[cunits])
 		{
 			++cunits;
 
-			cpoints += ((str[cunits] & 0xC0) != 0x80);
+			cpoints += !_is_utf8_surr(str[cunits]);
 		}
 	}
 
-	uint32_t _utf8_from_codepoint(char* out, char32_t cpoint)
+	uint32_t _utf8_from_codepoint(char* out, char32_t cpoint) noexcept
 	{
 		if (cpoint > 0xFFFF)
 		{
@@ -48,7 +48,7 @@ namespace och
 		return 1;
 	}
 
-	char32_t _utf8_to_utf32(const char* str)
+	char32_t _utf8_to_utf32(const char* str) noexcept
 	{
 		if (!(*str & 0x80))
 			return static_cast<char32_t>(*str);
@@ -62,7 +62,7 @@ namespace och
 			return ~U'\0';
 	}
 
-	uint32_t _utf8_codepoint_bytes(const char* str)
+	uint32_t _utf8_codepoint_bytes(const char* str) noexcept
 	{
 		if (!(*str & 0x80))
 			return 1;
@@ -76,7 +76,7 @@ namespace och
 			return 1;
 	}
 
-	bool _is_utf8_surr(char c)
+	bool _is_utf8_surr(char c) noexcept
 	{
 		return (c & 0xC0) == 0x80;
 	}
@@ -121,19 +121,19 @@ namespace och
 	/*/////////////////////////////////////////////////////utf8_iterator/////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	utf8_iterator::utf8_iterator(const char* cstring) : cstring{ cstring } {}
+	utf8_iterator::utf8_iterator(const char* cstring) noexcept : cstring{ cstring } {}
 
-	char32_t utf8_iterator::operator*()
+	char32_t utf8_iterator::operator*() noexcept
 	{
 		return _utf8_to_utf32(cstring);
 	}
 
-	void utf8_iterator::operator++()
+	void utf8_iterator::operator++() noexcept
 	{
 		while ((*++cstring & 0xC0) == 0x80);
 	}
 
-	bool utf8_iterator::operator!=(const utf8_iterator& rhs)
+	bool utf8_iterator::operator!=(const utf8_iterator& rhs) noexcept
 	{
 		return cstring < rhs.cstring;
 	}
@@ -144,7 +144,63 @@ namespace och
 	/*//////////////////////////////////////////////////////utf8_view////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+	utf8_view::utf8_view(const char* cstring) noexcept : m_ptr{ cstring }
+	{
+		uint32_t cunits = 0, cpoints = 0;
 
+		_utf8_len(cstring, cunits, cpoints);
+
+		m_codeunits = cunits;
+
+		m_codepoints = cpoints;
+	}
+
+	utf8_view::utf8_view(const char* cstring, uint32_t codeunits, uint32_t codepoints) noexcept : m_ptr{ cstring }, m_codeunits{ codeunits }, m_codepoints{ codepoints } {}
+
+	utf8_view::utf8_view(const utf8_string& string) noexcept : m_ptr{ string.raw_cbegin() }, m_codeunits{ string.get_codeunits() }, m_codepoints{ string.get_codepoints() } {}
+
+	utf8_view utf8_view::subview(uint32_t pos, uint32_t len) const noexcept
+	{
+		uint32_t beg_cunits = 0, beg_cpoints = 0;
+
+		_utf8_len(m_ptr, beg_cunits, beg_cpoints, pos);
+
+		uint32_t end_cunits = beg_cunits, end_cpoints = beg_cpoints;
+
+		_utf8_len(m_ptr, end_cunits, end_cpoints, pos + len);
+
+		return utf8_view(m_ptr + beg_cunits, end_cunits - beg_cunits, end_cpoints - beg_cpoints);
+	}
+
+	uint32_t utf8_view::get_codepoints() const noexcept
+	{
+		return m_codepoints;
+	}
+
+	uint32_t utf8_view::get_codeunits() const noexcept
+	{
+		return m_codeunits;
+	}
+
+	const char* utf8_view::raw_cbegin() const noexcept
+	{
+		return m_ptr;
+	}
+
+	const char* utf8_view::raw_cend() const noexcept
+	{
+		return m_ptr + m_codeunits;
+	}
+
+	utf8_iterator utf8_view::begin() const noexcept
+	{
+		return utf8_iterator(m_ptr);
+	}
+
+	utf8_iterator utf8_view::end() const noexcept
+	{
+		return utf8_iterator(m_ptr + m_codeunits);
+	}
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*/////////////////////////////////////////////////////utf8_string///////////////////////////////////////////////////////*/
@@ -152,19 +208,19 @@ namespace och
 
 	//////////////////////////////////////////////////Constructor//////////////////////////////////////////////////////////////
 
-	utf8_string::utf8_string() : ss{ {0}, internal_buf_max } {}
+	utf8_string::utf8_string() noexcept : ss{ {0}, internal_buf_max } {}
 
-	utf8_string::utf8_string(const utf8_view& view)
+	utf8_string::utf8_string(const utf8_view& view) noexcept
 	{
 		view.m_codeunits <= internal_buf_max ? construct_ss(view.m_ptr, view.m_codeunits) : construct_ls(view.m_ptr, view.m_codeunits, view.m_codepoints);
 	}
 
-	utf8_string::utf8_string(const utf8_string& str)
+	utf8_string::utf8_string(const utf8_string& str) noexcept
 	{
 		str.get_codeunits() <= internal_buf_max ? construct_ss(str.raw_cbegin(), str.get_codeunits()) : construct_ls(str.raw_cbegin(), str.get_codeunits(), str.get_codepoints());
 	}
 
-	utf8_string::utf8_string(const char* cstring)
+	utf8_string::utf8_string(const char* cstring) noexcept
 	{
 		uint32_t words = 0, codepts = 0;
 
@@ -173,7 +229,7 @@ namespace och
 		words <= internal_buf_max ? construct_ss(cstring, words) : construct_ls(cstring, words, codepts);
 	}
 
-	utf8_string::~utf8_string()
+	utf8_string::~utf8_string() noexcept
 	{
 		if (!is_sso())
 			free(ls.m_ptr);
@@ -181,54 +237,54 @@ namespace och
 
 	///////////////////////////////////////////////////Iterators///////////////////////////////////////////////////////////////
 
-	char* utf8_string::raw_begin()
+	char* utf8_string::raw_begin() noexcept
 	{
 		return is_sso() ? ss.m_internal_buf : ls.m_ptr;
 	}
 
-	const char* utf8_string::raw_cbegin() const
+	const char* utf8_string::raw_cbegin() const noexcept
 	{
 		return is_sso() ? ss.m_internal_buf : ls.m_ptr;
 	}
 
-	char* utf8_string::raw_end()
+	char* utf8_string::raw_end() noexcept
 	{
 		return is_sso() ? ss.m_internal_buf + internal_buf_max - ss.m_internal_cap : ls.m_ptr + ls.m_codeunits;
 	}
 
-	const char* utf8_string::raw_cend() const
+	const char* utf8_string::raw_cend() const noexcept
 	{
 		return is_sso() ? ss.m_internal_buf + internal_buf_max - ss.m_internal_cap : ls.m_ptr + ls.m_codeunits;
 	}
 
-	utf8_iterator utf8_string::begin() const
+	utf8_iterator utf8_string::begin() const noexcept
 	{
 		return utf8_iterator(raw_cbegin());
 	}
 
-	utf8_iterator utf8_string::end() const
+	utf8_iterator utf8_string::end() const noexcept
 	{
 		return utf8_iterator(raw_cend());
 	}
 
 	///////////////////////////////////////////////////Size////////////////////////////////////////////////////////////////////
 
-	uint32_t utf8_string::get_codeunits() const
+	uint32_t utf8_string::get_codeunits() const noexcept
 	{
 		return is_sso() ? internal_buf_max - ss.m_internal_cap : ls.m_codeunits;
 	}
 
-	uint32_t utf8_string::get_codepoints() const
+	uint32_t utf8_string::get_codepoints() const noexcept
 	{
 		return is_sso() ? [](const char* str) {uint32_t cps = 0; while (*str)cps += ((*(str++) & 0xC0) != 0x80); return cps; }(ss.m_internal_buf) : ls.m_codepoints;
 	}
 
-	uint32_t utf8_string::get_capacity() const
+	uint32_t utf8_string::get_capacity() const noexcept
 	{
 		return is_sso() ? internal_buf_max : ls.m_capacity;
 	}
 
-	uint32_t utf8_string::shrink_to_fit()
+	uint32_t utf8_string::shrink_to_fit() noexcept
 	{
 		if (is_sso() || try_activate_sso())
 			return internal_buf_max;
@@ -238,7 +294,7 @@ namespace och
 		return ls.m_capacity;
 	}
 
-	bool utf8_string::reserve(uint32_t n)
+	bool utf8_string::reserve(uint32_t n) noexcept
 	{
 		if (n <= get_capacity())
 			return true;				//min_capacity already exceeded; Nothing to do
@@ -249,7 +305,7 @@ namespace och
 		return change_heap_cap(n);		//min_capacity not reached and SSO inactive
 	}
 
-	bool utf8_string::resize(uint32_t n)
+	bool utf8_string::resize(uint32_t n) noexcept
 	{
 		if (get_capacity() == least_bigger_cap(n) || (is_sso() && n <= internal_buf_max))
 			return true;				//If capacity is already matched, or sso is active and a fitting capacity is requested, return true
@@ -260,19 +316,19 @@ namespace och
 		return change_heap_cap(n);		//sso already inactive and size actually changed; Change capacity
 	}
 
-	bool utf8_string::empty() const
+	bool utf8_string::empty() const noexcept
 	{
 		return !get_codeunits();
 	}
 
-	bool utf8_string::is_sso() const
+	bool utf8_string::is_sso() const noexcept
 	{
 		return ss.m_internal_cap != long_string_id;
 	}
 
 	//////////////////////////////////////////////Element Acess////////////////////////////////////////////////////////////////
 
-	char32_t utf8_string::at(uint32_t pos) const
+	char32_t utf8_string::at(uint32_t pos) const noexcept
 	{
 		if (!is_sso() && get_codepoints() == get_codeunits())
 			return raw_cbegin()[pos];
@@ -285,12 +341,12 @@ namespace och
 		return *it;
 	}
 
-	char32_t utf8_string::front() const
+	char32_t utf8_string::front() const noexcept
 	{
 		return _utf8_to_utf32(raw_cbegin());
 	}
 
-	char32_t utf8_string::back() const
+	char32_t utf8_string::back() const noexcept
 	{
 		const char* end = raw_cend() - 1;
 
@@ -323,7 +379,7 @@ namespace och
 		string.ls.m_ptr = nullptr;//To avoid freeing in dtor
 	}
 
-	void utf8_string::operator=(const char* cstring)
+	void utf8_string::operator=(const char* cstring) noexcept
 	{
 		uint32_t cunits = 0, cpoints = 0;
 
@@ -332,24 +388,24 @@ namespace och
 		set_to(cstring, cunits, cpoints);
 	}
 
-	void utf8_string::operator+=(char32_t cpoint)
+	void utf8_string::operator+=(char32_t cpoint) noexcept
 	{
 		char buf[4];
 
 		append(buf, _utf8_from_codepoint(buf, cpoint), 1);
 	}
 
-	void utf8_string::operator+=(const utf8_view& view)
+	void utf8_string::operator+=(const utf8_view& view) noexcept
 	{
 		append(view.m_ptr, view.m_codeunits, view.m_codepoints);
 	}
 
-	void utf8_string::operator+=(const utf8_string& str)
+	void utf8_string::operator+=(const utf8_string& str) noexcept
 	{
 		append(str.raw_cbegin(), str.get_codeunits(), str.get_codepoints());
 	}
 
-	void utf8_string::operator+=(const char* cstring)
+	void utf8_string::operator+=(const char* cstring) noexcept
 	{
 		uint32_t cunits = 0, cpoints = 0;
 
@@ -358,7 +414,7 @@ namespace och
 		append(cstring, cunits, cpoints);
 	}
 
-	uint32_t utf8_string::pop(uint32_t n)
+	uint32_t utf8_string::pop(uint32_t n) noexcept
 	{
 		uint32_t curr_cunit = get_codeunits();
 
@@ -378,7 +434,7 @@ namespace och
 		return codepts_popped;
 	}
 
-	void utf8_string::clear()
+	void utf8_string::clear() noexcept
 	{
 		if (!is_sso())
 			free(ls.m_ptr);
@@ -388,7 +444,7 @@ namespace och
 		ss.m_internal_cap = internal_buf_max;
 	}
 
-	void utf8_string::erase(uint32_t pos, uint32_t len)
+	void utf8_string::erase(uint32_t pos, uint32_t len) noexcept
 	{
 		uint32_t prev_cunits = get_codeunits();
 
@@ -418,19 +474,19 @@ namespace och
 		set_codepoints(prev_cpoints - len);
 	}
 
-	bool utf8_string::insert(uint32_t pos, char32_t cpoint)
+	bool utf8_string::insert(uint32_t pos, char32_t cpoint) noexcept
 	{
 		char buf[4];
 
 		return insert(buf, _utf8_from_codepoint(buf, cpoint), 1, pos);
 	}
 
-	bool utf8_string::insert(uint32_t pos, const utf8_view& view)
+	bool utf8_string::insert(uint32_t pos, const utf8_view& view) noexcept
 	{
 		return insert(view.m_ptr, view.m_codeunits, view.m_codepoints, pos);
 	}
 
-	bool utf8_string::insert(uint32_t pos, const char* cstring)
+	bool utf8_string::insert(uint32_t pos, const char* cstring) noexcept
 	{
 		uint32_t added_cunits = 0, added_cpoints = 0;
 
@@ -439,19 +495,19 @@ namespace och
 		return insert(cstring, added_cunits, added_cpoints, pos);
 	}
 
-	bool utf8_string::replace(uint32_t pos, char32_t cpoint)
+	bool utf8_string::replace(uint32_t pos, char32_t cpoint) noexcept
 	{
 		char buf[4];
 
 		return replace(buf, _utf8_from_codepoint(buf, cpoint), 1, pos);
 	}
 
-	bool utf8_string::replace(uint32_t pos, const utf8_view& view)
+	bool utf8_string::replace(uint32_t pos, const utf8_view& view) noexcept
 	{
 		return replace(view.m_ptr, view.m_codeunits, view.m_codepoints, pos);
 	}
 
-	bool utf8_string::replace(uint32_t pos, const char* cstring)
+	bool utf8_string::replace(uint32_t pos, const char* cstring) noexcept
 	{
 		uint32_t added_cunits = 0, added_cpoints = 0;
 
@@ -460,7 +516,7 @@ namespace och
 		return replace(cstring, added_cunits, added_cpoints, pos);
 	}
 
-	bool utf8_string::operator==(const utf8_string& rhs) const
+	bool utf8_string::operator==(const utf8_string& rhs) const noexcept
 	{
 		if (get_codeunits() != rhs.get_codeunits() || get_codepoints() != rhs.get_codepoints())
 			return false;
@@ -472,12 +528,12 @@ namespace och
 		return true;
 	}
 
-	bool utf8_string::operator!=(const utf8_string& rhs) const
+	bool utf8_string::operator!=(const utf8_string& rhs) const noexcept
 	{
 		return !operator==(rhs);
 	}
 
-	bool utf8_string::operator>(const utf8_string& rhs) const
+	bool utf8_string::operator>(const utf8_string& rhs) const noexcept
 	{
 		uint32_t min_cps = get_codepoints() < rhs.get_codepoints() ? get_codepoints() : rhs.get_codepoints();
 
@@ -491,12 +547,12 @@ namespace och
 		return get_codepoints() > rhs.get_codepoints();
 	}
 
-	bool utf8_string::operator>=(const utf8_string& rhs) const
+	bool utf8_string::operator>=(const utf8_string& rhs) const noexcept
 	{
 		return !operator<(rhs);
 	}
 
-	bool utf8_string::operator<(const utf8_string& rhs) const
+	bool utf8_string::operator<(const utf8_string& rhs) const noexcept
 	{
 		uint32_t min_cps = get_codepoints() < rhs.get_codepoints() ? get_codepoints() : rhs.get_codepoints();
 
@@ -510,14 +566,14 @@ namespace och
 		return get_codepoints() < rhs.get_codepoints();
 	}
 
-	bool utf8_string::operator<=(const utf8_string& rhs) const
+	bool utf8_string::operator<=(const utf8_string& rhs) const noexcept
 	{
 		return !operator>(rhs);
 	}
 
 	////////////////////////////////////////////////Operations/////////////////////////////////////////////////////////////////
 
-	utf8_string utf8_string::substr(uint32_t pos, uint32_t len) const
+	utf8_string utf8_string::substr(uint32_t pos, uint32_t len) const noexcept
 	{
 		uint32_t prev_cpoints = get_codepoints();
 
@@ -540,12 +596,12 @@ namespace och
 
 	/////////////////////////////////////////////////Private///////////////////////////////////////////////////////////////////
 
-	utf8_string::utf8_string(const char* cstring, uint32_t cunits, uint32_t cpoints)
+	utf8_string::utf8_string(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept
 	{
 		cunits <= internal_buf_max ? construct_ss(cstring, cunits) : construct_ls(cstring, cunits, cpoints);
 	}
 
-	void utf8_string::construct_ss(const char* cstring, uint32_t cunits)
+	void utf8_string::construct_ss(const char* cstring, uint32_t cunits) noexcept
 	{
 		for (uint32_t i = 0; i != cunits; ++i)
 			ss.m_internal_buf[i] = cstring[i];
@@ -555,7 +611,7 @@ namespace och
 		ss.m_internal_cap = static_cast<uint8_t>(internal_buf_max - cunits);
 	}
 
-	void utf8_string::construct_ls(const char* cstring, uint32_t cunits, uint32_t cpoints)
+	void utf8_string::construct_ls(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept
 	{
 		ls.m_capacity = least_bigger_cap(cunits);
 
@@ -580,7 +636,7 @@ namespace och
 		ss.m_internal_cap = long_string_id;
 	}
 
-	bool utf8_string::set_to(const char* cstring, uint32_t cunits, uint32_t cpoints)
+	bool utf8_string::set_to(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept
 	{
 		if (!resize(cunits))
 			return false;
@@ -597,7 +653,7 @@ namespace och
 		return true;
 	}
 
-	bool utf8_string::append(const char* cstring, uint32_t added_cunits, uint32_t added_cpoints)
+	bool utf8_string::append(const char* cstring, uint32_t added_cunits, uint32_t added_cpoints) noexcept
 	{
 		uint32_t prev_cunits = get_codeunits();
 		uint32_t prev_cpoints = get_codepoints();
@@ -617,7 +673,7 @@ namespace och
 		return true;
 	}
 
-	bool utf8_string::insert(const char* cstring, uint32_t added_cunits, uint32_t added_cpoints, uint32_t pos)
+	bool utf8_string::insert(const char* cstring, uint32_t added_cunits, uint32_t added_cpoints, uint32_t pos) noexcept
 	{
 		uint32_t prev_cunits = get_codeunits();
 		uint32_t prev_cpoints = get_codepoints();
@@ -644,7 +700,7 @@ namespace och
 		return true;
 	}
 
-	bool utf8_string::replace(const char* cstring, uint32_t added_cunits, uint32_t added_cpoints, uint32_t pos)
+	bool utf8_string::replace(const char* cstring, uint32_t added_cunits, uint32_t added_cpoints, uint32_t pos) noexcept
 	{
 		uint32_t prev_cunits = get_codeunits();
 
@@ -681,7 +737,7 @@ namespace och
 		return true;
 	}
 
-	void utf8_string::step(uint32_t& cunit, uint32_t& cpoint, uint32_t last_cpoint) const
+	void utf8_string::step(uint32_t& cunit, uint32_t& cpoint, uint32_t last_cpoint) const noexcept
 	{
 		while (cpoint < last_cpoint)
 		{
@@ -691,7 +747,7 @@ namespace och
 		}
 	}
 
-	bool utf8_string::deactivate_sso(uint32_t cunits)
+	bool utf8_string::deactivate_sso(uint32_t cunits) noexcept
 	{
 		uint32_t alloc_size = least_bigger_cap(cunits);
 
@@ -712,7 +768,7 @@ namespace och
 		return true;
 	}
 
-	bool utf8_string::try_activate_sso()
+	bool utf8_string::try_activate_sso() noexcept
 	{
 		bool can_activate_sso = !is_sso() && get_capacity() <= internal_buf_max;
 
@@ -735,7 +791,7 @@ namespace och
 		return can_activate_sso;
 	}
 
-	bool utf8_string::change_heap_cap(uint32_t cunits)
+	bool utf8_string::change_heap_cap(uint32_t cunits) noexcept
 	{
 		uint32_t alloc_size = least_bigger_cap(cunits);
 
@@ -750,7 +806,7 @@ namespace och
 		return true;
 	}
 
-	uint32_t utf8_string::least_bigger_cap(uint32_t required)
+	uint32_t utf8_string::least_bigger_cap(uint32_t required) noexcept
 	{
 		if (required-- <= min_heap_cap)
 			return min_heap_cap - 1;
@@ -764,12 +820,12 @@ namespace och
 		return ++required;
 	}
 
-	void utf8_string::set_codeunits(uint32_t cunits)
+	void utf8_string::set_codeunits(uint32_t cunits) noexcept
 	{
 		is_sso() ? ss.m_internal_cap = static_cast<uint8_t>(internal_buf_max - cunits) : ls.m_codeunits = cunits;
 	}
 
-	void utf8_string::set_codepoints(uint32_t cpoints)
+	void utf8_string::set_codepoints(uint32_t cpoints) noexcept
 	{
 		if (!is_sso()) ls.m_codepoints = cpoints;
 	}

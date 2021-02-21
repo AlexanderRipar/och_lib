@@ -4,15 +4,19 @@
 
 namespace och
 {
-	void _utf8_len(const char* cstring, uint32_t& cunits, uint32_t& cpoints, uint32_t max_cunits = ~0);
+	struct utf8_string;
 
-	uint32_t _utf8_from_codepoint(char* out, char32_t cpoint);
+	struct utf8_iterator;
 
-	char32_t _utf8_to_utf32(const char* cstring);
+	void _utf8_len(const char* cstring, uint32_t& cunits, uint32_t& cpoints, uint32_t max_cunits = ~0) noexcept;
 
-	uint32_t _utf8_codepoint_bytes(const char* cstring);
+	uint32_t _utf8_from_codepoint(char* out, char32_t cpoint) noexcept;
 
-	bool _is_utf8_surr(char c);
+	char32_t _utf8_to_utf32(const char* cstring) noexcept;
+
+	uint32_t _utf8_codepoint_bytes(const char* cstring) noexcept;
+
+	bool _is_utf8_surr(char c) noexcept;
 
 	struct utf8_codepoint
 	{
@@ -32,19 +36,39 @@ namespace och
 		const char* m_ptr;
 		uint32_t m_codeunits;
 		uint32_t m_codepoints;
+
+		utf8_view(const char* cstring) noexcept;
+
+		utf8_view(const char* cstring, uint32_t codeunits, uint32_t codepoints) noexcept;
+
+		utf8_view(const utf8_string& string) noexcept;
+
+		utf8_view subview(uint32_t pos, uint32_t len) const noexcept;
+
+		uint32_t get_codepoints() const noexcept;
+
+		uint32_t get_codeunits() const noexcept;
+		
+		const char* raw_cbegin() const noexcept;
+
+		const char* raw_cend() const noexcept;
+
+		utf8_iterator begin() const noexcept;
+
+		utf8_iterator end() const noexcept;
 	};
 
 	struct utf8_iterator
 	{
 		const char* cstring;
 
-		utf8_iterator(const char* cstring);
+		utf8_iterator(const char* cstring) noexcept;
 
-		char32_t operator*();
+		char32_t operator*() noexcept;
 
-		void operator++();
+		void operator++() noexcept;
 
-		bool operator!=(const utf8_iterator& rhs);
+		bool operator!=(const utf8_iterator& rhs) noexcept;
 	};
 
 	struct utf8_string
@@ -73,55 +97,55 @@ namespace och
 
 		////////////////////////////////////////////////////Constructor////////////////////////////////////////////////////////////
 
-		utf8_string();
+		utf8_string() noexcept;
 
-		utf8_string(const utf8_view& view);
+		utf8_string(const utf8_view& view) noexcept;
 
-		utf8_string(const utf8_string& str);
+		utf8_string(const utf8_string& str) noexcept;
 
-		utf8_string(const char* cstr);
+		utf8_string(const char* cstr) noexcept;
 
-		~utf8_string();
+		~utf8_string() noexcept;
 
 		///////////////////////////////////////////////////Iterators///////////////////////////////////////////////////////////////
 
-		char* raw_begin();
+		char* raw_begin() noexcept;
 
-		const char* raw_cbegin() const;
+		const char* raw_cbegin() const noexcept;
 
-		char* raw_end();
+		char* raw_end() noexcept;
 
-		const char* raw_cend() const;
+		const char* raw_cend() const noexcept;
 
-		utf8_iterator begin() const;
+		utf8_iterator begin() const noexcept;
 
-		utf8_iterator end() const;
+		utf8_iterator end() const noexcept;
 
 		/////////////////////////////////////////////////////Size//////////////////////////////////////////////////////////////////
 
-		uint32_t get_codeunits() const;
+		uint32_t get_codeunits() const noexcept;
 
-		uint32_t get_codepoints() const;
+		uint32_t get_codepoints() const noexcept;
 
-		uint32_t get_capacity() const;
+		uint32_t get_capacity() const noexcept;
 
-		uint32_t shrink_to_fit();
+		uint32_t shrink_to_fit() noexcept;
 
-		bool reserve(uint32_t n);
+		bool reserve(uint32_t n) noexcept;
 
-		bool resize(uint32_t n);
+		bool resize(uint32_t n) noexcept;
 
-		bool empty() const;
+		bool empty() const noexcept;
 
-		bool is_sso() const;
+		bool is_sso() const noexcept;
 
 		//////////////////////////////////////////////////Element Acess///////////////////////////////////////////////////////////////
 
-		char32_t at(uint32_t pos) const;
+		char32_t at(uint32_t pos) const noexcept;
 
-		char32_t front() const;
+		char32_t front() const noexcept;
 
-		char32_t back() const;
+		char32_t back() const noexcept;
 
 		///////////////////////////////////////////////////Modifiers///////////////////////////////////////////////////////////////
 
@@ -131,78 +155,78 @@ namespace och
 
 		void operator=(utf8_string&& string) noexcept;
 
-		void operator=(const char* cstr);
+		void operator=(const char* cstr) noexcept;
 
-		void operator+=(char32_t codept);
+		void operator+=(char32_t codept) noexcept;
 
-		void operator+=(const utf8_view& view);
+		void operator+=(const utf8_view& view) noexcept;
 
-		void operator+=(const utf8_string& str);
+		void operator+=(const utf8_string& str) noexcept;
 
-		void operator+=(const char* cstr);
+		void operator+=(const char* cstr) noexcept;
 
-		uint32_t pop(uint32_t n);
+		uint32_t pop(uint32_t n) noexcept;
 
-		void clear();
+		void clear() noexcept;
 
-		void erase(uint32_t pos, uint32_t len);
+		void erase(uint32_t pos, uint32_t len) noexcept;
 
-		bool insert(uint32_t pos, char32_t codept);
+		bool insert(uint32_t pos, char32_t codept) noexcept;
 
-		bool insert(uint32_t pos, const utf8_view& view);
+		bool insert(uint32_t pos, const utf8_view& view) noexcept;
 
-		bool insert(uint32_t pos, const char* cstr);
+		bool insert(uint32_t pos, const char* cstr) noexcept;
 
-		bool replace(uint32_t pos, char32_t codept);
+		bool replace(uint32_t pos, char32_t codept) noexcept;
 
-		bool replace(uint32_t pos, const utf8_view& view);
+		bool replace(uint32_t pos, const utf8_view& view) noexcept;
 
-		bool replace(uint32_t pos, const char* cstr);
+		bool replace(uint32_t pos, const char* cstr) noexcept;
 
-		bool operator==(const utf8_string& rhs) const;
+		bool operator==(const utf8_string& rhs) const noexcept;
 
-		bool operator!=(const utf8_string& rhs) const;
+		bool operator!=(const utf8_string& rhs) const noexcept;
 
-		bool operator>(const utf8_string& rhs) const;
+		bool operator>(const utf8_string& rhs) const noexcept;
 
-		bool operator>=(const utf8_string& rhs) const;
+		bool operator>=(const utf8_string& rhs) const noexcept;
 
-		bool operator<(const utf8_string& rhs) const;
+		bool operator<(const utf8_string& rhs) const noexcept;
 
-		bool operator<=(const utf8_string& rhs) const;
+		bool operator<=(const utf8_string& rhs) const noexcept;
 
 		//////////////////////////////////////////////////Operations///////////////////////////////////////////////////////////////
 
-		utf8_string substr(uint32_t pos, uint32_t len = static_cast<uint32_t>(-1)) const;
+		utf8_string substr(uint32_t pos, uint32_t len = static_cast<uint32_t>(-1)) const noexcept;
 
 	private:
 
-		utf8_string(const char* cstr, uint32_t wds, uint32_t cps);
+		utf8_string(const char* cstr, uint32_t wds, uint32_t cps) noexcept;
 
-		void construct_ss(const char* cstring, uint32_t words);
+		void construct_ss(const char* cstring, uint32_t words) noexcept;
 
-		void construct_ls(const char* cstring, uint32_t words, uint32_t codepoints);
+		void construct_ls(const char* cstring, uint32_t words, uint32_t codepoints) noexcept;
 
-		bool set_to(const char* cstring, uint32_t words, uint32_t codepts);
+		bool set_to(const char* cstring, uint32_t words, uint32_t codepts) noexcept;
 
-		bool append(const char* cstring, uint32_t words, uint32_t codepts);
+		bool append(const char* cstring, uint32_t words, uint32_t codepts) noexcept;
 
-		bool insert(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos);
+		bool insert(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos) noexcept;
 
-		bool replace(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos);
+		bool replace(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos) noexcept;
 
-		void step(uint32_t& wd_idx, uint32_t& cp_idx, uint32_t last_cp_idx) const;
+		void step(uint32_t& wd_idx, uint32_t& cp_idx, uint32_t last_cp_idx) const noexcept;
 
-		bool deactivate_sso(uint32_t alloc_size);
+		bool deactivate_sso(uint32_t alloc_size) noexcept;
 
-		bool try_activate_sso();
+		bool try_activate_sso() noexcept;
 
-		bool change_heap_cap(uint32_t new_cap);
+		bool change_heap_cap(uint32_t new_cap) noexcept;
 
-		uint32_t least_bigger_cap(uint32_t required);
+		uint32_t least_bigger_cap(uint32_t required) noexcept;
 
-		void set_codeunits(uint32_t wds);
+		void set_codeunits(uint32_t wds) noexcept;
 
-		void set_codepoints(uint32_t cps);
+		void set_codepoints(uint32_t cps) noexcept;
 	};
 }
