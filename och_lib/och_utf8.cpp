@@ -81,7 +81,15 @@ namespace och
 		return (c & 0xC0) == 0x80;
 	}
 
+	constexpr uint32_t _const_utf8_codepoints(const char* str)
+	{
+		uint32_t cpoints = 0, cunits = 0;
 
+		while (str[cunits])
+			cpoints += ((str[cunits++] & 0xC0) == 0x80);
+
+		return cpoints;
+	}
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*/////////////////////////////////////////////////////utf8_codepoint////////////////////////////////////////////////////*/
@@ -105,6 +113,11 @@ namespace och
 		_utf8_from_codepoint(utf8, codepoint);
 	}
 
+	utf8_codepoint::utf8_codepoint(char ascii_codepoint) noexcept
+	{
+		utf8[0] = ascii_codepoint;
+	}
+
 	uint32_t utf8_codepoint::get_codeunits() const noexcept
 	{
 		uint32_t cunits = 0;
@@ -113,6 +126,36 @@ namespace och
 			++cunits;
 
 		return cunits;
+	}
+
+	bool utf8_codepoint::operator==(const utf8_codepoint& rhs) const noexcept
+	{
+		return *(const char32_t*)utf8 == *(const char32_t*)rhs.utf8;
+	}
+
+	bool utf8_codepoint::operator!=(const utf8_codepoint& rhs) const noexcept
+	{
+		return *(const char32_t*)utf8 != *(const char32_t*)rhs.utf8;
+	}
+
+	bool utf8_codepoint::operator>(const utf8_codepoint& rhs) const noexcept
+	{
+		return *(const char32_t*)utf8 > *(const char32_t*)rhs.utf8;
+	}
+
+	bool utf8_codepoint::operator>=(const utf8_codepoint& rhs) const noexcept
+	{
+		return *(const char32_t*)utf8 >= *(const char32_t*)rhs.utf8;
+	}
+
+	bool utf8_codepoint::operator<(const utf8_codepoint& rhs) const noexcept
+	{
+		return *(const char32_t*)utf8 < *(const char32_t*)rhs.utf8;
+	}
+
+	bool utf8_codepoint::operator<=(const utf8_codepoint& rhs) const noexcept
+	{
+		return *(const char32_t*)utf8 <= *(const char32_t*)rhs.utf8;
 	}
 
 
@@ -143,19 +186,6 @@ namespace och
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*//////////////////////////////////////////////////////utf8_view////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-	utf8_view::utf8_view(const char* cstring) noexcept : m_ptr{ cstring }
-	{
-		uint32_t cunits = 0, cpoints = 0;
-
-		_utf8_len(cstring, cunits, cpoints);
-
-		m_codeunits = cunits;
-
-		m_codepoints = cpoints;
-	}
-
-	utf8_view::utf8_view(const char* cstring, uint32_t codeunits, uint32_t codepoints) noexcept : m_ptr{ cstring }, m_codeunits{ codeunits }, m_codepoints{ codepoints } {}
 
 	utf8_view::utf8_view(const utf8_string& string) noexcept : m_ptr{ string.raw_cbegin() }, m_codeunits{ string.get_codeunits() }, m_codepoints{ string.get_codepoints() } {}
 
@@ -212,7 +242,7 @@ namespace och
 
 	utf8_string::utf8_string(const utf8_view& view) noexcept
 	{
-		view.m_codeunits <= internal_buf_max ? construct_ss(view.m_ptr, view.m_codeunits) : construct_ls(view.m_ptr, view.m_codeunits, view.m_codepoints);
+		view.get_codeunits() <= internal_buf_max ? construct_ss(view.raw_cbegin(), view.get_codeunits()) : construct_ls(view.raw_cbegin(), view.get_codeunits(), view.get_codepoints());
 	}
 
 	utf8_string::utf8_string(const utf8_string& str) noexcept
@@ -361,7 +391,7 @@ namespace och
 
 	void utf8_string::operator=(const utf8_view& view) noexcept
 	{
-		set_to(view.m_ptr, view.m_codeunits, view.m_codepoints);
+		set_to(view.raw_cbegin(), view.get_codeunits(), view.get_codepoints());
 	}
 
 	void utf8_string::operator=(const utf8_string& string) noexcept
@@ -397,7 +427,7 @@ namespace och
 
 	void utf8_string::operator+=(const utf8_view& view) noexcept
 	{
-		append(view.m_ptr, view.m_codeunits, view.m_codepoints);
+		append(view.raw_cbegin(), view.get_codeunits(), view.get_codepoints());
 	}
 
 	void utf8_string::operator+=(const utf8_string& str) noexcept
@@ -483,7 +513,7 @@ namespace och
 
 	bool utf8_string::insert(uint32_t pos, const utf8_view& view) noexcept
 	{
-		return insert(view.m_ptr, view.m_codeunits, view.m_codepoints, pos);
+		return insert(view.raw_cbegin(), view.get_codeunits(), view.get_codepoints(), pos);
 	}
 
 	bool utf8_string::insert(uint32_t pos, const char* cstring) noexcept
@@ -504,7 +534,7 @@ namespace och
 
 	bool utf8_string::replace(uint32_t pos, const utf8_view& view) noexcept
 	{
-		return replace(view.m_ptr, view.m_codeunits, view.m_codepoints, pos);
+		return replace(view.raw_cbegin(), view.get_codeunits(), view.get_codepoints(), pos);
 	}
 
 	bool utf8_string::replace(uint32_t pos, const char* cstring) noexcept

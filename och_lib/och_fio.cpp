@@ -121,13 +121,18 @@ namespace och
 		return och::range<char>(buf.beg, bytes_read);
 	}
 
-	uint32_t write_to_file(const iohandle file, const och::stringview buf) noexcept
+	uint32_t write_to_file(const iohandle file, const och::range<const char> buf) noexcept
 	{
 		uint32_t bytes_written = 0;
 
 		WriteFile(file.ptr, reinterpret_cast<const void*>(buf.beg), static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_written), nullptr);
 
 		return bytes_written;
+	}
+
+	uint32_t write_to_file(const iohandle file, const och::stringview& buf) noexcept
+	{
+		return write_to_file(file, och::range(buf.raw_cbegin(), buf.raw_cend()));
 	}
 
 	bool file_seek(const iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept
@@ -203,13 +208,9 @@ namespace och
 	/*//////////////////////////////////////////////////filehandle///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+	filehandle::filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
+
 	filehandle::filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
-
-	filehandle::filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
-
-	filehandle::filehandle(const och::utf8_view& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.m_ptr, access_rights, existing_mode, new_mode, share_mode) {};
-
-	filehandle::filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.beg, access_rights, existing_mode, new_mode, share_mode) {};
 
 	filehandle::filehandle(iohandle handle) noexcept : handle{ handle } {}
 
@@ -217,9 +218,11 @@ namespace och
 
 	[[nodiscard]] och::range<char> filehandle::read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
 
-	uint32_t filehandle::write(const och::stringview buf) const noexcept { return write_to_file(handle, buf); }
+	uint32_t filehandle::write(const och::range<const char> buf) const noexcept { return write_to_file(handle, buf); }
 
 	uint32_t filehandle::write(const och::range<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
+
+	uint32_t filehandle::write(const och::stringview& buf) const noexcept { return write_to_file(handle, buf); }
 
 	[[nodiscard]] uint64_t filehandle::get_size() const noexcept { return get_filesize(handle); }
 
@@ -254,18 +257,6 @@ namespace och
 		delete_file(buf);
 	}
 
-	[[nodiscard]] och::range<char> tempfilehandle::read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
-
-	uint32_t tempfilehandle::write(const och::stringview buf) const noexcept { return write_to_file(handle, buf); }
-
-	[[nodiscard]] uint64_t tempfilehandle::get_size() const noexcept { return och::get_filesize(handle); }
-
-	bool tempfilehandle::set_size(uint64_t bytes) const noexcept { return och::set_filesize(handle, bytes); }
-
-	och::range<char> tempfilehandle::path(och::range<char> buf) const noexcept { return get_filepath(handle, buf); }
-
-	bool tempfilehandle::set_fileptr(int64_t set_to, uint32_t setptr_mode) const noexcept { return och::file_seek(handle, set_to, setptr_mode); }
-
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -276,9 +267,7 @@ namespace och
 
 	file_search::file_search(const och::utf8_string& path) noexcept : file_search(path.raw_cbegin()) {}
 
-	file_search::file_search(const och::utf8_view& path) noexcept : file_search(path.m_ptr) {}
-
-	file_search::file_search(const och::stringview& path) noexcept : file_search(path.beg) {}
+	file_search::file_search(const och::stringview& path) noexcept : file_search(path.raw_cbegin()) {}
 
 	file_search::~file_search() noexcept { FindClose(search_handle.ptr); }
 

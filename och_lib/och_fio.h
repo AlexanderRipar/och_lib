@@ -61,7 +61,9 @@ namespace och
 
 	[[nodiscard]] och::range<char> read_from_file(const iohandle file, och::range<char> buf) noexcept;
 
-	uint32_t write_to_file(const iohandle file, const och::stringview buf) noexcept;
+	uint32_t write_to_file(const iohandle file, const och::range<const char> buf) noexcept;
+
+	uint32_t write_to_file(const iohandle file, const och::stringview& buf) noexcept;
 
 	bool close_file(const iohandle file) noexcept;
 
@@ -81,13 +83,11 @@ namespace och
 	{
 		const iohandle handle;
 
+		filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+
 		filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
 		filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
-
-		filehandle(const och::utf8_view& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
-
-		filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
 		filehandle(iohandle handle) noexcept;
 
@@ -95,9 +95,11 @@ namespace och
 
 		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept;
 
-		uint32_t write(const och::stringview buf) const noexcept;
+		uint32_t write(const och::range<const char> buf) const noexcept;
 
 		uint32_t write(const och::range<char> buf) const noexcept;
+
+		uint32_t write(const och::stringview& buf) const noexcept;
 
 		[[nodiscard]] uint64_t get_size() const noexcept;
 
@@ -119,18 +121,6 @@ namespace och
 		tempfilehandle(uint32_t share_mode = 0) noexcept;
 
 		~tempfilehandle() noexcept;
-
-		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept;
-
-		uint32_t write(const och::stringview buf) const noexcept;
-
-		[[nodiscard]] uint64_t get_size() const noexcept;
-
-		bool set_size(uint64_t bytes) const noexcept;
-
-		och::range<char> path(och::range<char> buf) const noexcept;
-
-		bool set_fileptr(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept;
 	};
 
 	template<typename T = uint8_t>
@@ -156,11 +146,8 @@ namespace och
 		mapped_file(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
 			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
 
-		mapped_file(const och::utf8_view& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
-			mapped_file(filename.m_ptr, access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
-
 		mapped_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
-			mapped_file(filename.beg, access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
+			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
 
 		mapped_file(const iohandle file, uint32_t access_rights, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
 			file{ file },
@@ -208,8 +195,6 @@ namespace och
 		file_search(const char* path) noexcept;
 
 		file_search(const och::utf8_string& path) noexcept;
-		
-		file_search(const och::utf8_view& path) noexcept;
 		
 		file_search(const och::stringview& path) noexcept;
 

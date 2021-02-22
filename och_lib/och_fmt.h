@@ -13,7 +13,6 @@ namespace och
 		int64_t i;
 		float f;
 		double d;
-		och::mini_stringview s;
 		och::utf8_codepoint c;
 		const void* p;
 
@@ -24,8 +23,6 @@ namespace och
 		fmt_value(float f);
 		
 		fmt_value(double d);
-		
-		fmt_value(och::mini_stringview s);
 		
 		fmt_value(och::utf8_codepoint c);
 
@@ -97,27 +94,21 @@ namespace och
 	{
 		arg_wrapper argv[]{ args... };
 
-		vprint(format.beg, format.end, argv, sizeof...(args), out);
+		vprint(format.raw_cbegin(), format.raw_cend(), argv, sizeof...(args), out);
 	}
 
 	template<typename... Args>
 	void print(och::iohandle out, const char* format, Args... args)
 	{
-		print(out, och::stringview(format, strlen(format)), args...);
+		print(out, och::stringview(format), args...);
 	}
 
 	template<typename... Args>
 	void print(och::iohandle out, const och::utf8_string& format, Args... args)
 	{
-		print(out, och::stringview(format.raw_cbegin(), format.raw_cend()), args...);
+		print(out, och::stringview(format), args...);
 	}
 
-	template<typename... Args>
-	void print(och::iohandle out, const och::utf8_view& format, Args... args)
-	{
-		print(out, och::stringview(format.m_ptr, format.m_codeunits), args...);
-	}
-	
 
 
 	template<typename... Args>
@@ -129,19 +120,13 @@ namespace och
 	template<typename... Args>
 	void print(const char* format, Args... args)
 	{
-		print(och::standard_out, och::stringview(format, strlen(format)), args...);
+		print(och::standard_out, och::stringview(format), args...);
 	}
 
 	template<typename... Args>
 	void print(const och::utf8_string& format, Args... args)
 	{
-		print(och::standard_out, och::stringview(format.raw_cbegin(), format.raw_cend()), args...);
-	}
-
-	template<typename... Args>
-	void print(const och::utf8_view& format, Args... args)
-	{
-		print(och::standard_out, och::stringview(format.m_ptr, format.m_codeunits), args...);
+		print(och::standard_out, och::stringview(format), args...);
 	}
 
 
@@ -152,8 +137,6 @@ namespace och
 
 	void print(och::iohandle out, const och::utf8_string& format);
 
-	void print(och::iohandle out, const och::utf8_view& format);
-
 
 
 	void print(const och::filehandle& out, const och::stringview& format);
@@ -162,8 +145,6 @@ namespace och
 
 	void print(const och::filehandle& out, const och::utf8_string& format);
 
-	void print(const och::filehandle& out, const och::utf8_view& format);
-
 
 
 	void print(const och::stringview& format);
@@ -171,6 +152,4 @@ namespace och
 	void print(const char* format);
 
 	void print(const och::utf8_string& format);
-
-	void print(const och::utf8_view& format);
 }

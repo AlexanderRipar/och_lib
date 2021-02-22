@@ -26,20 +26,43 @@ namespace och
 
 		utf8_codepoint(char32_t codepoint) noexcept;
 
+		utf8_codepoint(char ascii_codepoint) noexcept;
+
 		utf8_codepoint() = default;
 
 		uint32_t get_codeunits() const noexcept;
+
+		bool operator==(const utf8_codepoint& rhs) const noexcept;
+
+		bool operator!=(const utf8_codepoint& rhs) const noexcept;
+
+		bool operator>(const utf8_codepoint& rhs) const noexcept;
+
+		bool operator>=(const utf8_codepoint& rhs) const noexcept;
+
+		bool operator<(const utf8_codepoint& rhs) const noexcept;
+
+		bool operator<=(const utf8_codepoint& rhs) const noexcept;
 	};
 	
 	struct utf8_view
 	{
+	private:
+
 		const char* m_ptr;
 		uint32_t m_codeunits;
 		uint32_t m_codepoints;
 
-		utf8_view(const char* cstring) noexcept;
+	public:
 
-		utf8_view(const char* cstring, uint32_t codeunits, uint32_t codepoints) noexcept;
+		constexpr utf8_view(const char* cstring) noexcept : 
+			m_ptr{ cstring }, 
+			m_codeunits{ [](const char* str) { uint32_t cunits = 0; while (*str++) ++cunits; return cunits; }(cstring) }, 
+			m_codepoints{ [](const char* str) { uint32_t cpoints = 0; while (*str) cpoints += ((*str++ & 0xC0) != 0x80); return cpoints; }(cstring) } {}
+
+		constexpr utf8_view(const char* cstring, uint32_t codeunits, uint32_t codepoints) noexcept : m_ptr{ cstring }, m_codeunits{ codeunits }, m_codepoints{ codepoints } {}
+
+		constexpr utf8_view(const utf8_view& view) = default;
 
 		utf8_view(const utf8_string& string) noexcept;
 
@@ -57,6 +80,8 @@ namespace och
 
 		utf8_iterator end() const noexcept;
 	};
+
+	using stringview = utf8_view;
 
 	struct utf8_iterator
 	{
