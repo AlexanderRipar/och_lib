@@ -1,18 +1,12 @@
 ﻿#include "och_lib.h"
 
-#include <Windows.h>
-
-#include <string_view>
-
 int main()
 {
-	och::filehandle file("testout.txt", och::fio::access_write, och::fio::open_truncate, och::fio::open_fail);
+	och::filehandle file("testout.txt", och::fio::access_write, och::fio::open_truncate, och::fio::open_normal);
 	
-	//, INFINITY);//
+	och::date now = och::date::local_now();
 
-	constexpr och::utf8_view view(u8"a");
+	och::print(file, u8"{:xYMDTIJK.LuU}", now);
 
-	constexpr och::utf8_view v = view;
-
-	//och::print(file.handle, u8"Numberwang: |{:8.7>~😂}|", u8"ab😂cd");
+	//och::print(file.handle, u8"Numberwang: |{:8.2>~😂}|, {}", u8"ab😂cd", -300);
 }
