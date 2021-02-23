@@ -95,67 +95,92 @@ namespace och
 	/*/////////////////////////////////////////////////////utf8_codepoint////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	utf8_codepoint::utf8_codepoint(const char* cstring) noexcept
+	utf8_char::utf8_char(const char* cstring) noexcept
 	{
-		*utf8 = *cstring;
+		*m_codeunits = *cstring;
 
 		uint32_t cunits = 1;
 
 		while (cunits != 4 && _is_utf8_surr(cstring[cunits]))
 		{
-			utf8[cunits] = cstring[cunits];
+			m_codeunits[cunits] = cstring[cunits];
 			++cunits;
 		}
 	}
 
-	utf8_codepoint::utf8_codepoint(char32_t codepoint) noexcept
+	utf8_char::utf8_char(char32_t codepoint) noexcept
 	{
-		_utf8_from_codepoint(utf8, codepoint);
+		_utf8_from_codepoint(m_codeunits, codepoint);
 	}
 
-	utf8_codepoint::utf8_codepoint(char ascii_codepoint) noexcept
+	utf8_char::utf8_char(char ascii_codepoint) noexcept
 	{
-		utf8[0] = ascii_codepoint;
+		m_codeunits[0] = ascii_codepoint;
 	}
 
-	uint32_t utf8_codepoint::get_codeunits() const noexcept
+	char32_t utf8_char::codepoint() const noexcept
+	{
+		return _utf8_to_utf32(m_codeunits);
+	}
+
+	uint32_t utf8_char::get_codeunits() const noexcept
 	{
 		uint32_t cunits = 0;
 
-		while (cunits != 4 && utf8[cunits])
+		while (cunits != 4 && m_codeunits[cunits])
 			++cunits;
 
 		return cunits;
 	}
 
-	bool utf8_codepoint::operator==(const utf8_codepoint& rhs) const noexcept
+	const char* utf8_char::cbegin() const noexcept
 	{
-		return *(const char32_t*)utf8 == *(const char32_t*)rhs.utf8;
+		return m_codeunits;
 	}
 
-	bool utf8_codepoint::operator!=(const utf8_codepoint& rhs) const noexcept
+	const char* utf8_char::cend() const noexcept
 	{
-		return *(const char32_t*)utf8 != *(const char32_t*)rhs.utf8;
+		return m_codeunits + get_codeunits();
 	}
 
-	bool utf8_codepoint::operator>(const utf8_codepoint& rhs) const noexcept
+	const char* utf8_char::begin() const noexcept
 	{
-		return *(const char32_t*)utf8 > *(const char32_t*)rhs.utf8;
+		return m_codeunits;
 	}
 
-	bool utf8_codepoint::operator>=(const utf8_codepoint& rhs) const noexcept
+	const char* utf8_char::end() const noexcept
 	{
-		return *(const char32_t*)utf8 >= *(const char32_t*)rhs.utf8;
+		return m_codeunits + get_codeunits();
 	}
 
-	bool utf8_codepoint::operator<(const utf8_codepoint& rhs) const noexcept
+	bool utf8_char::operator==(const utf8_char& rhs) const noexcept
 	{
-		return *(const char32_t*)utf8 < *(const char32_t*)rhs.utf8;
+		return *(const char32_t*)m_codeunits == *(const char32_t*)rhs.m_codeunits;
 	}
 
-	bool utf8_codepoint::operator<=(const utf8_codepoint& rhs) const noexcept
+	bool utf8_char::operator!=(const utf8_char& rhs) const noexcept
 	{
-		return *(const char32_t*)utf8 <= *(const char32_t*)rhs.utf8;
+		return *(const char32_t*)m_codeunits != *(const char32_t*)rhs.m_codeunits;
+	}
+
+	bool utf8_char::operator>(const utf8_char& rhs) const noexcept
+	{
+		return *(const char32_t*)m_codeunits > *(const char32_t*)rhs.m_codeunits;
+	}
+
+	bool utf8_char::operator>=(const utf8_char& rhs) const noexcept
+	{
+		return *(const char32_t*)m_codeunits >= *(const char32_t*)rhs.m_codeunits;
+	}
+
+	bool utf8_char::operator<(const utf8_char& rhs) const noexcept
+	{
+		return *(const char32_t*)m_codeunits < *(const char32_t*)rhs.m_codeunits;
+	}
+
+	bool utf8_char::operator<=(const utf8_char& rhs) const noexcept
+	{
+		return *(const char32_t*)m_codeunits <= *(const char32_t*)rhs.m_codeunits;
 	}
 
 
@@ -166,14 +191,14 @@ namespace och
 
 	utf8_iterator::utf8_iterator(const char* cstring) noexcept : cstring{ cstring } {}
 
-	char32_t utf8_iterator::operator*() noexcept
+	utf8_char utf8_iterator::operator*() noexcept
 	{
-		return _utf8_to_utf32(cstring);
+		return utf8_char(cstring);
 	}
 
 	void utf8_iterator::operator++() noexcept
 	{
-		while ((*++cstring & 0xC0) == 0x80);
+		while (_is_utf8_surr(*++cstring));
 	}
 
 	bool utf8_iterator::operator!=(const utf8_iterator& rhs) noexcept
@@ -191,15 +216,23 @@ namespace och
 
 	utf8_view utf8_view::subview(uint32_t pos, uint32_t len) const noexcept
 	{
-		uint32_t beg_cunits = 0, beg_cpoints = 0;
+		uint32_t prev_cpoints = get_codepoints();
 
-		_utf8_len(m_ptr, beg_cunits, beg_cpoints, pos);
+		if (pos >= prev_cpoints)
+			return utf8_string();
 
-		uint32_t end_cunits = beg_cunits, end_cpoints = beg_cpoints;
+		uint32_t first_cunit = 0, first_cpoint = 0;
 
-		_utf8_len(m_ptr, end_cunits, end_cpoints, pos + len);
+		_utf8_len(raw_cbegin(), first_cunit, first_cpoint, pos);
 
-		return utf8_view(m_ptr + beg_cunits, end_cunits - beg_cunits, end_cpoints - beg_cpoints);
+		uint32_t last_cunit = first_cunit, last_cpoint = first_cpoint;
+
+		if (len >= prev_cpoints - pos)
+			return utf8_view(raw_cbegin() + first_cunit, get_codeunits() - first_cunit, prev_cpoints - pos);
+
+		_utf8_len(raw_cbegin(), last_cunit, last_cpoint, pos + len);
+
+		return utf8_view(raw_cbegin() + first_cunit, last_cunit - first_cunit, len);
 	}
 
 	uint32_t utf8_view::get_codepoints() const noexcept
@@ -231,6 +264,18 @@ namespace och
 	{
 		return utf8_iterator(m_ptr + m_codeunits);
 	}
+
+	utf8_char utf8_view::at(uint32_t pos) const noexcept
+	{
+		utf8_iterator it = begin();
+
+		for (uint32_t i = 0; i != pos; ++i)
+			++it;
+
+		return *it;
+	}
+
+
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*/////////////////////////////////////////////////////utf8_string///////////////////////////////////////////////////////*/
@@ -358,7 +403,7 @@ namespace och
 
 	//////////////////////////////////////////////Element Acess////////////////////////////////////////////////////////////////
 
-	char32_t utf8_string::at(uint32_t pos) const noexcept
+	utf8_char utf8_string::at(uint32_t pos) const noexcept
 	{
 		if (!is_sso() && get_codepoints() == get_codeunits())
 			return raw_cbegin()[pos];
@@ -371,12 +416,12 @@ namespace och
 		return *it;
 	}
 
-	char32_t utf8_string::front() const noexcept
+	utf8_char utf8_string::front() const noexcept
 	{
 		return _utf8_to_utf32(raw_cbegin());
 	}
 
-	char32_t utf8_string::back() const noexcept
+	utf8_char utf8_string::back() const noexcept
 	{
 		const char* end = raw_cend() - 1;
 
@@ -504,11 +549,9 @@ namespace och
 		set_codepoints(prev_cpoints - len);
 	}
 
-	bool utf8_string::insert(uint32_t pos, char32_t cpoint) noexcept
+	bool utf8_string::insert(uint32_t pos, utf8_char cpoint) noexcept
 	{
-		char buf[4];
-
-		return insert(buf, _utf8_from_codepoint(buf, cpoint), 1, pos);
+		return insert(cpoint.cbegin(), cpoint.get_codeunits(), 1, pos);
 	}
 
 	bool utf8_string::insert(uint32_t pos, const utf8_view& view) noexcept
@@ -525,11 +568,9 @@ namespace och
 		return insert(cstring, added_cunits, added_cpoints, pos);
 	}
 
-	bool utf8_string::replace(uint32_t pos, char32_t cpoint) noexcept
+	bool utf8_string::replace(uint32_t pos, utf8_char cpoint) noexcept
 	{
-		char buf[4];
-
-		return replace(buf, _utf8_from_codepoint(buf, cpoint), 1, pos);
+		return replace(cpoint.cbegin(), cpoint.get_codeunits(), 1, pos);
 	}
 
 	bool utf8_string::replace(uint32_t pos, const utf8_view& view) noexcept

@@ -18,34 +18,44 @@ namespace och
 
 	bool _is_utf8_surr(char c) noexcept;
 
-	struct utf8_codepoint
+	struct utf8_char
 	{
-		char utf8[4] alignas(char32_t) { 0, 0, 0, 0 };
+		char m_codeunits[4] alignas(char32_t) { 0, 0, 0, 0 };
 
-		utf8_codepoint(const char* cstring) noexcept;
+		utf8_char(const char* cstring) noexcept;
 
-		utf8_codepoint(char32_t codepoint) noexcept;
+		utf8_char(char32_t codepoint) noexcept;
 
-		utf8_codepoint(char ascii_codepoint) noexcept;
+		utf8_char(char ascii_codepoint) noexcept;
 
-		utf8_codepoint() = default;
+		utf8_char() = default;
 
 		uint32_t get_codeunits() const noexcept;
 
-		bool operator==(const utf8_codepoint& rhs) const noexcept;
+		char32_t codepoint() const noexcept;
 
-		bool operator!=(const utf8_codepoint& rhs) const noexcept;
+		const char* cbegin() const noexcept;
 
-		bool operator>(const utf8_codepoint& rhs) const noexcept;
+		const char* cend() const noexcept;
 
-		bool operator>=(const utf8_codepoint& rhs) const noexcept;
+		const char* begin() const noexcept;
 
-		bool operator<(const utf8_codepoint& rhs) const noexcept;
+		const char* end() const noexcept;
 
-		bool operator<=(const utf8_codepoint& rhs) const noexcept;
+		bool operator==(const utf8_char& rhs) const noexcept;
+
+		bool operator!=(const utf8_char& rhs) const noexcept;
+
+		bool operator>(const utf8_char& rhs) const noexcept;
+
+		bool operator>=(const utf8_char& rhs) const noexcept;
+
+		bool operator<(const utf8_char& rhs) const noexcept;
+
+		bool operator<=(const utf8_char& rhs) const noexcept;
 	};
 	
-	struct utf8_view
+	struct utf8_view 
 	{
 	private:
 
@@ -66,7 +76,7 @@ namespace och
 
 		utf8_view(const utf8_string& string) noexcept;
 
-		utf8_view subview(uint32_t pos, uint32_t len) const noexcept;
+		utf8_view subview(uint32_t pos, uint32_t len = ~0) const noexcept;
 
 		uint32_t get_codepoints() const noexcept;
 
@@ -79,6 +89,8 @@ namespace och
 		utf8_iterator begin() const noexcept;
 
 		utf8_iterator end() const noexcept;
+
+		utf8_char at(uint32_t pos) const noexcept;
 	};
 
 	using stringview = utf8_view;
@@ -89,7 +101,7 @@ namespace och
 
 		utf8_iterator(const char* cstring) noexcept;
 
-		char32_t operator*() noexcept;
+		utf8_char operator*() noexcept;
 
 		void operator++() noexcept;
 
@@ -166,11 +178,11 @@ namespace och
 
 		//////////////////////////////////////////////////Element Acess///////////////////////////////////////////////////////////////
 
-		char32_t at(uint32_t pos) const noexcept;
+		utf8_char at(uint32_t pos) const noexcept;
 
-		char32_t front() const noexcept;
+		utf8_char front() const noexcept;
 
-		char32_t back() const noexcept;
+		utf8_char back() const noexcept;
 
 		///////////////////////////////////////////////////Modifiers///////////////////////////////////////////////////////////////
 
@@ -196,13 +208,13 @@ namespace och
 
 		void erase(uint32_t pos, uint32_t len) noexcept;
 
-		bool insert(uint32_t pos, char32_t codept) noexcept;
+		bool insert(uint32_t pos, utf8_char codept) noexcept;
 
 		bool insert(uint32_t pos, const utf8_view& view) noexcept;
 
 		bool insert(uint32_t pos, const char* cstr) noexcept;
 
-		bool replace(uint32_t pos, char32_t codept) noexcept;
+		bool replace(uint32_t pos, utf8_char codept) noexcept;
 
 		bool replace(uint32_t pos, const utf8_view& view) noexcept;
 
@@ -222,7 +234,7 @@ namespace och
 
 		//////////////////////////////////////////////////Operations///////////////////////////////////////////////////////////////
 
-		utf8_string substr(uint32_t pos, uint32_t len = static_cast<uint32_t>(-1)) const noexcept;
+		utf8_string substr(uint32_t pos, uint32_t len = ~0) const noexcept;
 
 	private:
 
