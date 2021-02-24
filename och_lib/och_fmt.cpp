@@ -8,9 +8,11 @@
 namespace och
 {
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-	/*///////////////////////////////////////////////formatting functions////////////////////////////////////////////////////*/
+	/*////////////////////////////////////////////////formatting helpers/////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-	
+
+	constexpr const char* hex_lower_upper = "0123456789abcdef0123456789ABCDEF";
+
 	void write_with_padding(och::iohandle out, och::stringview text, och::utf8_char filler, uint32_t to_write, bool is_rightadj)
 	{
 		uint32_t written = (uint32_t)text.get_codepoints();
@@ -40,13 +42,61 @@ namespace och
 		return out;
 	}
 
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////formatting functions////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+	void fmt_uint(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	{
+		uint64_t value = arg_value.u;
+
+		char buf[32];
+
+		char* curr = buf + 31;
+
+		if (context.format_specifier == '\0')
+			curr = reverse_itos(curr, value);
+		else if (context.format_specifier == 'x')
+			while (value)
+			{
+				*curr-- = hex_lower_upper[value & 0xF];
+
+				value >>= 4;
+			}
+		else if(context.format_specifier == 'X')
+			while (value)
+			{
+				*curr-- = hex_lower_upper[16 + value & 0xF];
+
+				value >>= 4;
+			}
+		else if (context.format_specifier == 'b')
+			while (value)
+			{
+				*curr-- = '0' + (value & 1);
+
+				value >>= 1;
+			}
+		else if (context.format_specifier == 'B')
+			for (uint32_t i = 0; i != 32; ++i)
+			{
+				*curr-- = '0' + (value & 1);
+
+				value >>= 1;
+			}
+
+		++curr;
+
+		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context.filler, context.width, context.flags & 4);
+	}
+
 	void fmt_int(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
 		int64_t value = arg_value.i;
 
-		char buf[20];
+		char buf[32];
 
-		char* curr = buf + 19;
+		char* curr = buf + 31;
 
 		bool is_negative = false;
 
@@ -57,31 +107,42 @@ namespace och
 			value = -value;
 		}
 
-		curr = reverse_itos(curr, value);
+		if (context.format_specifier == '\0')
+		{
+			curr = reverse_itos(curr, value);
+		}
+		else if (context.format_specifier == 'X')
+			while (value)
+			{
+				*curr-- = hex_lower_upper[16 + value & 0xF];
+
+				value >>= 4;
+			}
+		else if (context.format_specifier == 'b')
+			while (value)
+			{
+				*curr-- = '0' + (value & 1);
+
+				value >>= 1;
+			}
+		else if (context.format_specifier == 'B')
+			for (uint32_t i = 0; i != 31; ++i)
+			{
+				*curr-- = '0' + (value & 1);
+
+				value >>= 1;
+			}
 
 		if (is_negative)
-			*curr = '-';
+			*curr-- = '-';
 		else if (context.flags & 1)
-			*curr = '+';
+			*curr-- = '+';
 		else if (context.flags & 2)
-			*curr = ' ';
-		else
-			++curr;
+			*curr-- = ' ';
 
-		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 20), (uint32_t)(buf - curr + 20)), context.filler, context.width, context.flags & 4);
-	}
+		++curr;
 
-	void fmt_uint(och::iohandle out, fmt_value arg_value, const parsed_context& context)
-	{
-		uint64_t value = arg_value.u;
-
-		char buf[20];
-
-		char* curr = buf + 19;
-
-		curr = reverse_itos(curr, value) + 1;
-
-		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 20), (uint32_t)(buf - curr + 20)), context.filler, context.width, context.flags & 4);
+		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context.filler, context.width, context.flags & 4);
 	}
 
 	void fmt_utf8_view(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -117,69 +178,169 @@ namespace och
 
 	void fmt_float(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
-		//constexpr och::stringview nan_text("-nan");
-		//constexpr och::stringview inf_text("-inf");
-		//
-		//uint32_t value = (uint32_t)arg_value.u;
-		//
-		//if (context.format_specifier == 'b');
-		//
-		//const bool is_negative = value & 0x8000'0000;
-		//const int8_t exponent = (int8_t)(((value & 0x7F80'0000) >> 23) - 127);
-		//const uint32_t mantissa = value & 0x007F'FFFF;
-		//
-		//och::stringview text("[[fmt_float is not yet implemented]]");
-		//
-		//if (exponent == 0x7F80'0000)//infinity or nan
-		//	if (mantissa)
-		//		text = och::stringview(nan_text.beg + !is_negative, nan_text.end);
-		//	else
-		//		text = och::stringview(inf_text.beg + !is_negative, inf_text.end);
-		//else if (!exponent)//denorm or zero
-		//	if (mantissa)
-		//		text = "Denorm";
-		//	else
-		//		text = "0";
-		//else//normalized number
-		//{
-		//	char buf[64];
-		//
-		//	char* curr = buf + 63;
-		//
-		//	
-		//}
-		//
-		//write_ascii_with_padding(out, text, och::stringview(context.filler.utf8, context.filler.get_codeunits()), context.width, context.flags & 4);
+		//     ->   base 10 decimal
+		// e   ->   base 10 scientific ([+ -]N.NNNNe+-NNNN)
+		// x,X ->   base 16 decimal. x uses lowercase letters, H uppercase
+		// h,H ->   base 16 scientific ([+ -]N.NNNNp+-NNNN). h uses lowercase letters, H uppercase
+		// b   ->   bitpattern
+		// B   ->   bitpattern with ' separating sign, exponent and mantissa
+		
+		char buf[64];
+
+		char* curr = buf;
+
+		const uint32_t value = (uint32_t)arg_value.u;
+		
+		const bool is_negative = value & 0x8000'0000;
+		const int8_t exponent = (int8_t)(((value & 0x7F80'0000) >> 23) - 127);
+		const uint32_t mantissa = value & 0x007F'FFFF;
+
+		if /*TODO Implement*/ (context.format_specifier == '\0')
+		{
+
+		}
+		else if (context.format_specifier == 'b')
+		{
+			uint32_t mask = 0x8000'0000;
+
+			while (mask)
+			{
+				*curr++ = '0' + ((value & mask) == mask);
+				mask >>= 1;
+			}
+		}
+		else if (context.format_specifier == 'B')
+		{
+			uint32_t mask = 0x8000'0000;
+
+			*curr++ = '0' + ((value & mask) == mask);
+			mask >>= 1;
+
+			*curr++ = '\'';
+
+			for (uint32_t i = 0; i != 8; ++i)
+			{
+				*curr++ = '0' + ((value & mask) == mask);
+				mask >>= 1;
+			}
+
+			*curr++ = '\'';
+
+			while (mask)
+			{
+				*curr++ = '0' + ((value & mask) == mask);
+				mask >>= 1;
+			}
+		}
+		else if/*TODO Implement*/ (context.format_specifier == 'e')
+		{
+
+		}
+		else if /*TODO Precision*/ (context.format_specifier == 'h' || context.format_specifier == 'H')
+		{
+			const char* hex = context.format_specifier == 'h' ? hex_lower_upper : hex_lower_upper + 16;
+
+			int8_t hex_exponent = exponent >> 2;
+
+			const uint32_t hex_mantissa = ((1 << 23) | mantissa) << (exponent & 3);
+
+			const uint32_t predec = hex_mantissa >> 23;
+
+			const uint32_t postdec = hex_mantissa & ((1 << 23) - 1);
+
+			if (is_negative)
+				*curr++ = '-';
+			else if (context.flags & 1)
+				*curr++ = '+';
+			else if (context.flags & 2)
+				*curr++ = ' ';
+
+			*curr++ = hex[predec];
+
+			const char* const decimal_point = curr;
+
+			*curr++ = '.';
+
+			uint32_t shift = 19;
+
+			while (shift >= 4)
+			{
+				*curr++ = hex[(postdec >> shift) & 0xF];
+				shift -= 4;
+			}
+
+			*curr++ = hex[postdec & 3];
+
+			while (curr[-1] == '0' && curr[-2] != '.')
+				--curr;
+
+			if (context.precision != 0xFFFF)
+			{
+				//Cut off until precision is equal to curr - decimal_point
+				while (curr - decimal_point - 1 > context.precision)
+					--curr;
+
+				//Add '0' until precision is equal to curr - decimal_point
+				while (curr - decimal_point - 1 < context.precision)
+					*curr++ = '0';
+			}
+
+			*curr++ = 'p';
+
+			if (hex_exponent < 0)
+			{
+				*curr++ = '-';
+				hex_exponent = -hex_exponent;
+			}
+
+			if (hex_exponent > 0xF)
+				*curr++ = hex[hex_exponent >> 4];
+
+			*curr++ = hex[hex_exponent & 0xF];
+		}
+		else if /*TODO Implement*/ (context.format_specifier == 'x' || context.format_specifier == 'X')
+		{
+			
+		}
+		else /*TODO Error Handling*/
+		{
+
+		}
+
+		och::write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), (uint32_t)(curr - buf)), context.filler, context.width, context.flags & 4);
 	}
 
 	void fmt_double(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
+		arg_value;
+
+		context;
+
 		och::write_to_file(out, "[[fmt_double is not yet implemented]]");
 	}
 
 	void fmt_date(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
-		// y -> year
-		// m -> month, w/o leading zero
-		// n -> short monthname (Jan, Feb, ...)
-		// d -> monthday, w/o leading zero
-		// w -> short weekday (Mon, Tue, ...)
-		// i -> hour, w/o leading zero
-		// j -> minute, w/o leading zero
-		// k -> second, w/o leading zero
-		// l -> millisecond, three digits
+		// y   ->   year
+		// m   ->   month, w/o leading zero
+		// n   ->   short monthname (Jan, Feb, ...)
+		// d   ->   monthday, w/o leading zero
+		// w   ->   short weekday (Mon, Tue, ...)
+		// i   ->   hour, w/o leading zero
+		// j   ->   minute, w/o leading zero
+		// k   ->   second, w/o leading zero
+		// l   ->   millisecond, three digits
+		//	   	   
+		// u   ->   utc-offset hours (+-hh)
+		// U   ->   utc-offset minutes (mm)
+		// s?  ->   utf8_char after s is only printed if date is local
 		//
-		// u -> utc-offset hours (+-hh)
-		// U -> utc-offset minutes (mm)
-		//
-		// Capital letters indicate leading zeroes, or extended name
+		// Capital letters (except U) indicate leading zeroes, or extended name
 		auto date_formatter = [](char* out, const och::date& in, const char* format, uint32_t& utf8_cpoints) -> char*
 		{
 			constexpr const char* weekdays = "Sunday\0\0\0\0" "Monday\0\0\0\0" "Tuesday\0\0\0" "Wednesday\0" "Thursday\0\0" "Friday\0\0\0\0" "Saturday\0";
 			constexpr const char* months = "January\0\0\0" "February\0\0" "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0" 
 				                           "July\0\0\0\0\0\0" "August\0\0\0\0" "September\0" "October\0\0\0" "November\0\0" "December\0";
-
-			bool last_char_was_surrogate = false;
 
 			for (char c = *format; c != '}'; c = *++format)
 			{
@@ -373,6 +534,20 @@ namespace och
 					*out++ = '0' + m % 10;
 				}
 					break;
+				case 's':
+				{
+					if (*++format == '{')
+						++format;
+
+					och::utf8_char sep(format);
+
+					format += sep.get_codeunits() - 1;
+
+					if (!in.is_utc())
+						for (uint32_t i = 0; i != sep.get_codeunits(); ++i)
+							*out++ = sep.cbegin()[i];
+				}
+					break;
 				case '{':
 					c = *++format;//Fallthrough...
 				default:
@@ -407,7 +582,7 @@ namespace och
 		else if (context.format_specifier == 't')
 			curr = date_formatter(curr, value, "I:J:K.L}", printed_utf_cpoints);
 		else if (context.format_specifier == 'u')
-			curr = date_formatter(curr, value, "Y-M-DTI:J:K.Lu:U}", printed_utf_cpoints);
+			curr = date_formatter(curr, value, "Y-M-DTI:J:K.Lus:U}", printed_utf_cpoints);
 		else if (context.format_specifier == 'x')
 			curr = date_formatter(curr, value, context.raw_context, printed_utf_cpoints);
 		else
