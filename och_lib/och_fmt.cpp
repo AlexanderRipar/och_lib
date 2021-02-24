@@ -373,6 +373,8 @@ namespace och
 		constexpr const char* months = "January\0\0\0"    "February\0\0"   "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0"
 			                           "July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
 
+#define OCH_FMT_2DIGIT(x) if(x >= 10 || c >= 'A') *curr++ = '0' + (char)x / 10; *curr++ = '0' + (char)x % 10;
+
 		for (char c = *format; c != '}'; c = *++format)
 		{
 			char* prev = curr;
@@ -395,7 +397,7 @@ namespace och
 
 				curr[-idx] = '0' + (char)y;
 			}
-			break;
+				break;
 			case 'Y':
 			{
 				uint16_t y = in.year();
@@ -416,23 +418,11 @@ namespace och
 
 				curr += 4;
 			}
-			break;
+				break;
 			case 'm':
-			{
-				if (in.month() >= 10)
-				{
-					*curr++ = '1';
-					*curr++ = '0' + (char)(in.month() - 10);
-				}
-				else
-					*curr++ = '0' + (char)(in.month());
-			}
-			break;
 			case 'M':
-			{
-				*curr++ = '0' + (char)(in.month() / 10);
-				*curr++ = '0' + in.month() % 10;
-			}
+				OCH_FMT_2DIGIT(in.month());
+				break;
 			break;
 			case 'n':
 			{
@@ -440,7 +430,7 @@ namespace och
 				*curr++ = months[(in.month() - 1) * 10 + 1];
 				*curr++ = months[(in.month() - 1) * 10 + 2];
 			}
-			break;
+				break;
 			case 'N':
 			{
 				const char* monthname = months + (ptrdiff_t)(in.month() - 1) * 10;
@@ -448,21 +438,11 @@ namespace och
 				while (*monthname)
 					*curr++ = *monthname++;
 			}
-			break;
+				break;
 			case 'd':
-			{
-				if (in.monthday() >= 10)
-					*curr++ = '0' + (char)(in.monthday() / 10);
-
-				*curr++ = '0' + in.monthday() % 10;
-			}
-			break;
 			case 'D':
-			{
-				*curr++ = '0' + (char)(in.monthday() / 10);
-				*curr++ = '0' + in.monthday() % 10;
-			}
-			break;
+				OCH_FMT_2DIGIT(in.monthday());
+				break;
 			case 'w':
 			{
 				*curr++ = weekdays[in.weekday() * 10];
@@ -480,46 +460,16 @@ namespace och
 			}
 			break;
 			case 'i':
-			{
-				if (in.hour() >= 10)
-					*curr++ = '0' + (char)(in.hour() / 10);
-
-				*curr++ = '0' + in.hour() % 10;
-			}
-			break;
 			case 'I':
-			{
-				*curr++ = '0' + (char)(in.hour() / 10);
-				*curr++ = '0' + in.hour() % 10;
-			}
-			break;
+				OCH_FMT_2DIGIT(in.hour());
+				break;
 			case 'j':
-			{
-				if (in.minute() >= 10)
-					*curr++ = '0' + (char)(in.minute() / 10);
-
-				*curr++ = '0' + in.minute() % 10;
-			}
-			break;
 			case 'J':
-			{
-				*curr++ = '0' + (char)(in.minute() / 10);
-				*curr++ = '0' + in.minute() % 10;
-			}
+				OCH_FMT_2DIGIT(in.minute());
 			break;
 			case 'k':
-			{
-				if (in.second() >= 10)
-					*curr++ = '0' + (char)(in.second() / 10);
-
-				*curr++ = '0' + in.second() % 10;
-			}
-			break;
 			case 'K':
-			{
-				*curr++ = '0' + (char)(in.second() / 10);
-				*curr++ = '0' + in.second() % 10;
-			}
+				OCH_FMT_2DIGIT(in.second());
 			break;
 			case 'l':
 			{
@@ -546,9 +496,9 @@ namespace och
 					break;
 				}
 
-				uint16_t h = in.utc_offset_hours();
-
 				*curr++ = in.utc_offset_is_negative() ? '-' : '+';
+
+				uint16_t h = in.utc_offset_hours();
 
 				*curr++ = '0' + (char)(h / 10);
 				*curr++ = '0' + h % 10;
@@ -588,6 +538,8 @@ namespace och
 
 			utf8_cpoints += (uint32_t)(curr - prev);
 		}
+
+#undef OCH_FMT_2DIGIT
 
 		write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), utf8_cpoints), context.filler, context.width, context.flags & 4);
 	}
@@ -782,13 +734,15 @@ namespace och
 
 				if (*curr >= '0' && *curr <= '9')
 				{
-					arg_idx = *curr - '0';
+					arg_idx = *curr++ - '0';
 
 					while (*curr >= '0' && *curr <= '9')
-						arg_idx = arg_idx * 10 + *curr - '0';
+						arg_idx = arg_idx * 10 + *curr++ - '0';
 				}
 				else
-					arg_idx = arg_counter++;
+					arg_idx = arg_counter;
+
+				++arg_counter;
 
 				_ASSERT(arg_idx < argv.len());
 

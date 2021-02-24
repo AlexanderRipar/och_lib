@@ -4,5 +4,5 @@
 
 int main()
 {
-
+	och::print("{1} ||||| {}", 3, och::date::local_now());
 }
