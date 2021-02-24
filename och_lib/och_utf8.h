@@ -14,13 +14,17 @@ namespace och
 
 	char32_t _utf8_to_utf32(const char* cstring) noexcept;
 
-	uint32_t _utf8_codepoint_bytes(const char* cstring) noexcept;
+	uint32_t _utf8_codepoint_bytes(char c) noexcept;
 
 	bool _is_utf8_surr(char c) noexcept;
 
 	struct utf8_char
 	{
-		char m_codeunits[4] alignas(char32_t) { 0, 0, 0, 0 };
+		union
+		{
+			char m_codeunits[4]{ 0, 0, 0, 0 };
+			uint32_t m_intval;
+		};
 
 		utf8_char(const char* cstring) noexcept;
 

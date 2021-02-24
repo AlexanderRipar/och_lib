@@ -62,18 +62,16 @@ namespace och
 			return ~U'\0';
 	}
 
-	uint32_t _utf8_codepoint_bytes(const char* str) noexcept
+	uint32_t _utf8_codepoint_bytes(char c) noexcept
 	{
-		if (!(*str & 0x80))
+		if (c < 0x80)
 			return 1;
-		else if (!(*str & 0x20))
+		else if (c < 0xC0)
 			return 2;
-		else if (!(*str & 0x10))
+		else if (c < 0xE0)
 			return 3;
-		else if (!(*str & 0x08))
-			return 4;
 		else
-			return 1;
+			return 4;
 	}
 
 	bool _is_utf8_surr(char c) noexcept
@@ -125,12 +123,7 @@ namespace och
 
 	uint32_t utf8_char::get_codeunits() const noexcept
 	{
-		uint32_t cunits = 0;
-
-		while (cunits != 4 && m_codeunits[cunits])
-			++cunits;
-
-		return cunits;
+		return _utf8_codepoint_bytes(*m_codeunits);
 	}
 
 	const char* utf8_char::cbegin() const noexcept
@@ -155,32 +148,32 @@ namespace och
 
 	bool utf8_char::operator==(const utf8_char& rhs) const noexcept
 	{
-		return *(const char32_t*)m_codeunits == *(const char32_t*)rhs.m_codeunits;
+		return m_intval == rhs.m_intval;
 	}
 
 	bool utf8_char::operator!=(const utf8_char& rhs) const noexcept
 	{
-		return *(const char32_t*)m_codeunits != *(const char32_t*)rhs.m_codeunits;
+		return m_intval != rhs.m_intval;
 	}
 
 	bool utf8_char::operator>(const utf8_char& rhs) const noexcept
 	{
-		return *(const char32_t*)m_codeunits > *(const char32_t*)rhs.m_codeunits;
+		return m_intval > rhs.m_intval;
 	}
 
 	bool utf8_char::operator>=(const utf8_char& rhs) const noexcept
 	{
-		return *(const char32_t*)m_codeunits >= *(const char32_t*)rhs.m_codeunits;
+		return m_intval >= rhs.m_intval;
 	}
 
 	bool utf8_char::operator<(const utf8_char& rhs) const noexcept
 	{
-		return *(const char32_t*)m_codeunits < *(const char32_t*)rhs.m_codeunits;
+		return m_intval < rhs.m_intval;
 	}
 
 	bool utf8_char::operator<=(const utf8_char& rhs) const noexcept
 	{
-		return *(const char32_t*)m_codeunits <= *(const char32_t*)rhs.m_codeunits;
+		return m_intval <= rhs.m_intval;
 	}
 
 
@@ -812,7 +805,7 @@ namespace och
 	{
 		while (cpoint < last_cpoint)
 		{
-			cunit += _utf8_codepoint_bytes(raw_cbegin() + cunit);
+			cunit += _utf8_codepoint_bytes(raw_cbegin()[cunit]);
 
 			++cpoint;
 		}
