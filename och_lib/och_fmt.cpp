@@ -13,19 +13,19 @@ namespace och
 
 	constexpr const char* hex_lower_upper = "0123456789abcdef0123456789ABCDEF";
 
-	void write_with_padding(och::iohandle out, och::stringview text, och::utf8_char filler, uint32_t to_write, bool is_rightadj)
+	void write_with_padding(och::iohandle out, och::stringview text, const och::parsed_context& context)
 	{
 		uint32_t written = (uint32_t)text.get_codepoints();
 
-		if (is_rightadj)
-			while (written++ < to_write)
-				och::write_to_file(out, { filler.cbegin(), filler.cend() });
+		if (context.flags & 4)
+			while (written++ < context.width)
+				och::write_to_file(out, { context.filler.cbegin(), context.filler.cend() });
 
 		och::write_to_file(out, { text.raw_cbegin(), text.raw_cend() });
 
-		if (!is_rightadj)
-			while (written++ < to_write)
-				och::write_to_file(out, { filler.cbegin(), filler.cend() });
+		if (!(context.flags & 4))
+			while (written++ < context.width)
+				och::write_to_file(out, { context.filler.cbegin(), context.filler.cend() });
 	}
 
 	char* reverse_itos(char* out, uint64_t n)
@@ -84,10 +84,14 @@ namespace och
 
 				value >>= 1;
 			}
+		{
+			och::write_with_padding(out, "[[Invalid format-specifier", context);
+			return;
+		}
 
 		++curr;
 
-		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context.filler, context.width, context.flags & 4);
+		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context);
 	}
 
 	void fmt_int(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -132,6 +136,11 @@ namespace och
 
 				value >>= 1;
 			}
+		else
+		{
+			och::write_with_padding(out, "[[Invalid format-specifier", context);
+			return;
+		}
 
 		if (is_negative)
 			*curr-- = '-';
@@ -142,7 +151,7 @@ namespace och
 
 		++curr;
 
-		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context.filler, context.width, context.flags & 4);
+		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context);
 	}
 
 	void fmt_utf8_view(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -152,7 +161,7 @@ namespace och
 		if (value.get_codepoints() > context.precision)
 			value = value.subview(0, context.precision);
 
-		write_with_padding(out, value, context.filler, context.width, context.flags & 4);
+		write_with_padding(out, value, context);
 	}
 
 	void fmt_utf8_string(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -173,7 +182,7 @@ namespace och
 	{
 		och::utf8_char value = arg_value.c;
 
-		write_with_padding(out, och::stringview(value.cbegin(), value.get_codeunits(), 1), context.filler, context.width, context.flags & 4);
+		write_with_padding(out, och::stringview(value.cbegin(), value.get_codeunits(), 1), context);
 	}
 
 	void fmt_float(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -232,11 +241,15 @@ namespace och
 				mask >>= 1;
 			}
 		}
+		else if /*TODO Implement*/ (context.format_specifier == 'x' || context.format_specifier == 'X')
+		{
+
+		}
 		else if/*TODO Implement*/ (context.format_specifier == 'e')
 		{
 
 		}
-		else if /*TODO Precision*/ (context.format_specifier == 'h' || context.format_specifier == 'H')
+		else if /*TODO Rounding*/ (context.format_specifier == 'h' || context.format_specifier == 'H')
 		{
 			const char* hex = context.format_specifier == 'h' ? hex_lower_upper : hex_lower_upper + 16;
 
@@ -298,16 +311,13 @@ namespace och
 
 			*curr++ = hex[hex_exponent & 0xF];
 		}
-		else if /*TODO Implement*/ (context.format_specifier == 'x' || context.format_specifier == 'X')
+		else
 		{
-			
-		}
-		else /*TODO Error Handling*/
-		{
-
+			och::write_with_padding(out, "[[Invalid format-specifier", context);
+			return;
 		}
 
-		och::write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), (uint32_t)(curr - buf)), context.filler, context.width, context.flags & 4);
+		och::write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), (uint32_t)(curr - buf)), context);
 	}
 
 	void fmt_double(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -367,7 +377,10 @@ namespace och
 		else if (context.format_specifier == 'x')
 			format = context.raw_context;
 		else
-			format = "[[xIxnvaxlxixd xdate-forxmat xspecxifxier]]}";
+		{
+			och::write_with_padding(out, "[[Invalid format-specifier", context);
+			return;
+		}
 
 		constexpr const char* weekdays = "Sunday\0\0\0\0" "Monday\0\0\0\0" "Tuesday\0\0\0" "Wednesday\0" "Thursday\0\0" "Friday\0\0\0\0" "Saturday\0";
 		constexpr const char* months = "January\0\0\0"    "February\0\0"   "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0"
@@ -541,7 +554,7 @@ namespace och
 
 #undef OCH_FMT_2DIGIT
 
-		write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), utf8_cpoints), context.filler, context.width, context.flags & 4);
+		write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), utf8_cpoints), context);
 	}
 
 
