@@ -321,274 +321,275 @@ namespace och
 
 	void fmt_date(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
-		// y   ->   year
-		// m   ->   month, w/o leading zero
-		// n   ->   short monthname (Jan, Feb, ...)
-		// d   ->   monthday, w/o leading zero
-		// w   ->   short weekday (Mon, Tue, ...)
-		// i   ->   hour, w/o leading zero
-		// j   ->   minute, w/o leading zero
-		// k   ->   second, w/o leading zero
-		// l   ->   millisecond, three digits
-		//	   	   
-		// u   ->   utc-offset hours (+-hh)
-		// U   ->   utc-offset minutes (mm)
-		// s?  ->   utf8_char after s is only printed if date is local
-		//
-		// Capital letters (except U) indicate leading zeroes, or extended name
-		auto date_formatter = [](char* out, const och::date& in, const char* format, uint32_t& utf8_cpoints) -> char*
-		{
-			constexpr const char* weekdays = "Sunday\0\0\0\0" "Monday\0\0\0\0" "Tuesday\0\0\0" "Wednesday\0" "Thursday\0\0" "Friday\0\0\0\0" "Saturday\0";
-			constexpr const char* months = "January\0\0\0" "February\0\0" "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0" 
-				                           "July\0\0\0\0\0\0" "August\0\0\0\0" "September\0" "October\0\0\0" "November\0\0" "December\0";
-
-			for (char c = *format; c != '}'; c = *++format)
-			{
-				char* before = out;
-
-				switch (c)
-				{
-				case 'y':
-				{
-					uint16_t y = in.year();
-
-					int32_t idx = y >= 10000 ? 5 : y >= 1000 ? 4 : y >= 100 ? 3 : y >= 10 ? 2 : 1;
-
-					out += idx;
-
-					for(int32_t i = 1; i != idx; ++i)
-					{
-						out[-i] = '0' + y % 10;
-						y /= 10;
-					}
-
-					out[-idx] = '0' + (char)y;
-				}
-				break;
-				case 'Y':
-				{
-					uint16_t y = in.year();
-
-					if (y >= 10000)
-					{
-						*out++ = '0' + (char)(y / 10000);
-						y /= 10;
-					}
-
-					out[3] = '0' + y % 10;
-					y /= 10;
-					out[2] = '0' + y % 10;
-					y /= 10;
-					out[1] = '0' + y % 10;
-					y /= 10;
-					out[0] = '0' + (char)y;
-
-					out += 4;
-				}
-					break;
-				case 'm':
-				{
-					if (in.month() >= 10)
-					{
-						*out++ = '1';
-						*out++ = '0' + (char)(in.month() - 10);
-					}
-					else
-						*out++ = '0' + (char)(in.month());
-				}
-					break;
-				case 'M':
-				{
-					*out++ = '0' + (char)(in.month() / 10);
-					*out++ = '0' + in.month() % 10;
-				}
-					break;
-				case 'n':
-				{
-					*out++ = months[(in.month() - 1) * 10    ];
-					*out++ = months[(in.month() - 1) * 10 + 1];
-					*out++ = months[(in.month() - 1) * 10 + 2];
-				}
-					break;
-				case 'N':
-				{
-					const char* monthname = months + (ptrdiff_t)(in.month() - 1) * 10;
-
-					while (*monthname)
-						*out++ = *monthname++;
-				}
-					break;
-				case 'd':
-				{
-					if (in.monthday() >= 10)
-						*out++ = '0' + (char)(in.monthday() / 10);
-
-					*out++ = '0' + in.monthday() % 10;
-				}
-					break;
-				case 'D':
-				{
-					*out++ = '0' + (char)(in.monthday() / 10);
-					*out++ = '0' + in.monthday() % 10;
-				}
-					break;
-				case 'w':
-				{
-					*out++ = weekdays[in.weekday() * 10    ];
-					*out++ = weekdays[in.weekday() * 10 + 1];
-					*out++ = weekdays[in.weekday() * 10 + 2];
-
-				}
-					break;
-				case 'W':
-				{
-					const char* dayname = weekdays + (ptrdiff_t)in.weekday() * 10;
-
-					while (*dayname)
-						*out++ = *dayname++;
-				}
-					break;
-				case 'i':
-				{
-					if (in.hour() >= 10)
-						*out++ = '0' + (char)(in.hour() / 10);
-
-					*out++ = '0' + in.hour() % 10;
-				}
-					break;
-				case 'I':
-				{
-					*out++ = '0' + (char)(in.hour() / 10);
-					*out++ = '0' + in.hour() % 10;
-				}
-					break;
-				case 'j':
-				{
-					if (in.minute() >= 10)
-						*out++ = '0' + (char)(in.minute() / 10);
-
-					*out++ = '0' + in.minute() % 10;
-				}
-					break;
-				case 'J':
-				{
-					*out++ = '0' + (char)(in.minute() / 10);
-					*out++ = '0' + in.minute() % 10;
-				}
-					break;
-				case 'k':
-				{
-					if (in.second() >= 10)
-						*out++ = '0' + (char)(in.second() / 10);
-
-					*out++ = '0' + in.second() % 10;
-				}
-					break;
-				case 'K':
-				{
-					*out++ = '0' + (char)(in.second() / 10);
-					*out++ = '0' + in.second() % 10;
-				}
-					break;
-				case 'l':
-				{
-					if(in.millisecond() >= 100)
-						*out++ = '0' + (char)(in.millisecond() / 100);
-					if(in.millisecond() >= 10)
-						*out++ = '0' + (in.millisecond() / 10) % 10;
-					*out++ = '0' + in.millisecond() % 10;
-				}
-					break;
-				case 'L':
-				{
-					*out++ = '0' + (char)(in.millisecond() / 100);
-					*out++ = '0' + (in.millisecond() / 10) % 10;
-					*out++ = '0' + in.millisecond() % 10;
-				}
-					break;
-				case 'u':
-				{
-					if (in.is_utc())
-					{
-						*out++ = 'Z';
-
-						break;
-					}
-
-					uint16_t h = in.utc_offset_hours();
-
-					*out++ = in.utc_offset_is_negative() ? '-' : '+';
-
-					*out++ = '0' + (char)(h / 10);
-					*out++ = '0' + h % 10;
-				}
-					break;
-				case 'U':
-				{
-					if (in.is_utc())
-						break;
-
-					uint16_t m = in.utc_offset_minutes();
-
-					*out++ = '0' + (char)(m / 10);
-					*out++ = '0' + m % 10;
-				}
-					break;
-				case 's':
-				{
-					if (*++format == '{')
-						++format;
-
-					och::utf8_char sep(format);
-
-					format += sep.get_codeunits() - 1;
-
-					if (!in.is_utc())
-						for (uint32_t i = 0; i != sep.get_codeunits(); ++i)
-							*out++ = sep.cbegin()[i];
-				}
-					break;
-				case '{':
-					c = *++format;//Fallthrough...
-				default:
-					*out++ = c;
-					utf8_cpoints -= _is_utf8_surr(c);
-					break;
-				}
-
-				utf8_cpoints += (uint32_t)(out - before);
-			}
-
-			return out;
-		};
+		//          [y]yyyy-mm-dd, hh:mm:ss.mmm
+		// d   ->   [y]yyyy-mm-dd
+		// t   ->   is_utc ? hh:mm:ss.mmm : hh:mm:ss:mmm
+		// u   ->   is_utc ? [y]yyyy-mm-ddThh:mm:ss.mmmZ : [y]yyyy-mm-ddThh:mm:ss.mmm+-hh:mm
+		// x   ->   custom format:
+		//          +-------------------------------------------------------------------------------------------+
+		//          | y   ->   year														                        |
+		//          | m   ->   month, w/o leading zero										                    |
+		//          | n   ->   short monthname (Jan, Feb, ...)								                    |
+		//          | d   ->   monthday, w/o leading zero									                    |
+		//          | w   ->   short weekday (Mon, Tue, ...)								                    |
+		//          | i   ->   hour, w/o leading zero										                    |
+		//          | j   ->   minute, w/o leading zero									                        |
+		//          | k   ->   second, w/o leading zero									                        |
+		//          | l   ->   millisecond, three digits									                    |
+		//          | 	   	   																                    |
+		//          | u   ->   utc-offset hours (+-hh)										                    |
+		//          | U   ->   utc-offset minutes (mm)										                    |
+		//          | s?  ->   utf8_char after s is only printed if date is local			                    |
+		//          | S?  ->   utf8_char after s is only printed if date is utc			                        |
+		//          | x   ->   x is ignored and the next character is printed, even if it is a format-specifier |
+		//          | 																	                        |
+		//          | Capital letters (except U) indicate leading zeroes, or extended name                      |
+		//          +-------------------------------------------------------------------------------------------+
 
 		char buf[64];
 
 		char* curr = buf;
 
-		const och::date& value = *reinterpret_cast<const och::date*>(arg_value.p);
+		const och::date& in = *reinterpret_cast<const och::date*>(arg_value.p);
 
-		//   [y]yyyy-mm-dd, hh:mm:ss.mmm
-		//d: [y]yyyy-mm-dd
-		//t: is_utc ? hh:mm:ss.mmm : hh:mm:ss:mmm
-		//u: is_utc ? [y]yyyy-mm-ddThh:mm:ss.mmmZ : [y]yyyy-mm-ddThh:mm:ss.mmm+-hh:mm
+		uint32_t utf8_cpoints = 0;
 
-		uint32_t printed_utf_cpoints = 0;
+		const char* format;
 
 		if (context.format_specifier == '\0')
-			curr = date_formatter(curr, value, "y-M-D, I:J:K.L}", printed_utf_cpoints);
+			format = "y-M-D, I:J:K.L}";
 		else if (context.format_specifier == 'd')
-			curr = date_formatter(curr, value, "y-M-D}", printed_utf_cpoints);
+			format = "y-M-D}";
 		else if (context.format_specifier == 't')
-			curr = date_formatter(curr, value, "I:J:K.L}", printed_utf_cpoints);
+			format = "I:J:K.L}";
 		else if (context.format_specifier == 'u')
-			curr = date_formatter(curr, value, "Y-M-DTI:J:K.Lus:U}", printed_utf_cpoints);
+			format = "Y-M-DTI:J:K.Lus:U}";
 		else if (context.format_specifier == 'x')
-			curr = date_formatter(curr, value, context.raw_context, printed_utf_cpoints);
+			format = context.raw_context;
 		else
-			curr = date_formatter(curr, value, "/I/nva/l/i/d /date-for/mat spec/if/ier", printed_utf_cpoints);
+			format = "[[xIxnvaxlxixd xdate-forxmat xspecxifxier]]}";
 
-		write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), printed_utf_cpoints), context.filler, context.width, context.flags & 4);
+		constexpr const char* weekdays = "Sunday\0\0\0\0" "Monday\0\0\0\0" "Tuesday\0\0\0" "Wednesday\0" "Thursday\0\0" "Friday\0\0\0\0" "Saturday\0";
+		constexpr const char* months = "January\0\0\0"    "February\0\0"   "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0"
+			                           "July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
+
+		for (char c = *format; c != '}'; c = *++format)
+		{
+			char* prev = curr;
+
+			switch (c)
+			{
+			case 'y':
+			{
+				uint16_t y = in.year();
+
+				int32_t idx = y >= 10000 ? 5 : y >= 1000 ? 4 : y >= 100 ? 3 : y >= 10 ? 2 : 1;
+
+				curr += idx;
+
+				for (int32_t i = 1; i != idx; ++i)
+				{
+					curr[-i] = '0' + y % 10;
+					y /= 10;
+				}
+
+				curr[-idx] = '0' + (char)y;
+			}
+			break;
+			case 'Y':
+			{
+				uint16_t y = in.year();
+
+				if (y >= 10000)
+				{
+					*curr++ = '0' + (char)(y / 10000);
+					y /= 10;
+				}
+
+				curr[3] = '0' + y % 10;
+				y /= 10;
+				curr[2] = '0' + y % 10;
+				y /= 10;
+				curr[1] = '0' + y % 10;
+				y /= 10;
+				curr[0] = '0' + (char)y;
+
+				curr += 4;
+			}
+			break;
+			case 'm':
+			{
+				if (in.month() >= 10)
+				{
+					*curr++ = '1';
+					*curr++ = '0' + (char)(in.month() - 10);
+				}
+				else
+					*curr++ = '0' + (char)(in.month());
+			}
+			break;
+			case 'M':
+			{
+				*curr++ = '0' + (char)(in.month() / 10);
+				*curr++ = '0' + in.month() % 10;
+			}
+			break;
+			case 'n':
+			{
+				*curr++ = months[(in.month() - 1) * 10];
+				*curr++ = months[(in.month() - 1) * 10 + 1];
+				*curr++ = months[(in.month() - 1) * 10 + 2];
+			}
+			break;
+			case 'N':
+			{
+				const char* monthname = months + (ptrdiff_t)(in.month() - 1) * 10;
+
+				while (*monthname)
+					*curr++ = *monthname++;
+			}
+			break;
+			case 'd':
+			{
+				if (in.monthday() >= 10)
+					*curr++ = '0' + (char)(in.monthday() / 10);
+
+				*curr++ = '0' + in.monthday() % 10;
+			}
+			break;
+			case 'D':
+			{
+				*curr++ = '0' + (char)(in.monthday() / 10);
+				*curr++ = '0' + in.monthday() % 10;
+			}
+			break;
+			case 'w':
+			{
+				*curr++ = weekdays[in.weekday() * 10];
+				*curr++ = weekdays[in.weekday() * 10 + 1];
+				*curr++ = weekdays[in.weekday() * 10 + 2];
+
+			}
+			break;
+			case 'W':
+			{
+				const char* dayname = weekdays + (ptrdiff_t)in.weekday() * 10;
+
+				while (*dayname)
+					*curr++ = *dayname++;
+			}
+			break;
+			case 'i':
+			{
+				if (in.hour() >= 10)
+					*curr++ = '0' + (char)(in.hour() / 10);
+
+				*curr++ = '0' + in.hour() % 10;
+			}
+			break;
+			case 'I':
+			{
+				*curr++ = '0' + (char)(in.hour() / 10);
+				*curr++ = '0' + in.hour() % 10;
+			}
+			break;
+			case 'j':
+			{
+				if (in.minute() >= 10)
+					*curr++ = '0' + (char)(in.minute() / 10);
+
+				*curr++ = '0' + in.minute() % 10;
+			}
+			break;
+			case 'J':
+			{
+				*curr++ = '0' + (char)(in.minute() / 10);
+				*curr++ = '0' + in.minute() % 10;
+			}
+			break;
+			case 'k':
+			{
+				if (in.second() >= 10)
+					*curr++ = '0' + (char)(in.second() / 10);
+
+				*curr++ = '0' + in.second() % 10;
+			}
+			break;
+			case 'K':
+			{
+				*curr++ = '0' + (char)(in.second() / 10);
+				*curr++ = '0' + in.second() % 10;
+			}
+			break;
+			case 'l':
+			{
+				if (in.millisecond() >= 100)
+					*curr++ = '0' + (char)(in.millisecond() / 100);
+				if (in.millisecond() >= 10)
+					*curr++ = '0' + (in.millisecond() / 10) % 10;
+				*curr++ = '0' + in.millisecond() % 10;
+			}
+			break;
+			case 'L':
+			{
+				*curr++ = '0' + (char)(in.millisecond() / 100);
+				*curr++ = '0' + (in.millisecond() / 10) % 10;
+				*curr++ = '0' + in.millisecond() % 10;
+			}
+			break;
+			case 'u':
+			{
+				if (in.is_utc())
+				{
+					*curr++ = 'Z';
+
+					break;
+				}
+
+				uint16_t h = in.utc_offset_hours();
+
+				*curr++ = in.utc_offset_is_negative() ? '-' : '+';
+
+				*curr++ = '0' + (char)(h / 10);
+				*curr++ = '0' + h % 10;
+			}
+			break;
+			case 'U':
+			{
+				if (in.is_utc())
+					break;
+
+				uint16_t m = in.utc_offset_minutes();
+
+				*curr++ = '0' + (char)(m / 10);
+				*curr++ = '0' + m % 10;
+			}
+			break;
+			case 's':
+			case 'S':
+			{
+				if ((c != 's') ^ (in.is_utc())) //Next char is inactive
+				{
+					if (*++format == 'x')
+						++format;
+
+					while (_is_utf8_surr(format[1]))
+						++format;
+				}
+			}
+			break;
+			case 'x':
+				c = *++format;//Fallthrough...
+			default:
+				*curr++ = c;
+				utf8_cpoints -= _is_utf8_surr(c);
+				break;
+			}
+
+			utf8_cpoints += (uint32_t)(curr - prev);
+		}
+
+		write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), utf8_cpoints), context.filler, context.width, context.flags & 4);
 	}
 
 

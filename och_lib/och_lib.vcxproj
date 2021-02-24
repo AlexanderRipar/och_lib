@@ -179,9 +179,6 @@
     <ClInclude Include="och_utf16.h" />
     <ClInclude Include="och_utf8.h" />
   </ItemGroup>
-  <ItemGroup>
-    <Text Include="testout.txt" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
