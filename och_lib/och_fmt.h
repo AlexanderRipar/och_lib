@@ -92,7 +92,7 @@ namespace och
 	{
 		const arg_wrapper argv[]{ arg_wrapper(args)... };
 
-		vprint(out, format, och::range(argv));
+		vprint(out, format, och::range<const arg_wrapper>(argv));
 	}
 
 	template<typename... Args>
