@@ -84,11 +84,13 @@ namespace och
 
 				value >>= 1;
 			}
+		else
 		{
-			och::write_with_padding(out, "[[Invalid format-specifier", context);
+			och::write_with_padding(out, "[[Invalid format-specifier]]", context);
+
 			return;
 		}
-
+		
 		++curr;
 
 		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context);
@@ -139,6 +141,7 @@ namespace och
 		else
 		{
 			och::write_with_padding(out, "[[Invalid format-specifier", context);
+
 			return;
 		}
 
