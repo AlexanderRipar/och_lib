@@ -6,60 +6,196 @@ namespace och
 {
 	struct utf8_string;
 
-	struct utf8_iterator;
-
 	void _utf8_len(const char* cstring, uint32_t& cunits, uint32_t& cpoints, uint32_t max_cunits = ~0) noexcept;
 
-	uint32_t _utf8_from_codepoint(char* out, char32_t cpoint) noexcept;
+	constexpr uint32_t _utf8_from_codepoint(char* out, char32_t cpoint) noexcept
+	{
+		if (cpoint > 0xFFFF)
+		{
+			out[0] = static_cast<char>(0xF0 | cpoint >> 18);
+			out[1] = static_cast<char>(0x80 | ((cpoint >> 12) & 0x3F));
+			out[2] = static_cast<char>(0x80 | ((cpoint >> 6) & 0x3F));
+			out[3] = static_cast<char>(0x80 | (cpoint & 0x3F));
 
-	char32_t _utf8_to_utf32(const char* cstring) noexcept;
+			return 4;
+		}
 
-	uint32_t _utf8_codepoint_bytes(char c) noexcept;
+		if (cpoint > 0x07FF)
+		{
+			out[0] = static_cast<char>(0xE0 | cpoint >> 12);
+			out[1] = static_cast<char>(0x80 | ((cpoint >> 6) & 0x3F));
+			out[2] = static_cast<char>(0x80 | (cpoint & 0x3F));
 
-	bool _is_utf8_surr(char c) noexcept;
+			return 3;
+		}
+		if (cpoint > 0x007F)
+		{
+			out[0] = static_cast<char>(0xC0 | cpoint >> 6);
+			out[1] = static_cast<char>(0x80 | (cpoint & 0x3F));
+
+			return 2;
+		}
+
+		out[0] = static_cast<char>(cpoint);
+
+		return 1;
+	}
+
+	constexpr char32_t _utf8_to_utf32(const char* cstring) noexcept
+	{
+		if (!(*cstring & 0x80))
+			return static_cast<char32_t>(*cstring);
+		if (!(*cstring & 0x20))
+			return (static_cast<char32_t>(cstring[0] & 0x1F) << 6) | (cstring[1] & 0x3F);
+		if (!(*cstring & 0x10))
+			return (static_cast<char32_t>(cstring[0] & 0x0F) << 12) | ((cstring[1] & 0x3F) << 6) | (cstring[2] & 0x3F);
+		if (!(*cstring & 0x08))
+			return (static_cast<char32_t>(cstring[0] & 0x07) << 18) | ((cstring[1] & 0x3F) << 12) | ((cstring[2] & 0x3F) << 6) | (cstring[3] & 0x3F);
+		else
+			return ~U'\0';
+	}
+
+	constexpr uint32_t _utf8_codepoint_bytes(unsigned char c) noexcept
+	{
+		if (c < 0x80)
+			return 1;
+		else if (c < 0xC0)
+			return 2;
+		else if (c < 0xE0)
+			return 3;
+		else
+			return 4;
+	}
+
+	constexpr bool _is_utf8_surr(char c) noexcept
+	{
+		return (c & 0xC0) == 0x80;
+	}
 
 	struct utf8_char
 	{
+	private:
+
 		union
 		{
-			char m_codeunits[4]{ 0, 0, 0, 0 };
-			uint32_t m_intval;
+			char m_codeunits[4] alignas(uint32_t);
+			uint32_t m_intval{ 0 };
 		};
 
-		utf8_char(const char* cstring) noexcept;
+		constexpr uint32_t _init_intval_from_cstring(const char* cstring)
+		{
+			uint32_t val = (uint32_t) * (const uint8_t*)cstring++;
 
-		utf8_char(char32_t codepoint) noexcept;
+			int32_t i = 1;
 
-		utf8_char(char ascii_codepoint) noexcept;
+			while (i != 4 && _is_utf8_surr(*cstring))
+				val |= ((uint32_t) * (const uint8_t*)cstring++) << (i++ * 8);
 
-		utf8_char() = default;
+			return val;
+		}
 
-		uint32_t get_codeunits() const noexcept;
+		constexpr uint32_t _init_intval_from_codepoint(char32_t cpoint)
+		{
+			if (cpoint > 0xFFFF)
+				return 0x808080F0 | (uint32_t)((cpoint >> 18) | (((cpoint >> 12) & 0x3F) << 8) | (((cpoint >> 6) & 0x3F) << 16) | ((cpoint & 0x3F) << 24));
+			else if (cpoint > 0x07FF)
+				return 0x8080E0 | (uint32_t)((cpoint >> 12) | (((cpoint >> 6) & 0x3F) << 8) | ((cpoint & 0x3F) << 16));
+			else if (cpoint > 0x007F)
+				return 0x80C0 | (uint32_t)((cpoint >> 6) | ((cpoint & 0x3F) << 8));
+			else
+				return (uint32_t)cpoint;
+		}
 
-		char32_t codepoint() const noexcept;
+	public:
 
-		const char* cbegin() const noexcept;
+		constexpr utf8_char(const char* cstring) noexcept : m_intval{ _init_intval_from_cstring(cstring) } {}
 
-		const char* cend() const noexcept;
+		constexpr utf8_char(char32_t codepoint) noexcept : m_intval{ _init_intval_from_codepoint(codepoint) } {}
 
-		const char* begin() const noexcept;
+		constexpr utf8_char(char ascii_codepoint) noexcept : m_intval{ (uint32_t)ascii_codepoint } {}
 
-		const char* end() const noexcept;
+		constexpr utf8_char() = default;
 
-		bool operator==(const utf8_char& rhs) const noexcept;
+		constexpr uint32_t get_codeunits() const noexcept
+		{
+			return m_intval <= 0xFF ? 1 : m_intval <= 0xFFFF ? 2 : m_intval <= 0xFFFFFF ? 3 : 4;
+		}
 
-		bool operator!=(const utf8_char& rhs) const noexcept;
+		constexpr char32_t codepoint() const noexcept
+		{
+			return _utf8_to_utf32(m_codeunits);
+		}
 
-		bool operator>(const utf8_char& rhs) const noexcept;
+		constexpr uint32_t intval() const noexcept
+		{
+			return m_intval;
+		}
 
-		bool operator>=(const utf8_char& rhs) const noexcept;
+		constexpr const char* cbegin() const noexcept
+		{
+			return m_codeunits;
+		}
 
-		bool operator<(const utf8_char& rhs) const noexcept;
+		constexpr const char* cend() const noexcept
+		{
+			return m_codeunits + get_codeunits();
+		}
 
-		bool operator<=(const utf8_char& rhs) const noexcept;
+		constexpr const char* begin() noexcept
+		{
+			return m_codeunits;
+		}
+
+		constexpr const char* end() noexcept
+		{
+			return m_codeunits + get_codeunits();
+		}
+
+		constexpr bool operator==(const utf8_char& rhs) const noexcept
+		{
+			return m_intval == rhs.m_intval;
+		}
+
+		constexpr bool operator!=(const utf8_char& rhs) const noexcept
+		{
+			return m_intval != rhs.m_intval;
+		}
+
+		constexpr bool operator>(const utf8_char& rhs) const noexcept
+		{
+			return m_intval > rhs.m_intval;
+		}
+
+		constexpr bool operator>=(const utf8_char& rhs) const noexcept
+		{
+			return m_intval >= rhs.m_intval;
+		}
+
+		constexpr bool operator<(const utf8_char& rhs) const noexcept
+		{
+			return m_intval < rhs.m_intval;
+		}
+
+		constexpr bool operator<=(const utf8_char& rhs) const noexcept
+		{
+			return m_intval <= rhs.m_intval;
+		}
 	};
-	
-	struct utf8_view 
+
+	struct utf8_iterator
+	{
+		const char* cstring;
+
+		utf8_iterator(const char* cstring) noexcept;
+
+		utf8_char operator*() const noexcept;
+
+		void operator++() noexcept;
+
+		bool operator!=(const utf8_iterator& rhs) const noexcept;
+	};
+
+	struct utf8_view
 	{
 	private:
 
@@ -70,10 +206,10 @@ namespace och
 		constexpr uint32_t _init_codeunits(const char* cstring) const noexcept
 		{
 			uint32_t cunits = 0;
-			
+
 			while (*cstring++)
 				++cunits;
-			
+
 			return cunits;
 		}
 
@@ -83,14 +219,14 @@ namespace och
 
 			while (*cstring)
 				cpoints += !_is_utf8_surr(*cstring++);
-			
+
 			return cpoints;
 		}
 
 	public:
 
-		constexpr utf8_view(const char* cstring) noexcept : 
-			m_ptr{ cstring }, 
+		constexpr utf8_view(const char* cstring) noexcept :
+			m_ptr{ cstring },
 			m_codeunits{ _init_codeunits(cstring) },
 			m_codepoints{ _init_codepoints(cstring) } {}
 
@@ -105,7 +241,7 @@ namespace och
 		uint32_t get_codepoints() const noexcept;
 
 		uint32_t get_codeunits() const noexcept;
-		
+
 		const char* raw_cbegin() const noexcept;
 
 		const char* raw_cend() const noexcept;
@@ -118,19 +254,6 @@ namespace och
 	};
 
 	using stringview = utf8_view;
-
-	struct utf8_iterator
-	{
-		const char* cstring;
-
-		utf8_iterator(const char* cstring) noexcept;
-
-		utf8_char operator*() noexcept;
-
-		void operator++() noexcept;
-
-		bool operator!=(const utf8_iterator& rhs) noexcept;
-	};
 
 	struct utf8_string
 	{
@@ -218,7 +341,7 @@ namespace och
 
 		void operator=(const char* cstr) noexcept;
 
-		void operator+=(char32_t codept) noexcept;
+		void operator+=(utf8_char codept) noexcept;
 
 		void operator+=(const utf8_view& view) noexcept;
 
@@ -289,5 +412,128 @@ namespace och
 		void set_codeunits(uint32_t wds) noexcept;
 
 		void set_codepoints(uint32_t cps) noexcept;
+	};
+
+	using string = utf8_string;
+
+	//Include needs och::stringview, and is only used for utf8_buffer
+}
+
+#include "och_fio.h"
+
+namespace och
+{
+	template<uint16_t N, bool Reverse = true>
+	struct utf8_buffer
+	{
+		const uint16_t size = n;
+
+		uint16_t m_codeunits = 0;
+		uint16_t m_codepoints = 0;
+		uint16_t m_head = Reverse ? N - 1 : 0;
+		char m_buf[N];
+
+		bool push(const utf8_string& string) noexcept
+		{
+			return push(string.raw_cbegin(), string.get_codeunits(), string.get_codepoints());
+		}
+
+		bool push(const utf8_view& view) noexcept
+		{
+			return push(view.raw_cbegin(), view.get_codeunits(), view.get_codepoints());
+		}
+
+		bool push(const char* cstring) noexcept
+		{
+			uint32_t cunits = 0, cpoints = 0;
+
+			_utf8_len(cstring, cunits, cpoints);
+
+			return push(cstring, cunits, cpoints);
+		}
+
+		bool push(utf8_char c) noexcept
+		{
+			return push(c.cbegin(), c.get_codeunits(), 1);
+		}
+
+		uint32_t fill(utf8_char c, uint32_t n)
+		{
+			const uint32_t codeunits_added = n * c.get_codeunits();
+
+			if constexpr (Reverse)
+			{
+				if (m_head - codeunits_added >= N)
+					return false;
+
+				m_head -= codeunits_added;
+			}
+			else
+			{
+				if (m_head + codeunits_added >= N)
+					return false;
+
+				m_head += codeunits_added;
+			}
+
+			for (uint32_t i = 0; i != codeunits_added; ++i)
+				m_buf[m_head + i] = cstring[i];
+
+			return true;
+		}
+
+		void pop(const char* cstring, uint32_t n)
+		{
+			if constexpr (Reverse)
+				while (n && m_head != N)
+					n -= !_is_utf8_surr(m_buf[m_head++]);
+			else
+				while (n && m_head != ~0)
+					n -= !_is_utf8_surr(m_buf[m_head--]);
+
+		}
+
+		void clear() noexcept
+		{
+			if constexpr (Reverse)
+				m_head = N - 1;
+			else
+				m_head = 0;
+		}
+
+		void flush(och::iohandle file)
+		{
+			och::write_to_file(file, och::range<const char>(m_buf, m_buf + m_head));
+		}
+		
+		void flush(const och::filehandle& file)
+		{
+			och::write_to_file(file.handle, och::range<const char>(m_buf, m_buf + m_head));
+		}
+
+	private:
+
+		bool push(const char* cstring, uint32_t codeunits_added, uint32_t codepoints_added) noexcept
+		{
+			if constexpr (Reverse)
+			{
+				if (m_head - codeunits_added >= N)
+					return false;
+
+				m_head -= codeunits_added;
+			}
+			else
+			{
+				if (m_head + codeunits_added >= N)
+					return false;
+
+				m_head += codeunits_added;
+			}
+
+			for (uint32_t i = 0; i != codeunits_added; ++i)
+				m_buf[m_head + i] = cstring[i];
+
+			return true;
+		}
 	};
 }
