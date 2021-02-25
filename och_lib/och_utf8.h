@@ -67,12 +67,32 @@ namespace och
 		uint32_t m_codeunits;
 		uint32_t m_codepoints;
 
+		constexpr uint32_t _init_codeunits(const char* cstring) const noexcept
+		{
+			uint32_t cunits = 0;
+			
+			while (*cstring++)
+				++cunits;
+			
+			return cunits;
+		}
+
+		constexpr uint32_t _init_codepoints(const char* cstring) const noexcept
+		{
+			uint32_t cpoints = 0;
+
+			while (*cstring)
+				cpoints += !_is_utf8_surr(*cstring++);
+			
+			return cpoints;
+		}
+
 	public:
 
 		constexpr utf8_view(const char* cstring) noexcept : 
 			m_ptr{ cstring }, 
-			m_codeunits{ [](const char* str) { uint32_t cunits = 0; while (*str++) ++cunits; return cunits; }(cstring) }, 
-			m_codepoints{ [](const char* str) { uint32_t cpoints = 0; while (*str) cpoints += ((*str++ & 0xC0) != 0x80); return cpoints; }(cstring) } {}
+			m_codeunits{ _init_codeunits(cstring) },
+			m_codepoints{ _init_codepoints(cstring) } {}
 
 		constexpr utf8_view(const char* cstring, uint32_t codeunits, uint32_t codepoints) noexcept : m_ptr{ cstring }, m_codeunits{ codeunits }, m_codepoints{ codepoints } {}
 
