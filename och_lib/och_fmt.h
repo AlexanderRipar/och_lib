@@ -83,6 +83,10 @@ namespace och
 		arg_wrapper(char32_t value);
 
 		arg_wrapper(const och::utf8_char& value);
+
+		arg_wrapper(och::timespan value);
+
+		arg_wrapper(och::highres_timespan value);
 	};
 	void vprint(och::iohandle out, const och::stringview& format, const och::range<const arg_wrapper>& argv);
 

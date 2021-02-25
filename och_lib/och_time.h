@@ -38,7 +38,7 @@ namespace och
 
 		uint64_t minutes() const noexcept { return val / 600000000llu; }
 
-		uint64_t hour() const noexcept { return val / (60 * 600000000llu); }
+		uint64_t hours() const noexcept { return val / (60 * 600000000llu); }
 
 		uint64_t days() const noexcept { return val / (24 * 60 * 600000000llu); }
 	};
