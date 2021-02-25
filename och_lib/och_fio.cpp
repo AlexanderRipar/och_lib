@@ -130,11 +130,6 @@ namespace och
 		return bytes_written;
 	}
 
-	uint32_t write_to_file(const iohandle file, const och::stringview& buf) noexcept
-	{
-		return write_to_file(file, och::range(buf.raw_cbegin(), buf.raw_cend()));
-	}
-
 	bool file_seek(const iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept
 	{
 		LARGE_INTEGER _set_to;
@@ -208,9 +203,11 @@ namespace och
 	/*//////////////////////////////////////////////////filehandle///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	filehandle::filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
+	filehandle::filehandle(const och::stringview& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
 
 	filehandle::filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
+
+	filehandle::filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
 
 	filehandle::filehandle(iohandle handle) noexcept : handle{ handle } {}
 
@@ -221,8 +218,6 @@ namespace och
 	uint32_t filehandle::write(const och::range<const char> buf) const noexcept { return write_to_file(handle, buf); }
 
 	uint32_t filehandle::write(const och::range<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
-
-	uint32_t filehandle::write(const och::stringview& buf) const noexcept { return write_to_file(handle, buf); }
 
 	[[nodiscard]] uint64_t filehandle::get_size() const noexcept { return get_filesize(handle); }
 

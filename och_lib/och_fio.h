@@ -63,8 +63,6 @@ namespace och
 
 	uint32_t write_to_file(const iohandle file, const och::range<const char> buf) noexcept;
 
-	uint32_t write_to_file(const iohandle file, const och::stringview& buf) noexcept;
-
 	bool close_file(const iohandle file) noexcept;
 
 	bool close_file_array(const iohandle file_array) noexcept;
@@ -83,7 +81,7 @@ namespace och
 	{
 		const iohandle handle;
 
-		filehandle(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+		filehandle(const och::stringview& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
 		filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
@@ -98,8 +96,6 @@ namespace och
 		uint32_t write(const och::range<const char> buf) const noexcept;
 
 		uint32_t write(const och::range<char> buf) const noexcept;
-
-		uint32_t write(const och::stringview& buf) const noexcept;
 
 		[[nodiscard]] uint64_t get_size() const noexcept;
 
@@ -146,7 +142,7 @@ namespace och
 		mapped_file(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
 			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
 
-		mapped_file(const och::stringview filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
+		mapped_file(const och::stringview& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
 			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
 
 		mapped_file(const iohandle file, uint32_t access_rights, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
