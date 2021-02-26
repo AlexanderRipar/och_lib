@@ -1,9 +1,11 @@
 ﻿#include "och_fmt.h"
 
 #include <cstdint>
+#include <intrin.h>
 
-#include "och_range.h"
 #include "och_fio.h"
+#include "och_utf8.h"
+#include "och_utf8buf.h"
 
 namespace och
 {
@@ -11,7 +13,56 @@ namespace och
 	/*////////////////////////////////////////////////formatting helpers/////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	och::utf8_buffer<1024> _vprint_buf;
+	constexpr const char* hex_lower_upper = "0123456789abcdef0123456789ABCDEF";
+
+	constexpr och::stringview invalid_specifier_msg("[[Invalid format-specifier]]");
+
+	constexpr const char* weekdays = "Sunday\0\0\0\0" "Monday\0\0\0\0" "Tuesday\0\0\0" "Wednesday\0" "Thursday\0\0" "Friday\0\0\0\0" "Saturday\0";
+
+	constexpr const char* months = "January\0\0\0"    "February\0\0"   "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0"
+		                           "July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
+
+	och::forward_utf8_buffer<1024> _vprint_buf;
+	
+	uint32_t log2(uint64_t n)
+	{
+		uint32_t idx;
+
+		_BitScanReverse64((unsigned long*)&idx, n);
+
+		return idx + 1;
+	}
+
+	uint32_t log10(uint64_t n)
+	{
+		uint32_t log{ 0 };
+
+		while (n >= 1000)
+		{
+			log += 3;
+
+			n /= 1000;
+		}
+
+		if (n >= 100)
+			return log + 3;
+		else if (n >= 10)
+			return log + 2;
+		else
+			return log + 1;
+	}
+
+	uint32_t log16(uint64_t n)
+	{
+		return (log2(n) + 3) >> 2;
+	}
+
+	bool is_rightadj(const parsed_context& context)
+	{
+		return context.flags & 4;
+	}
+
+
 
 	void to_vbuf(och::iohandle out, const och::stringview& text)
 	{
@@ -25,86 +76,240 @@ namespace och
 			_vprint_buf.flush(out);
 	}
 
-	void to_vbuf_with_padding(och::iohandle out, const och::stringview& text, const och::parsed_context& context)
+	void pad_vbuf(och::iohandle out, uint32_t text_codepoints, const och::parsed_context& context)
 	{
-		uint32_t text_cpoints = (uint32_t)text.get_codepoints();
-
-		uint32_t filler_cpoints
-			= context.width > text_cpoints ? context.width - text_cpoints : 0;
+		int32_t filler_cpoints = context.width - text_codepoints;
 
 		if (context.flags & 4)
-			while (filler_cpoints)
+			while (filler_cpoints > 0)
+			{
 				if (!_vprint_buf.fill(context.filler, filler_cpoints & (_vprint_buf.size - 1)))
 					_vprint_buf.flush(out);
-
-		if (!_vprint_buf.push(text))
-			_vprint_buf.flush(out);
-
-		if (!context.flags & 4)
-			while (filler_cpoints)
-				if (!_vprint_buf.fill(context.filler, filler_cpoints & (_vprint_buf.size - 1)))
-					_vprint_buf.flush(out);
+				filler_cpoints -= _vprint_buf.size - 1;
+			}
 	}
 
-	constexpr const char* hex_lower_upper = "0123456789abcdef0123456789ABCDEF";
-
-	void write_with_padding(och::iohandle out, och::stringview text, const och::parsed_context& context)
+	void to_vbuf_with_padding(och::iohandle out, utf8_char c, const parsed_context& context)
 	{
-		uint32_t written = (uint32_t)text.get_codepoints();
+		if(is_rightadj(context))
+			pad_vbuf(out, 1, context);
 
-		if (context.flags & 4)
-			while (written++ < context.width)
-				och::write_to_file(out, { context.filler.cbegin(), context.filler.cend() });
+		to_vbuf(out, c);
 
-		och::write_to_file(out, { text.raw_cbegin(), text.raw_cend() });
-
-		if (!(context.flags & 4))
-			while (written++ < context.width)
-				och::write_to_file(out, { context.filler.cbegin(), context.filler.cend() });
+		if(!is_rightadj(context))
+			pad_vbuf(out, 1, context);
 	}
 
-	char* reverse_itos(char* out, uint64_t n)
+	void to_vbuf_with_padding(och::iohandle out, const och::stringview& v, const parsed_context& context)
 	{
+		if (is_rightadj(context))
+			pad_vbuf(out, v.get_codepoints(), context);
+
+		to_vbuf(out, v);
+
+		if (!is_rightadj(context))
+			pad_vbuf(out, v.get_codepoints(), context);
+	}
+
+	char* reserve_vbuf(och::iohandle out, uint32_t codeunits)
+	{
+		return _vprint_buf.reserve((uint16_t)codeunits, out);
+	}
+
+
+
+	void _fmt_decimal(och::iohandle out, uint64_t n, uint32_t log10_n, char sign = '\0')
+	{
+		char* curr = reserve_vbuf(out, log10_n + (sign != 0)) + log10_n - (sign == 0);
+
 		while (n >= 10)
 		{
-			*out-- = (n % 10) + '0';
+			*curr-- = (char)('0' + n % 10);
 
 			n /= 10;
 		}
 
-		*out-- = (char)n + '0';
+		*curr-- = (char)('0' + n);
 
-		return out;
+		if (sign)
+			*curr = sign;
 	}
 
-	char* reverse_two_digit(char* out, uint64_t n)
+	void _fmt_two_digit(och::iohandle out, uint64_t n)
 	{
-		*out-- = '0' + n % 10;
-		*out-- = '0' + (char)(n / 10);
+		to_vbuf(out, (char)('0' + n / 10));
 
-		return out;
+		to_vbuf(out, (char)('0' + n % 10));
 	}
 
-	char* reverse_three_digit(char* out, uint64_t n)
+	void _fmt_three_digit(och::iohandle out, uint64_t n)
 	{
-		*out-- = '0' + n % 10;
-		n /= 10;
-		*out-- = '0' + n % 10;
-		*out-- = '0' + (char)n / 10;
-
-		return out;
+		to_vbuf(out, (char)('0' + n / 100));
+		to_vbuf(out, (char)('0' + (n / 10) % 10));
+		to_vbuf(out, (char)('0' + n % 10));
 	}
 
-	char* reverse_write_sign(char* out, bool is_negative, const parsed_context& context)
+	void _fmt_hex(och::iohandle out, uint64_t value, const parsed_context& context, const char* hex_charset, char sign = '\0')
 	{
-		if (is_negative)
-			*out-- = '-';
+		uint32_t chars = log16(value) + (sign != 0);
+
+		if (is_rightadj(context))
+			pad_vbuf(out, chars, context);
+
+		char* curr = reserve_vbuf(out, chars) + chars - 1;
+
+		while (value > 0xF)
+		{
+			*curr-- = hex_charset[value & 0xF];
+
+			value >>= 4;
+		}
+
+		*curr-- = hex_charset[value];
+
+		if (sign)
+			*curr-- = sign;
+
+		if (!is_rightadj(context))
+			pad_vbuf(out, chars, context);
+	}
+
+	void _fmt_binary(och::iohandle out, uint64_t value, const parsed_context& context, uint32_t min_digits, char sign = '\0')
+	{
+		uint32_t chars = log2(value) + (sign != 0);
+
+		if (chars < min_digits)
+			chars = min_digits;
+
+		if (is_rightadj(context))
+			pad_vbuf(out, chars, context);
+
+		char* curr = reserve_vbuf(out, chars) + chars - 1;
+
+		while (value || min_digits-- > 1)
+		{
+			*curr-- = '0' + value & 1;
+
+			value >>= 1;
+		}
+
+		*curr-- = '0' + value & 1;
+
+		if (sign)
+			*curr-- = sign;
+
+		if (!is_rightadj(context))
+			pad_vbuf(out, chars, context);
+	}
+
+	uint32_t _get_date_cpoints(const char* fmt, const och::date& d) noexcept
+	{
+		uint32_t cpoints = 0;
+
+		for (char c = *fmt; c != '}'; c = *++fmt)
+			switch (c)
+			{
+			case 'y':
+				cpoints += log10(d.year());
+				break;
+			case 'Y':
+				cpoints += d.year() >= 10000 ? 5 : 4;
+				break;
+			case 'm':
+				cpoints += d.month() >= 10 ? 2 : 1;
+				break;
+			case 'M':
+				cpoints += 2;
+				break;
+			case 'n':
+				cpoints += 3;
+				break;
+			case 'N':
+				{
+					const char* monthname = months + (ptrdiff_t)(d.month() - 1) * 10;
+
+					while (*monthname++)
+						++cpoints;
+				}
+				break;
+			case 'd':
+				cpoints += d.monthday() >= 10 ? 2 : 1;
+				break;
+			case 'D':
+				cpoints += 2;
+				break;
+			case 'w':
+				cpoints += 3;
+				break;
+			case 'W':
+				{
+					const char* dayname = weekdays + (ptrdiff_t)d.weekday() * 10;
+
+					while (*dayname++)
+						++cpoints;
+				}
+				break;
+			case 'i':
+				cpoints += d.hour() >= 10 ? 2 : 1;
+				break;
+			case 'I':
+				cpoints += 2;
+				break;
+			case 'j':
+				cpoints += d.minute() >= 10 ? 2 : 1;
+				break;
+			case 'J':
+				cpoints += 2;
+				break;
+			case 'k':
+				cpoints += d.second() >= 10 ? 2 : 1;
+				break;
+			case 'K':
+				cpoints += 2;
+				break;
+			case 'l':
+				cpoints += d.millisecond() >= 100 ? 3 : d.millisecond() >= 10 ? 2 : 1;
+				break;
+			case 'L':
+				cpoints += 3;
+				break;
+			case 'u':
+				cpoints += d.is_utc() ? 1 : 3;
+				break;
+			case 'U':
+				cpoints += d.is_utc() ? 0 : 2;
+				break;
+			case 's':
+			case 'S':
+				if ((c != 's') ^ (d.is_utc())) //Next char is inactive
+				{
+					if (*++fmt == 'x')
+						++fmt;
+
+					while (_is_utf8_surr(fmt[1]))
+						++fmt;
+				}
+				break;
+			case 'x':
+				c = *++fmt;//Fallthrough...
+			default:
+				cpoints += !_is_utf8_surr(c);
+				break;
+			}
+
+		return cpoints;
+	}
+
+	char _get_sign(int64_t n, const parsed_context& context)
+	{
+		if (n < 0)
+			return '-';
 		else if (context.flags & 1)
-			*out-- = '+';
+			return '+';
 		else if (context.flags & 2)
-			*out-- = ' ';
-
-		return out;
+			return ' ';
+		else
+			return '\0';
 	}
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -115,106 +320,90 @@ namespace och
 	{
 		uint64_t value = arg_value.u;
 
-		char buf[32];
-
-		char* curr = buf + 31;
-
-		if (context.format_specifier == '\0')
-			curr = reverse_itos(curr, value);
-		else if (context.format_specifier == 'x')
-			while (value)
-			{
-				*curr-- = hex_lower_upper[value & 0xF];
-
-				value >>= 4;
-			}
-		else if(context.format_specifier == 'X')
-			while (value)
-			{
-				*curr-- = hex_lower_upper[16 + value & 0xF];
-
-				value >>= 4;
-			}
-		else if (context.format_specifier == 'b')
-			while (value)
-			{
-				*curr-- = '0' + (value & 1);
-
-				value >>= 1;
-			}
-		else if (context.format_specifier == 'B')
-			for (uint32_t i = 0; i != 32; ++i)
-			{
-				*curr-- = '0' + (value & 1);
-
-				value >>= 1;
-			}
-		else
+		switch (context.format_specifier.codepoint())
 		{
-			och::write_with_padding(out, "[[Invalid format-specifier]]", context);
+		case '\0':
+			{
+				uint32_t log10_n = log10(value);
+				if (is_rightadj(context))
+					pad_vbuf(out, log10_n, context);
 
-			return;
+				_fmt_decimal(out, value, log10_n);
+
+				if (!is_rightadj(context))
+					pad_vbuf(out, log10_n, context);
+			}
+			break;
+
+		case 'x':
+			_fmt_hex(out, value, context, hex_lower_upper);
+			break;
+
+		case 'X':
+			_fmt_hex(out, value, context, hex_lower_upper + 16);
+			break;
+
+		case 'b':
+			_fmt_binary(out, value, context, 1);
+			break;
+
+		case 'B':
+			_fmt_binary(out, value, context, 32);
+			break;
+
+		default:
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			break;
 		}
-		
-		++curr;
-
-		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context);
 	}
 
 	void fmt_int(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
 		int64_t value = arg_value.i;
 
-		char buf[32];
-
-		char* curr = buf + 31;
-
-		bool is_negative = false;
+		char sign = _get_sign(value, context);
 
 		if (value < 0)
-		{
-			is_negative = true;
-
 			value = -value;
-		}
 
-		if (context.format_specifier == '\0')
+		switch (context.format_specifier.codepoint())
 		{
-			curr = reverse_itos(curr, value);
+		case '\0':
+			{
+				uint32_t log10_n = log10(value);
+
+				uint32_t total_chars = log10_n + (sign != 0);
+
+				if (is_rightadj(context))
+					pad_vbuf(out, total_chars, context);
+
+				_fmt_decimal(out, value, log10_n, sign);
+
+				if (!is_rightadj(context))
+					pad_vbuf(out, total_chars, context);
+			}
+			break;
+
+		case 'x':
+			_fmt_hex(out, value, context, hex_lower_upper, sign);
+			break;
+
+		case 'X':
+			_fmt_hex(out, value, context, hex_lower_upper + 16, sign);
+			break;
+
+		case 'b':
+			_fmt_binary(out, value, context, 1, sign);
+			break;
+
+		case 'B':
+			_fmt_binary(out, value, context, 32, sign);
+			break;
+
+		default:
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			break;
 		}
-		else if (context.format_specifier == 'X')
-			while (value)
-			{
-				*curr-- = hex_lower_upper[16 + value & 0xF];
-
-				value >>= 4;
-			}
-		else if (context.format_specifier == 'b')
-			while (value)
-			{
-				*curr-- = '0' + (value & 1);
-
-				value >>= 1;
-			}
-		else if (context.format_specifier == 'B')
-			for (uint32_t i = 0; i != 31; ++i)
-			{
-				*curr-- = '0' + (value & 1);
-
-				value >>= 1;
-			}
-		else
-		{
-			och::write_with_padding(out, "[[Invalid format-specifier", context);
-
-			return;
-		}
-
-		curr = reverse_write_sign(curr, is_negative, context);
-
-		++curr;
-
-		write_with_padding(out, och::stringview(curr, (uint32_t)(buf - curr + 32), (uint32_t)(buf - curr + 32)), context);
 	}
 
 	void fmt_utf8_view(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -224,7 +413,7 @@ namespace och
 		if (value.get_codepoints() > context.precision)
 			value = value.subview(0, context.precision);
 
-		write_with_padding(out, value, context);
+		to_vbuf_with_padding(out, value, context);
 	}
 
 	void fmt_utf8_string(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -245,11 +434,17 @@ namespace och
 	{
 		och::utf8_char value = arg_value.c;
 
-		write_with_padding(out, och::stringview(value.cbegin(), value.get_codeunits(), 1), context);
+		to_vbuf_with_padding(out, value, context);
 	}
 
 	void fmt_float(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
+		arg_value;
+
+		context;
+
+		out;
+
 		//     ->   base 10 decimal
 		// e   ->   base 10 scientific ([+ -]N.NNNNe+-NNNN)
 		// x,X ->   base 16 decimal. x uses lowercase letters, H uppercase
@@ -257,130 +452,130 @@ namespace och
 		// b   ->   bitpattern
 		// B   ->   bitpattern with ' separating sign, exponent and mantissa
 		
-		char buf[64];
-
-		char* curr = buf;
-
-		const uint32_t value = (uint32_t)arg_value.u;
-		
-		const bool is_negative = value & 0x8000'0000;
-		const int8_t exponent = (int8_t)(((value & 0x7F80'0000) >> 23) - 127);
-		const uint32_t mantissa = value & 0x007F'FFFF;
-
-		if /*TODO Implement*/ (context.format_specifier == '\0')
-		{
-
-		}
-		else if (context.format_specifier == 'b')
-		{
-			uint32_t mask = 0x8000'0000;
-
-			while (mask)
-			{
-				*curr++ = '0' + ((value & mask) == mask);
-				mask >>= 1;
-			}
-		}
-		else if (context.format_specifier == 'B')
-		{
-			uint32_t mask = 0x8000'0000;
-
-			*curr++ = '0' + ((value & mask) == mask);
-			mask >>= 1;
-
-			*curr++ = '\'';
-
-			for (uint32_t i = 0; i != 8; ++i)
-			{
-				*curr++ = '0' + ((value & mask) == mask);
-				mask >>= 1;
-			}
-
-			*curr++ = '\'';
-
-			while (mask)
-			{
-				*curr++ = '0' + ((value & mask) == mask);
-				mask >>= 1;
-			}
-		}
-		else if /*TODO Implement*/ (context.format_specifier == 'x' || context.format_specifier == 'X')
-		{
-
-		}
-		else if/*TODO Implement*/ (context.format_specifier == 'e')
-		{
-
-		}
-		else if /*TODO Rounding*/ (context.format_specifier == 'h' || context.format_specifier == 'H')
-		{
-			const char* hex = context.format_specifier == 'h' ? hex_lower_upper : hex_lower_upper + 16;
-
-			int8_t hex_exponent = exponent >> 2;
-
-			const uint32_t hex_mantissa = ((1 << 23) | mantissa) << (exponent & 3);
-
-			const uint32_t predec = hex_mantissa >> 23;
-
-			const uint32_t postdec = hex_mantissa & ((1 << 23) - 1);
-
-			if (is_negative)
-				*curr++ = '-';
-			else if (context.flags & 1)
-				*curr++ = '+';
-			else if (context.flags & 2)
-				*curr++ = ' ';
-
-			*curr++ = hex[predec];
-
-			const char* const decimal_point = curr;
-
-			*curr++ = '.';
-
-			uint32_t shift = 19;
-
-			while (shift >= 4)
-			{
-				*curr++ = hex[(postdec >> shift) & 0xF];
-				shift -= 4;
-			}
-
-			*curr++ = hex[postdec & 3];
-
-			while (curr[-1] == '0' && curr[-2] != '.')
-				--curr;
-
-			if (context.precision != 0xFFFF)
-			{
-				//Cut off until precision is equal to curr - decimal_point
-				while (curr - decimal_point - 1 > context.precision)
-					--curr;
-
-				//Add '0' until precision is equal to curr - decimal_point
-				while (curr - decimal_point - 1 < context.precision)
-					*curr++ = '0';
-			}
-
-			*curr++ = 'p';
-
-			if (hex_exponent < 0)
-			{
-				*curr++ = '-';
-				hex_exponent = -hex_exponent;
-			}
-
-			if (hex_exponent > 0xF)
-				*curr++ = hex[hex_exponent >> 4];
-
-			*curr++ = hex[hex_exponent & 0xF];
-		}
-		else
-		{
-			och::write_with_padding(out, "[[Invalid format-specifier", context);
-			return;
-		}
-
-		och::write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), (uint32_t)(curr - buf)), context);
+		//char buf[64];
+		//
+		//char* curr = buf;
+		//
+		//const uint32_t value = (uint32_t)arg_value.u;
+		//
+		//const bool is_negative = value & 0x8000'0000;
+		//const int8_t exponent = (int8_t)(((value & 0x7F80'0000) >> 23) - 127);
+		//const uint32_t mantissa = value & 0x007F'FFFF;
+		//
+		//if /*TODO Implement*/ (context.format_specifier == '\0')
+		//{
+		//
+		//}
+		//else if (context.format_specifier == 'b')
+		//{
+		//	uint32_t mask = 0x8000'0000;
+		//
+		//	while (mask)
+		//	{
+		//		*curr++ = '0' + ((value & mask) == mask);
+		//		mask >>= 1;
+		//	}
+		//}
+		//else if (context.format_specifier == 'B')
+		//{
+		//	uint32_t mask = 0x8000'0000;
+		//
+		//	*curr++ = '0' + ((value & mask) == mask);
+		//	mask >>= 1;
+		//
+		//	*curr++ = '\'';
+		//
+		//	for (uint32_t i = 0; i != 8; ++i)
+		//	{
+		//		*curr++ = '0' + ((value & mask) == mask);
+		//		mask >>= 1;
+		//	}
+		//
+		//	*curr++ = '\'';
+		//
+		//	while (mask)
+		//	{
+		//		*curr++ = '0' + ((value & mask) == mask);
+		//		mask >>= 1;
+		//	}
+		//}
+		//else if /*TODO Implement*/ (context.format_specifier == 'x' || context.format_specifier == 'X')
+		//{
+		//
+		//}
+		//else if/*TODO Implement*/ (context.format_specifier == 'e')
+		//{
+		//
+		//}
+		//else if /*TODO Rounding*/ (context.format_specifier == 'h' || context.format_specifier == 'H')
+		//{
+		//	const char* hex = context.format_specifier == 'h' ? hex_lower_upper : hex_lower_upper + 16;
+		//
+		//	int8_t hex_exponent = exponent >> 2;
+		//
+		//	const uint32_t hex_mantissa = ((1 << 23) | mantissa) << (exponent & 3);
+		//
+		//	const uint32_t predec = hex_mantissa >> 23;
+		//
+		//	const uint32_t postdec = hex_mantissa & ((1 << 23) - 1);
+		//
+		//	if (is_negative)
+		//		*curr++ = '-';
+		//	else if (context.flags & 1)
+		//		*curr++ = '+';
+		//	else if (context.flags & 2)
+		//		*curr++ = ' ';
+		//
+		//	*curr++ = hex[predec];
+		//
+		//	const char* const decimal_point = curr;
+		//
+		//	*curr++ = '.';
+		//
+		//	uint32_t shift = 19;
+		//
+		//	while (shift >= 4)
+		//	{
+		//		*curr++ = hex[(postdec >> shift) & 0xF];
+		//		shift -= 4;
+		//	}
+		//
+		//	*curr++ = hex[postdec & 3];
+		//
+		//	while (curr[-1] == '0' && curr[-2] != '.')
+		//		--curr;
+		//
+		//	if (context.precision != 0xFFFF)
+		//	{
+		//		//Cut off until precision is equal to curr - decimal_point
+		//		while (curr - decimal_point - 1 > context.precision)
+		//			--curr;
+		//
+		//		//Add '0' until precision is equal to curr - decimal_point
+		//		while (curr - decimal_point - 1 < context.precision)
+		//			*curr++ = '0';
+		//	}
+		//
+		//	*curr++ = 'p';
+		//
+		//	if (hex_exponent < 0)
+		//	{
+		//		*curr++ = '-';
+		//		hex_exponent = -hex_exponent;
+		//	}
+		//
+		//	if (hex_exponent > 0xF)
+		//		*curr++ = hex[hex_exponent >> 4];
+		//
+		//	*curr++ = hex[hex_exponent & 0xF];
+		//}
+		//else
+		//{
+		//	och::write_with_padding(out, "[[Invalid format-specifier", context);
+		//	return;
+		//}
+		//
+		//och::write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), (uint32_t)(curr - buf)), context);
 	}
 
 	void fmt_double(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -419,10 +614,6 @@ namespace och
 		//          | Capital letters (except U) indicate leading zeroes, or extended name                      |
 		//          +-------------------------------------------------------------------------------------------+
 
-		char buf[64];
-
-		char* curr = buf;
-
 		const och::date& value = *reinterpret_cast<const och::date*>(arg_value.p);
 
 		uint32_t utf8_cpoints = 0;
@@ -441,183 +632,192 @@ namespace och
 			format = context.raw_context;
 		else
 		{
-			och::write_with_padding(out, "[[Invalid format-specifier", context);
+			to_vbuf_with_padding(out, och::stringview("[[Invalid format-specifier]]"), context);
 			return;
 		}
 
-		constexpr const char* weekdays = "Sunday\0\0\0\0" "Monday\0\0\0\0" "Tuesday\0\0\0" "Wednesday\0" "Thursday\0\0" "Friday\0\0\0\0" "Saturday\0";
-		constexpr const char* months = "January\0\0\0"    "February\0\0"   "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0"
-			                           "July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
+		uint32_t cpoints = _get_date_cpoints(format, value);
 
-#define OCH_FMT_2DIGIT(x) if(x >= 10 || c >= 'A') *curr++ = '0' + (char)x / 10; *curr++ = '0' + (char)x % 10;
+		if (is_rightadj(context))
+			pad_vbuf(out, cpoints, context);
+
+#define OCH_FMT_2DIGIT(x) if(c & 0x20) { if(x >= 10) to_vbuf(out, (char)('0' + x / 10)); to_vbuf(out, (char)('0' + x % 10)); } else { to_vbuf(out, (char)('0' + x / 10)); to_vbuf(out, (char)('0' + x % 10)); }
 
 		for (char c = *format; c != '}'; c = *++format)
-		{
-			char* prev = curr;
-
 			switch (c)
 			{
 			case 'y':
-			{
-				uint16_t y = value.year();
-
-				int32_t idx = y >= 10000 ? 5 : y >= 1000 ? 4 : y >= 100 ? 3 : y >= 10 ? 2 : 1;
-
-				curr += idx;
-
-				for (int32_t i = 1; i != idx; ++i)
 				{
-					curr[-i] = '0' + y % 10;
-					y /= 10;
-				}
+					uint16_t y = value.year();
 
-				curr[-idx] = '0' + (char)y;
-			}
+					char* curr = reserve_vbuf(out, log10(y)) + log10(y) - 1;
+
+					while (y >= 10)
+					{
+						*curr-- = (char)('0' + y % 10);
+
+						y /= 10;
+					}
+
+					*curr = (char)('0' + y);
+				}
 				break;
+
 			case 'Y':
-			{
-				uint16_t y = value.year();
-
-				if (y >= 10000)
 				{
-					*curr++ = '0' + (char)(y / 10000);
+					uint16_t y = value.year();
+
+					char* curr = reserve_vbuf(out, 4 + (y >= 10000));
+
+					if (y >= 10000)
+					{
+						*curr++ = '0' + (char)(y / 10000);
+						y /= 10;
+					}
+
+					curr[3] = '0' + y % 10;
 					y /= 10;
+					curr[2] = '0' + y % 10;
+					y /= 10;
+					curr[1] = '0' + y % 10;
+					y /= 10;
+					curr[0] = '0' + (char)y;
 				}
-
-				curr[3] = '0' + y % 10;
-				y /= 10;
-				curr[2] = '0' + y % 10;
-				y /= 10;
-				curr[1] = '0' + y % 10;
-				y /= 10;
-				curr[0] = '0' + (char)y;
-
-				curr += 4;
-			}
 				break;
+
 			case 'm':
 			case 'M':
 				OCH_FMT_2DIGIT(value.month());
 				break;
-			break;
-			case 'n':
-			{
-				*curr++ = months[(value.month() - 1) * 10];
-				*curr++ = months[(value.month() - 1) * 10 + 1];
-				*curr++ = months[(value.month() - 1) * 10 + 2];
-			}
-				break;
-			case 'N':
-			{
-				const char* monthname = months + (ptrdiff_t)(value.month() - 1) * 10;
 
-				while (*monthname)
-					*curr++ = *monthname++;
-			}
+			case 'n':
+				{
+					to_vbuf(out, months[(value.month() - 1) * 10]);
+					to_vbuf(out, months[(value.month() - 1) * 10 + 1]);
+					to_vbuf(out, months[(value.month() - 1) * 10 + 2]);
+				}
 				break;
+
+			case 'N':
+				{
+					const char* monthname = months + (ptrdiff_t)(value.month() - 1) * 10;
+
+					while (*monthname)
+						to_vbuf(out, *monthname++);
+				}
+				break;
+
 			case 'd':
 			case 'D':
 				OCH_FMT_2DIGIT(value.monthday());
 				break;
+
 			case 'w':
-			{
-				*curr++ = weekdays[value.weekday() * 10];
-				*curr++ = weekdays[value.weekday() * 10 + 1];
-				*curr++ = weekdays[value.weekday() * 10 + 2];
+				{
+					to_vbuf(out, weekdays[value.weekday() * 10]);
+					to_vbuf(out, weekdays[value.weekday() * 10 + 1]);
+					to_vbuf(out, weekdays[value.weekday() * 10 + 2]);
+				}
+				break;
 
-			}
-			break;
 			case 'W':
-			{
-				const char* dayname = weekdays + (ptrdiff_t)value.weekday() * 10;
+				{
+					const char* dayname = weekdays + (ptrdiff_t)value.weekday() * 10;
 
-				while (*dayname)
-					*curr++ = *dayname++;
-			}
-			break;
+					while (*dayname)
+						to_vbuf(out, *dayname++);
+				}
+				break;
+
 			case 'i':
 			case 'I':
-				OCH_FMT_2DIGIT(value.hours());
+				OCH_FMT_2DIGIT(value.hour());
 				break;
+
 			case 'j':
 			case 'J':
 				OCH_FMT_2DIGIT(value.minute());
-			break;
+				break;
+
 			case 'k':
 			case 'K':
 				OCH_FMT_2DIGIT(value.second());
-			break;
+				break;
+
 			case 'l':
-			{
-				if (value.millisecond() >= 100)
-					*curr++ = '0' + (char)(value.millisecond() / 100);
-				if (value.millisecond() >= 10)
-					*curr++ = '0' + (value.millisecond() / 10) % 10;
-				*curr++ = '0' + value.millisecond() % 10;
-			}
-			break;
-			case 'L':
-			{
-				*curr++ = '0' + (char)(value.millisecond() / 100);
-				*curr++ = '0' + (value.millisecond() / 10) % 10;
-				*curr++ = '0' + value.millisecond() % 10;
-			}
-			break;
-			case 'u':
-			{
-				if (value.is_utc())
 				{
-					*curr++ = 'Z';
-
-					break;
+					if (value.millisecond() >= 100)
+						to_vbuf(out, (char)('0' + value.millisecond() / 100));
+					if (value.millisecond() >= 10)
+						to_vbuf(out, (char)('0' + (value.millisecond() / 10) % 10));
+					to_vbuf(out, (char)('0' + value.millisecond() % 10));
 				}
+				break;
 
-				*curr++ = value.utc_offset_is_negative() ? '-' : '+';
+			case 'L':
+				{
+					to_vbuf(out, (char)('0' + (char)(value.millisecond() / 100)));
+					to_vbuf(out, (char)('0' + (value.millisecond() / 10) % 10));
+					to_vbuf(out, (char)('0' + value.millisecond() % 10));
+				}
+				break;
 
-				uint16_t h = value.utc_offset_hours();
+			case 'u':
+				{
+					if (value.is_utc())
+					{
+						to_vbuf(out, 'Z');
 
-				*curr++ = '0' + (char)(h / 10);
-				*curr++ = '0' + h % 10;
-			}
-			break;
+						break;
+					}
+
+					to_vbuf(out, value.utc_offset_is_negative() ? '-' : '+');
+
+					uint16_t h = value.utc_offset_hours();
+
+					to_vbuf(out, (char)('0' + h / 10));
+					to_vbuf(out, (char)('0' + h % 10));
+				}
+				break;
+
 			case 'U':
-			{
-				if (value.is_utc())
-					break;
+				{
+					if (value.is_utc())
+						break;
 
-				uint16_t m = value.utc_offset_minutes();
+					uint16_t m = value.utc_offset_minutes();
 
-				*curr++ = '0' + (char)(m / 10);
-				*curr++ = '0' + m % 10;
-			}
-			break;
+					to_vbuf(out, (char)('0' + m / 10));
+					to_vbuf(out, (char)('0' + m % 10));
+				}
+				break;
+
 			case 's':
 			case 'S':
-			{
-				if ((c != 's') ^ (value.is_utc())) //Next char is inactive
 				{
-					if (*++format == 'x')
-						++format;
+					if ((c != 's') ^ (value.is_utc())) //Next char is inactive
+					{
+						if (*++format == 'x')
+							++format;
 
-					while (_is_utf8_surr(format[1]))
-						++format;
+						while (_is_utf8_surr(format[1]))
+							++format;
+					}
 				}
-			}
-			break;
+				break;
+
 			case 'x':
 				c = *++format;//Fallthrough...
 			default:
-				*curr++ = c;
+				to_vbuf(out, c);
 				utf8_cpoints -= _is_utf8_surr(c);
 				break;
 			}
 
-			utf8_cpoints += (uint32_t)(curr - prev);
-		}
-
 #undef OCH_FMT_2DIGIT
 
-		write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), utf8_cpoints), context);
+			if (!is_rightadj(context))
+				pad_vbuf(out, cpoints, context);
 	}
 
 	void fmt_timespan(och::iohandle out, fmt_value arg_value, const parsed_context& context)
@@ -642,411 +842,468 @@ namespace och
 
 		value.val = arg_value.i;
 
-		bool is_negative = false;
+		char sign = _get_sign(value.val, context);
 
 		if(value.val < 0)
-		{ 
-			is_negative = true;
 			value.val = -value.val;
-		}
-
-		char buf[64];
-		char* curr = buf + 63;
 
 		char32_t c = context.format_specifier.codepoint();
 
 		uint32_t utf_surr_count = 0;
 
+		const char* specifier = nullptr;
+
+		int64_t fmt_value;
+
 		switch (c)
 		{
 		case '\0':
+			if (value.val < 10000ll && value.val > -10000ll)
 			{
-				if (value.val < 10000ll && value.val > -10000ll)
-				{
-					*curr-- = 'u';
-					*curr-- = 's';
-					
-					curr = reverse_three_digit(curr, value.microseconds());
-				}
-				else if (value.val < 10000000ll && value.val > -10000000ll)
-				{
-					*curr-- = 'm';
-					*curr-- = 's';
+				if (is_rightadj(context))
+					pad_vbuf(out, 5 + (sign != 0), context);
 
-					curr = reverse_three_digit(curr, value.microseconds() % 1000);
+				if (sign)
+					to_vbuf(out, sign);
 
-					*curr-- = '.';
+				_fmt_three_digit(out, value.microseconds());
+				to_vbuf(out, 'u');
+				to_vbuf(out, 's');
 
-					curr = reverse_three_digit(curr, value.milliseconds());
-				}
-				else if (value.val < 600000000ll && value.val > -600000000ll)
-				{
-					*curr-- = 's';
-
-					curr = reverse_three_digit(curr, value.milliseconds() % 1000);
-
-					*curr-- = '.';
-
-					curr = reverse_two_digit(curr, value.seconds());
-				}
-				else if (value.val < 60 * 600000000ll && value.val > -60 * 600000000ll)
-				{
-					*curr-- = 'n';
-					*curr-- = 'i';
-					*curr-- = 'm';
-
-					curr = reverse_three_digit(curr, value.milliseconds() % 1000);
-
-					*curr-- = '.';
-
-					curr = reverse_two_digit(curr, value.seconds() % 60);
-
-					*curr-- = ':';
-
-					curr = reverse_two_digit(curr, value.minutes());
-				}
-				else
-				{
-					*curr-- = 'h';
-
-					curr = reverse_two_digit(curr, value.seconds() % 60);
-
-					*curr-- = ':';
-
-					curr = reverse_two_digit(curr, value.minutes() % 60);
-
-					*curr-- = ':';
-
-					curr = reverse_two_digit(curr, value.hours());
-
-					if((value.val > 24 * 60 * 600000000ll && value.val < -24 * 60 * 600000000ll))
-					{
-						*curr-- = ' ';
-						*curr-- = ',';
-						*curr-- = 'd';
-						curr = reverse_itos(curr, value.days());
-					}
-				}
+				if (!is_rightadj(context))
+					pad_vbuf(out, 5 + (sign != 0), context);
 			}
-			break;
-		case 'D':
-			*curr-- = 'd';
-		case 'd':
-			curr = reverse_itos(curr, value.days());
-			break;
-		case 'H':
-			*curr-- = 'h';
-		case 'h':
-			curr = reverse_itos(curr, value.hours());
-			break;
-		case 'M':
+			else if (value.val < 10000000ll && value.val > -10000000ll)
 			{
+				if (is_rightadj(context))
+					pad_vbuf(out, 9 + (sign != 0), context);
+
+				if (sign)
+					to_vbuf(out, sign);
+
+				_fmt_three_digit(out, value.milliseconds());
+
+				to_vbuf(out, '.');
+
+				_fmt_three_digit(out, value.microseconds() % 1000);
+
+				to_vbuf(out, 'm');
+				to_vbuf(out, 's');
+
+				if (!is_rightadj(context))
+					pad_vbuf(out, 9 + (sign != 0), context);
+			}
+			else if (value.val < 600000000ll && value.val > -600000000ll)
+			{
+				if (is_rightadj(context))
+					pad_vbuf(out, 7 + (sign != 0), context);
+
+				_fmt_two_digit(out, value.seconds());
+
+				to_vbuf(out, '.');
+
+				_fmt_three_digit(out, value.milliseconds() % 1000);
+
+				to_vbuf(out, 's');
+
+				if (!is_rightadj(context))
+					pad_vbuf(out, 7 + (sign != 0), context);
+			}
+			else if (value.val < 60 * 600000000ll && value.val > -60 * 600000000ll)
+			{
+				if (is_rightadj(context))
+					pad_vbuf(out, 12 + (sign != 0), context);
+
+				_fmt_two_digit(out, value.minutes());
+
+				to_vbuf(out, ':');
+
+				_fmt_two_digit(out, value.seconds() % 60);
+
+				to_vbuf(out, '.');
+
+				_fmt_three_digit(out, value.milliseconds() % 1000);
+
+				to_vbuf(out, och::stringview("min"));
+
+				if (!is_rightadj(context))
+					pad_vbuf(out, 12 + (sign != 0), context);
+			}
+			else
+			{
+				int64_t days = value.days();
+
+				uint32_t log10_d = log10(days);
+
+				uint32_t chars = 6 + (days ? log10_d + 4 : 0) + (sign != 0);
+
+				if (is_rightadj(context))
+					pad_vbuf(out, chars, context);
+
+				if (sign)
+					to_vbuf(out, sign);
+
+				if (days)
+				{
+					_fmt_decimal(out, value.days(), log10_d);
+
+					to_vbuf(out, och::stringview("d + "));
+				}
+
+				_fmt_two_digit(out, value.hours() % 24);
+
+				to_vbuf(out, ':');
+
+				_fmt_two_digit(out, value.minutes() % 60);
+
+				if (!is_rightadj(context))
+					pad_vbuf(out, chars, context);
+			}
+			return;
+
+		case 'D':
+			specifier = "d";
+		case 'd':
+			fmt_value = value.days();
+			break;
+
+		case 'H':
+			specifier = "h";
+		case 'h':
+			fmt_value = value.hours();
+			break;
+
+		case 'M':
 			if (!context.raw_context)
 			{
-				och::write_with_padding(out, "[[Invalid format-specifier]]", context);
+				to_vbuf_with_padding(out, invalid_specifier_msg, context);
 
 				return;
 			}
 			else if (context.raw_context[0] == 'S')
 			{
-				*curr-- = 's';
-				*curr-- = 'm';
+				specifier = "ms";
 
-				curr = reverse_itos(curr, value.milliseconds());
+				fmt_value = value.milliseconds();
 			}
 			else if (context.raw_context[0] == 'I' && context.raw_context[1] == 'N')
 			{
-				*curr-- = 'n';
+				specifier = "min";
 
-				*curr-- = 'i';
-
-				*curr-- = 'm';
-
-				curr = reverse_itos(curr, value.minutes());
+				fmt_value = value.minutes();
 			}
 			else
 			{
-				och::write_with_padding(out, "[[Invalid format-specifier]]", context);
+				to_vbuf_with_padding(out, invalid_specifier_msg, context);
 
 				return;
 			}
-		}
 			break;
+
 		case 'm':
-			{
 			if (!context.raw_context)
 			{
-				och::write_with_padding(out, "[[Invalid format-specifier]]", context);
+				to_vbuf_with_padding(out, invalid_specifier_msg, context);
 
 				return;
 			}
 			else if (context.raw_context[0] == 's')
-				curr = reverse_itos(curr, value.milliseconds());
+				fmt_value = value.milliseconds();
 			else if (context.raw_context[0] == 'i' && context.raw_context[1] == 'n')
-				curr = reverse_itos(curr, value.minutes());
+				fmt_value = value.minutes();
 			else
 			{
-				och::write_with_padding(out, "[[Invalid format-specifier]]", context);
+				to_vbuf_with_padding(out, invalid_specifier_msg, context);
 
 				return;
 			}
-		}
 			break;
+
 		case 'S':
-			*curr-- = 's';
+			specifier = "s";
 		case 's':
-			curr = reverse_itos(curr, value.seconds());
+			fmt_value = value.seconds();
 			break;
+
 		case U'μ':
-			{
-			*curr-- = 's';
-			
-			*curr-- = '\xBC';//μ in utf-8
-
-			*curr-- = '\xCE';
-
+			specifier = u8"μs";
+			fmt_value = value.microseconds();
 			++utf_surr_count;
+			break;
 
-			curr = reverse_itos(curr, value.microseconds());
-		}
-			break;
 		case 'U':
-			{
-				*curr-- = 's';
-				*curr-- = 'u';
-			}
+			specifier = "us";
 		case 'u':
-			curr = reverse_itos(curr, value.microseconds());
+			fmt_value = value.microseconds();
 			break;
+
 		case 'L':
 			{
-				*curr-- = 's';
-				*curr-- = 'u';
-				curr = reverse_itos(curr, value.microseconds() % 1000);
+				//[+ -][D+d, ]HH:MM:SS.MMM.UUU
 
-				*curr-- = ' ';
-				*curr-- = ',';
+				int64_t days = value.days();
 
-				*curr-- = 's';
-				*curr-- = 'm';
-				curr = reverse_itos(curr, value.milliseconds() % 1000);
+				uint32_t log10_d = days ? log10(days) : 0;
 
-				*curr-- = ' ';
-				*curr-- = ',';
+				uint32_t chars = 32 + log10_d + (sign != 0);
 
-				*curr-- = 's';
-				curr = reverse_itos(curr, value.seconds() % 60);
+				if (is_rightadj(context))
+					pad_vbuf(out, chars, context);
 
-				*curr-- = ' ';
-				*curr-- = ',';
+				if (sign)
+					to_vbuf(out, sign);
 
-				*curr-- = 'n';
-				*curr-- = 'i';
-				*curr-- = 'm';
-				curr = reverse_itos(curr, value.minutes() % 60);
+				if (days)
+				{
+					_fmt_decimal(out, value.days(), log10_d, sign);
 
-				*curr-- = ' ';
-				*curr-- = ',';
+					to_vbuf(out, och::stringview("d, "));
+				}
 
-				*curr-- = 'h';
-				curr = reverse_itos(curr, value.hours() % 24);
+				_fmt_two_digit(out, value.hours() % 24);
 
-				*curr-- = ' ';
-				*curr-- = ',';
+				to_vbuf(out, och::stringview("h, "));
 
-				*curr-- = 'd';
-				curr = reverse_itos(curr, value.days());
+				_fmt_two_digit(out, value.minutes() % 60);
+
+				to_vbuf(out, och::stringview("min, "));
+
+				_fmt_two_digit(out, value.seconds() % 60);
+
+				to_vbuf(out, och::stringview("s, "));
+
+				_fmt_three_digit(out, value.milliseconds() % 1000);
+
+				to_vbuf(out, och::stringview("ms, "));
+
+				_fmt_three_digit(out, value.microseconds() % 1000);
+
+				to_vbuf(out, och::stringview("us, "));
+
+				if (!is_rightadj(context))
+					pad_vbuf(out, chars, context);
 			}
-			break;
+			return;
+
 		case 'l':
 			{
-				*curr-- = 's';
-				*curr-- = 'u';
-
-				uint64_t us = value.microseconds() % 1000;
-				if(us)
-					curr = reverse_itos(curr, us);
-
-				if (value.val < 10000llu) break;
-
-				*curr-- = ' ';
-				*curr-- = ',';
-
-				*curr-- = 's';
-				*curr-- = 'm';
-
-				uint64_t ms = value.milliseconds() % 1000;
-				if(ms)
-					curr = reverse_itos(curr, ms);
-
-				if (value.val < 10000000llu) break;
-
-				*curr-- = ' ';
-				*curr-- = ',';
-
-				*curr-- = 's';
-
-				uint64_t s = value.seconds() % 60;
-				if (ms)
-					curr = reverse_itos(curr, s);
-
-				if (value.val < 600000000llu) break;
-
-				*curr-- = ' ';
-				*curr-- = ',';
-
-				*curr-- = 'n';
-				*curr-- = 'i';
-				*curr-- = 'm';
-
-				uint64_t min = value.minutes() % 60;
-				if (min)
-					curr = reverse_itos(curr, min);
-
-				if (value.val < 60 * 600000000llu) break;
-
-				*curr-- = ' ';
-				*curr-- = ',';
-
-				*curr-- = 'h';
-				uint64_t h = value.hours() % 24;
-				if (h)
-					curr = reverse_itos(curr, h);
-
-				if (value.val < 24 * 60 * 600000000llu) break;
-
-				*curr-- = ' ';
-				*curr-- = ',';
-
-				*curr-- = 'd';
-				curr = reverse_itos(curr, value.days());
+				////[+ -][D+d, ][HHh, ][MMmin, ][SSs, ][MMMms, ]UUUus
+				//int64_t days = value.days();
+				//
+				//uint32_t log10_d = log10(days);
+				//
+				//uint32_t chars = 5; //chars for us;
+				//
+				//if (value.val < 10000000ll)
+				//{
+				//	chars += 4;
+				//}
+				//
+				//
+				//*curr-- = 's';
+				//*curr-- = 'u';
+				//
+				//uint64_t us = value.microseconds() % 1000;
+				//if(us)
+				//	curr = _fmt_reverse_itos(curr, us);
+				//
+				//if (value.val < 10000llu) break;
+				//
+				//*curr-- = ' ';
+				//*curr-- = ',';
+				//
+				//*curr-- = 's';
+				//*curr-- = 'm';
+				//
+				//uint64_t ms = value.milliseconds() % 1000;
+				//if(ms)
+				//	curr = _fmt_reverse_itos(curr, ms);
+				//
+				//if (value.val < 10000000llu) break;
+				//
+				//*curr-- = ' ';
+				//*curr-- = ',';
+				//
+				//*curr-- = 's';
+				//
+				//uint64_t s = value.seconds() % 60;
+				//if (ms)
+				//	curr = _fmt_reverse_itos(curr, s);
+				//
+				//if (value.val < 600000000llu) break;
+				//
+				//*curr-- = ' ';
+				//*curr-- = ',';
+				//
+				//*curr-- = 'n';
+				//*curr-- = 'i';
+				//*curr-- = 'm';
+				//
+				//uint64_t min = value.minutes() % 60;
+				//if (min)
+				//	curr = _fmt_reverse_itos(curr, min);
+				//
+				//if (value.val < 60 * 600000000llu) break;
+				//
+				//*curr-- = ' ';
+				//*curr-- = ',';
+				//
+				//*curr-- = 'h';
+				//uint64_t h = value.hours() % 24;
+				//if (h)
+				//	curr = _fmt_reverse_itos(curr, h);
+				//
+				//if (value.val < 24 * 60 * 600000000llu) break;
+				//
+				//*curr-- = ' ';
+				//*curr-- = ',';
+				//
+				//*curr-- = 'd';
+				//curr = _fmt_reverse_itos(curr, value.days());
 			}
-			break;
+			return;
+
 		case 'x':
-			{
-				och::write_with_padding(out, "[[Format-specifier 'x' is not yet implemented]]", context);
+			
+			to_vbuf_with_padding(out, och::stringview("[[fmt_time - specifier 'x' is not yet implemented]]"), context);
+			return;
 
-				return;
-			}
-			break;
 		default:
-			{
-				och::write_with_padding(out, "[[Invalid format-specifier]]", context);
-
-				return;
-			}
-			break;
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			return;
 		}
 
-		curr = reverse_write_sign(curr, is_negative, context);
+		uint32_t log10_v = log10(fmt_value);
 
-		++curr;
+		uint32_t chars = log10_v + (sign != 0) - utf_surr_count;
 
-		write_with_padding(out, och::stringview(curr, (uint32_t)(buf- curr + 64), (uint32_t)(buf - curr + 64 - utf_surr_count)), context);
+		uint32_t specifier_len = 0;
+		if (specifier)
+			for (uint32_t i = 0; specifier[i]; ++i)
+				++specifier_len;
+
+		chars += specifier_len;
+
+		if (is_rightadj(context))
+			pad_vbuf(out, chars, context);
+
+		_fmt_decimal(out, fmt_value, log10_v, sign);
+
+		if (specifier)
+			to_vbuf(out, och::stringview(specifier, specifier_len, 1));
+
+		if(!is_rightadj(context))
+			pad_vbuf(out, chars, context);
 	}
 
 	void fmt_highres_timespan(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
-		//     ->   microseconds (with format specifier)
-		// ns  ->   nanoseconds
-		// us,
-		// μs  ->   microseconds
-		// ms  ->   milliseconds
-		// s   ->   seconds
+		out;
+
+		arg_value;
+
+		context;
+		
+		////     ->   microseconds (with format specifier)
+		//// ns  ->   nanoseconds
+		//// us,
+		//// μs  ->   microseconds
+		//// ms  ->   milliseconds
+		//// s   ->   seconds
+		////
+		//// Uppercase letters also write the fitting SI-symbol.
+		////
+		//// For microseconds, U writes [n...]u, while μ writes [n...]μ
 		//
-		// Uppercase letters also write the fitting SI-symbol.
+		//char32_t c = context.format_specifier.codepoint();
 		//
-		// For microseconds, U writes [n...]u, while μ writes [n...]μ
-
-		char32_t c = context.format_specifier.codepoint();
-
-		uint32_t utf_surr_count = 0;
-
-		och::highres_timespan value;
-
-		value.val = arg_value.i;
-
-		char buf[64];
-		char* curr = buf + 63;
-
-		switch (c)
-		{
-		case '\0':
-		{
-			*curr-- = 's';
-
-			if (value.microseconds() >= 1'000'000 || value.microseconds() <= -1'000'000)
-				curr = reverse_itos(curr, value.seconds());
-			else if (value.microseconds() >= 1000)
-			{
-				*curr-- = 'm';
-
-				curr = reverse_itos(curr, value.milliseconds());
-			}
-			else
-			{
-				*curr-- = 'u';
-
-				curr = reverse_itos(curr, value.microseconds());
-			}
-		}
-		break;
-		case 'S':
-			*curr-- = 's';
-		case 's':
-			curr = reverse_itos(curr, value.seconds());
-			break;
-		case U'μ':
-		{
-			*curr-- = '\xBC';//μ in utf-8
-
-			*curr-- = '\xCE';
-
-			curr = reverse_itos(curr, value.microseconds());
-
-			++utf_surr_count;
-		}
-		break;
-		case 'U':
-		{
-			*curr-- = 's';
-			*curr-- = 'u';
-		}
-		case 'u':
-			curr = reverse_itos(curr, value.microseconds());
-			break;
-		case 'l':
-		{
-			curr = reverse_itos(curr, value.microseconds() % 1000);
-
-			*curr-- = '.';
-			
-			curr = reverse_itos(curr, value.milliseconds() % 1000);
-
-			*curr-- = '.';
-
-			curr = reverse_itos(curr, value.seconds());
-		}
-		break;
-		case 'x':
-		{
-			och::write_with_padding(out, "[[Format-specifier 'x' not yet implemented]]", context);
-
-			return;
-		}
-		break;
-		default:
-		{
-			och::write_with_padding(out, "[[Invalid format-specifier]]", context);
-
-			return;
-		}
-		break;
-		}
-
-		++curr;
-
-		write_with_padding(out, och::stringview(curr, (uint32_t)(curr - buf), (uint32_t)(curr - buf - utf_surr_count)), context);
+		//uint32_t utf_surr_count = 0;
+		//
+		//och::highres_timespan value;
+		//
+		//value.val = arg_value.i;
+		//
+		//char buf[64];
+		//char* curr = buf + 63;
+		//
+		//switch (c)
+		//{
+		//case '\0':
+		//{
+		//	*curr-- = 's';
+		//
+		//	if (value.microseconds() >= 1'000'000 || value.microseconds() <= -1'000'000)
+		//		curr = _fmt_reverse_itos(curr, value.seconds());
+		//	else if (value.microseconds() >= 1000)
+		//	{
+		//		*curr-- = 'm';
+		//
+		//		curr = _fmt_reverse_itos(curr, value.milliseconds());
+		//	}
+		//	else
+		//	{
+		//		*curr-- = 'u';
+		//
+		//		curr = _fmt_reverse_itos(curr, value.microseconds());
+		//	}
+		//}
+		//break;
+		//case 'S':
+		//	*curr-- = 's';
+		//case 's':
+		//	curr = _fmt_reverse_itos(curr, value.seconds());
+		//	break;
+		//case U'μ':
+		//{
+		//	*curr-- = '\xBC';//μ in utf-8
+		//
+		//	*curr-- = '\xCE';
+		//
+		//	curr = _fmt_reverse_itos(curr, value.microseconds());
+		//
+		//	++utf_surr_count;
+		//}
+		//break;
+		//case 'U':
+		//{
+		//	*curr-- = 's';
+		//	*curr-- = 'u';
+		//}
+		//case 'u':
+		//	curr = _fmt_reverse_itos(curr, value.microseconds());
+		//	break;
+		//case 'l':
+		//{
+		//	curr = _fmt_reverse_itos(curr, value.microseconds() % 1000);
+		//
+		//	*curr-- = '.';
+		//	
+		//	curr = _fmt_reverse_itos(curr, value.milliseconds() % 1000);
+		//
+		//	*curr-- = '.';
+		//
+		//	curr = _fmt_reverse_itos(curr, value.seconds());
+		//}
+		//break;
+		//case 'x':
+		//{
+		//	och::write_with_padding(out, "[[Format-specifier 'x' not yet implemented]]", context);
+		//
+		//	return;
+		//}
+		//break;
+		//default:
+		//{
+		//	och::write_with_padding(out, "[[Invalid format-specifier]]", context);
+		//
+		//	return;
+		//}
+		//break;
+		//}
+		//
+		//++curr;
+		//
+		//write_with_padding(out, och::stringview(curr, (uint32_t)(curr - buf), (uint32_t)(curr - buf - utf_surr_count)), context);
 	}
 
 
@@ -1237,7 +1494,7 @@ namespace och
 					continue;
 				}
 				
-				och::write_to_file(out, { last_fmt_end, curr - 1 });
+				to_vbuf(out, och::stringview(last_fmt_end, curr - 1 - last_fmt_end, 1));
 
 				uint32_t arg_idx;
 
@@ -1269,7 +1526,11 @@ namespace och
 				last_fmt_end = curr;
 			}
 
-		och::write_to_file(out, { last_fmt_end, curr });
+		och::stringview _temp(last_fmt_end, curr - last_fmt_end, 1);
+
+		to_vbuf(out, _temp);
+
+		_vprint_buf.flush(out);
 	}
 
 

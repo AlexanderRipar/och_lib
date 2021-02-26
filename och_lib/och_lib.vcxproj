@@ -173,6 +173,7 @@
     <ClInclude Include="och_net.h" />
     <ClInclude Include="och_rtv.h" />
     <ClInclude Include="och_time.h" />
+    <ClInclude Include="och_utf8buf.h" />
     <ClInclude Include="och_wnd.h" />
     <ClInclude Include="och_timer.h" />
     <ClInclude Include="och_tok.h" />

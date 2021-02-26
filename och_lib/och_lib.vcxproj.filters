@@ -89,6 +89,9 @@
     <ClInclude Include="och_utf16.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="och_utf8buf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="testout.txt">
