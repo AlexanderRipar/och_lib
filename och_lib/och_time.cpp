@@ -194,22 +194,22 @@ namespace och
 	/*//////////////////////////////////////////////////highres_timespan/////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	uint64_t highres_timespan::nanoseconds() const noexcept
+	int64_t highres_timespan::nanoseconds() const noexcept
 	{
 		return val * 1000'000'000 / time_data.highres_clock_ticks_per_second;
 	}
 
-	uint64_t highres_timespan::microseconds() const noexcept
+	int64_t highres_timespan::microseconds() const noexcept
 	{
 		return val * 1000'000 / time_data.highres_clock_ticks_per_second;
 	}
 
-	uint64_t highres_timespan::milliseconds() const noexcept
+	int64_t highres_timespan::milliseconds() const noexcept
 	{
 		return val * 1000 / time_data.highres_clock_ticks_per_second;
 	}
 
-	uint64_t highres_timespan::seconds() const noexcept
+	int64_t highres_timespan::seconds() const noexcept
 	{
 		return val / time_data.highres_clock_ticks_per_second;
 	}

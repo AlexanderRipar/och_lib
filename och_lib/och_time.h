@@ -30,17 +30,17 @@ namespace och
 
 		bool operator!=(timespan rhs) const noexcept { return val != rhs.val; }
 
-		uint64_t microseconds() const noexcept { return val / 10llu; }
+		int64_t microseconds() const noexcept { return val / 10llu; }
 
-		uint64_t milliseconds() const noexcept { return val / 10000llu; }
+		int64_t milliseconds() const noexcept { return val / 10000llu; }
 
-		uint64_t seconds() const noexcept { return val / 10000000llu; }
+		int64_t seconds() const noexcept { return val / 10000000llu; }
 
-		uint64_t minutes() const noexcept { return val / 600000000llu; }
+		int64_t minutes() const noexcept { return val / 600000000llu; }
 
-		uint64_t hours() const noexcept { return val / (60 * 600000000llu); }
+		int64_t hours() const noexcept { return val / (60 * 600000000llu); }
 
-		uint64_t days() const noexcept { return val / (24 * 60 * 600000000llu); }
+		int64_t days() const noexcept { return val / (24 * 60 * 600000000llu); }
 	};
 
 	struct time
@@ -148,13 +148,13 @@ namespace och
 
 		bool operator!=(highres_timespan rhs) const noexcept { return val != rhs.val; }
 
-		uint64_t nanoseconds() const noexcept;
+		int64_t nanoseconds() const noexcept;
 
-		uint64_t microseconds() const noexcept;
+		int64_t microseconds() const noexcept;
 
-		uint64_t milliseconds() const noexcept;
+		int64_t milliseconds() const noexcept;
 
-		uint64_t seconds() const noexcept;
+		int64_t seconds() const noexcept;
 	};
 
 	struct highres_time
