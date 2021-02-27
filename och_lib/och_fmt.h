@@ -9,17 +9,35 @@ namespace och
 {
 	union fmt_value
 	{
-		uint64_t u;
-		int64_t i;
+		uint64_t u64;
+		int64_t i64;
+		uint32_t u32;
+		int32_t i32;
+		uint16_t u16;
+		int16_t i16;
+		uint8_t u8;
+		int8_t i8;
 		float f;
 		double d;
 		och::utf8_char c;
 		const void* p;
 
-		fmt_value(uint64_t u);
+		fmt_value(uint64_t u64);
 		
-		fmt_value(int64_t i);
-		
+		fmt_value(int64_t i64);
+
+		fmt_value(uint32_t u32);
+
+		fmt_value(int32_t i32);
+
+		fmt_value(uint16_t u16);
+
+		fmt_value(int16_t i16);
+
+		fmt_value(uint8_t u8);
+
+		fmt_value(int8_t i8);
+
 		fmt_value(float f);
 		
 		fmt_value(double d);

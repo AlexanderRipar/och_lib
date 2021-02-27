@@ -116,6 +116,18 @@ namespace och
 		return _vprint_buf.reserve((uint16_t)codeunits, out);
 	}
 
+	void pad_left(och::iohandle out, uint32_t text_codepoints, const parsed_context& context)
+	{
+		if (is_rightadj(context))
+			pad_vbuf(out, text_codepoints, context);
+	}
+
+	void pad_right(och::iohandle out, uint32_t text_codepoints, const parsed_context& context)
+	{
+		if (!is_rightadj(context))
+			pad_vbuf(out, text_codepoints, context);
+	}
+
 
 
 	void _fmt_decimal(och::iohandle out, uint64_t n, uint32_t log10_n, char sign = '\0')
@@ -316,24 +328,109 @@ namespace och
 	/*///////////////////////////////////////////////formatting functions////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	void fmt_uint(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_uint64(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
-		uint64_t value = arg_value.u;
+		uint64_t value = arg_value.u64;
 
 		switch (context.format_specifier.codepoint())
 		{
 		case '\0':
 			{
 				uint32_t log10_n = log10(value);
-				if (is_rightadj(context))
-					pad_vbuf(out, log10_n, context);
+
+				pad_left(out, log10_n, context);
 
 				_fmt_decimal(out, value, log10_n);
 
-				if (!is_rightadj(context))
-					pad_vbuf(out, log10_n, context);
+				pad_right(out, log10_n, context);
 			}
 			break;
+
+		case 'x':
+			_fmt_hex(out, value, context, hex_lower_upper);
+			break;
+
+		case 'X':
+			_fmt_hex(out, value, context, hex_lower_upper + 16);
+			break;
+
+		case 'b':
+			_fmt_binary(out, value, context, 1);
+			break;
+
+		case 'B':
+			_fmt_binary(out, value, context, 64);
+			break;
+
+		default:
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			break;
+		}
+	}
+
+	void fmt_int64(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	{
+		int64_t value = arg_value.i64;
+
+		char sign = _get_sign(value, context);
+
+		uint64_t abs_value = value < 0 ? (uint64_t)-value : (uint64_t)value;
+
+		switch (context.format_specifier.codepoint())
+		{
+		case '\0':
+			{
+				uint32_t log10_n = log10(value);
+
+				uint32_t total_chars = log10_n + (sign != 0);
+				
+				pad_left(out, total_chars, context);
+
+				_fmt_decimal(out, abs_value, log10_n, sign);
+
+				pad_right(out, total_chars, context);
+			}
+			break;
+
+		case 'x':
+			_fmt_hex(out, value, context, hex_lower_upper);
+			break;
+
+		case 'X':
+			_fmt_hex(out, value, context, hex_lower_upper + 16);
+			break;
+
+		case 'b':
+			_fmt_binary(out, value, context, 1);
+			break;
+
+		case 'B':
+			_fmt_binary(out, value, context, 64);
+			break;
+
+		default:
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			break;
+		}
+	}
+
+	void fmt_uint32(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	{
+		uint32_t value = arg_value.u32;
+
+		switch (context.format_specifier.codepoint())
+		{
+		case '\0':
+		{
+			uint32_t log10_n = log10(value);
+
+			pad_left(out, log10_n, context);
+
+			_fmt_decimal(out, value, log10_n);
+
+			pad_right(out, log10_n, context);
+		}
+		break;
 
 		case 'x':
 			_fmt_hex(out, value, context, hex_lower_upper);
@@ -357,47 +454,216 @@ namespace och
 		}
 	}
 
-	void fmt_int(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_int32(och::iohandle out, fmt_value arg_value, const parsed_context& context)
 	{
-		int64_t value = arg_value.i;
+		int32_t value = arg_value.i32;
 
 		char sign = _get_sign(value, context);
 
-		if (value < 0)
-			value = -value;
+		uint32_t abs_value = value < 0 ? (uint32_t)-value : (uint32_t)value;
 
 		switch (context.format_specifier.codepoint())
 		{
 		case '\0':
-			{
-				uint32_t log10_n = log10(value);
+		{
+			uint32_t log10_n = log10(value);
 
-				uint32_t total_chars = log10_n + (sign != 0);
+			uint32_t total_chars = log10_n + (sign != 0);
 
-				if (is_rightadj(context))
-					pad_vbuf(out, total_chars, context);
+			pad_left(out, total_chars, context);
 
-				_fmt_decimal(out, value, log10_n, sign);
+			_fmt_decimal(out, abs_value, log10_n, sign);
 
-				if (!is_rightadj(context))
-					pad_vbuf(out, total_chars, context);
-			}
-			break;
+			pad_right(out, total_chars, context);
+		}
+		break;
 
 		case 'x':
-			_fmt_hex(out, value, context, hex_lower_upper, sign);
+			_fmt_hex(out, (uint32_t)value, context, hex_lower_upper);
 			break;
 
 		case 'X':
-			_fmt_hex(out, value, context, hex_lower_upper + 16, sign);
+			_fmt_hex(out, (uint32_t)value, context, hex_lower_upper + 16);
 			break;
 
 		case 'b':
-			_fmt_binary(out, value, context, 1, sign);
+			_fmt_binary(out, (uint32_t)value, context, 1);
 			break;
 
 		case 'B':
-			_fmt_binary(out, value, context, 32, sign);
+			_fmt_binary(out, (uint32_t)value, context, 32);
+			break;
+
+		default:
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			break;
+		}
+	}
+
+	void fmt_uint16(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	{
+		uint16_t value = arg_value.u16;
+
+		switch (context.format_specifier.codepoint())
+		{
+		case '\0':
+		{
+			uint32_t log10_n = log10(value);
+
+			pad_left(out, log10_n, context);
+
+			_fmt_decimal(out, value, log10_n);
+
+			pad_right(out, log10_n, context);
+		}
+		break;
+
+		case 'x':
+			_fmt_hex(out, value, context, hex_lower_upper);
+			break;
+
+		case 'X':
+			_fmt_hex(out, value, context, hex_lower_upper + 16);
+			break;
+
+		case 'b':
+			_fmt_binary(out, value, context, 1);
+			break;
+
+		case 'B':
+			_fmt_binary(out, value, context, 16);
+			break;
+
+		default:
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			break;
+		}
+	}
+
+	void fmt_int16(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	{
+		int16_t value = arg_value.i16;
+
+		char sign = _get_sign(value, context);
+
+		uint16_t abs_value = value < 0 ? (uint16_t)-value : (uint16_t)value;
+
+		switch (context.format_specifier.codepoint())
+		{
+		case '\0':
+		{
+			uint32_t log10_n = log10(value);
+
+			uint32_t total_chars = log10_n + (sign != 0);
+
+			pad_left(out, total_chars, context);
+
+			_fmt_decimal(out, abs_value, log10_n, sign);
+
+			pad_right(out, total_chars, context);
+		}
+		break;
+
+		case 'x':
+			_fmt_hex(out, (uint16_t)value, context, hex_lower_upper);
+			break;
+
+		case 'X':
+			_fmt_hex(out, (uint16_t)value, context, hex_lower_upper + 16);
+			break;
+
+		case 'b':
+			_fmt_binary(out, (uint16_t)value, context, 1);
+			break;
+
+		case 'B':
+			_fmt_binary(out, (uint16_t)value, context, 16);
+			break;
+
+		default:
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			break;
+		}
+	}
+
+	void fmt_uint8(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	{
+		uint8_t value = arg_value.u8 & 0xFF;
+
+		switch (context.format_specifier.codepoint())
+		{
+		case '\0':
+		{
+			uint32_t log10_n = log10(value);
+
+			pad_left(out, log10_n, context);
+
+			_fmt_decimal(out, value, log10_n);
+
+			pad_right(out, log10_n, context);
+		}
+		break;
+
+		case 'x':
+			_fmt_hex(out, value, context, hex_lower_upper);
+			break;
+
+		case 'X':
+			_fmt_hex(out, value, context, hex_lower_upper + 16);
+			break;
+
+		case 'b':
+			_fmt_binary(out, value, context, 1);
+			break;
+
+		case 'B':
+			_fmt_binary(out, value, context, 8);
+			break;
+
+		default:
+			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			break;
+		}
+	}
+
+	void fmt_int8(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	{
+		int8_t value = arg_value.i8 & 0xFF;
+
+		char sign = _get_sign(value, context);
+
+		uint8_t abs_value = value < 0 ? (uint8_t)-value : (uint8_t)value;
+
+		switch (context.format_specifier.codepoint())
+		{
+		case '\0':
+		{
+			uint32_t log10_n = log10(value);
+
+			uint32_t total_chars = log10_n + (sign != 0);
+
+			pad_left(out, total_chars, context);
+
+			_fmt_decimal(out, abs_value, log10_n, sign);
+
+			pad_right(out, total_chars, context);
+		}
+		break;
+
+		case 'x':
+			_fmt_hex(out, (uint8_t)value, context, hex_lower_upper);
+			break;
+
+		case 'X':
+			_fmt_hex(out, (uint8_t)value, context, hex_lower_upper + 16);
+			break;
+
+		case 'b':
+			_fmt_binary(out, (uint8_t)value, context, 1);
+			break;
+
+		case 'B':
+			_fmt_binary(out, (uint8_t)value, context, 8);
 			break;
 
 		default:
@@ -840,7 +1106,7 @@ namespace och
 
 		och::timespan value;
 
-		value.val = arg_value.i;
+		value.val = arg_value.i64;
 
 		char sign = _get_sign(value.val, context);
 
@@ -1312,9 +1578,21 @@ namespace och
 	/*/////////////////////////////////////////////////////fmt_value/////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	fmt_value::fmt_value(uint64_t u) : u{ u } {}
+	fmt_value::fmt_value(uint64_t u64) : u64{ u64 } {}
 
-	fmt_value::fmt_value(int64_t i) : i{ i } {}
+	fmt_value::fmt_value(int64_t i64) : i64{ i64 } {}
+
+	fmt_value::fmt_value(uint32_t u32) : u32{ u32 } {}
+
+	fmt_value::fmt_value(int32_t i32) : i32{ i32 } {}
+
+	fmt_value::fmt_value(uint16_t u16) : u16{ u16 } {}
+
+	fmt_value::fmt_value(int16_t i16) : i16{ i16 } {}
+
+	fmt_value::fmt_value(uint8_t u8) : u8{ u8 } {}
+
+	fmt_value::fmt_value(int8_t i8) : i8{ i8 } {}
 
 	fmt_value::fmt_value(float f) : f{ f } {}
 
@@ -1330,21 +1608,21 @@ namespace och
 	/*////////////////////////////////////////////////////arg_wrapper////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	arg_wrapper::arg_wrapper(uint8_t value) : value{ (uint64_t)value }, formatter{ fmt_uint } {}
+	arg_wrapper::arg_wrapper(uint64_t value) : value{ value }, formatter{ fmt_uint64 } {}
 
-	arg_wrapper::arg_wrapper(uint16_t value) : value{ (uint64_t)value }, formatter{ fmt_uint } {}
-															   
-	arg_wrapper::arg_wrapper(uint32_t value) : value{ (uint64_t)value }, formatter{ fmt_uint } {}
-															   
-	arg_wrapper::arg_wrapper(uint64_t value) : value{ value }, formatter{ fmt_uint } {}
+	arg_wrapper::arg_wrapper(int64_t value) : value{ value }, formatter{ fmt_int64 } {}
 
-	arg_wrapper::arg_wrapper(int8_t value) : value{ (int64_t)value }, formatter{ fmt_int } {}
+	arg_wrapper::arg_wrapper(uint32_t value) : value{ value }, formatter{ fmt_uint32 } {}
 
-	arg_wrapper::arg_wrapper(int16_t value) : value{ (int64_t)value }, formatter{ fmt_int } {}
+	arg_wrapper::arg_wrapper(int32_t value) : value{ value }, formatter{ fmt_int32 } {}
 
-	arg_wrapper::arg_wrapper(int32_t value) : value{ (int64_t)value }, formatter{ fmt_int } {}
+	arg_wrapper::arg_wrapper(uint16_t value) : value{ value }, formatter{ fmt_uint16 } {}
 
-	arg_wrapper::arg_wrapper(int64_t value) : value{ value }, formatter{ fmt_int } {}
+	arg_wrapper::arg_wrapper(int16_t value) : value{ value }, formatter{ fmt_int16 } {}
+
+	arg_wrapper::arg_wrapper(uint8_t value) : value{ value }, formatter{ fmt_uint8 } {}
+
+	arg_wrapper::arg_wrapper(int8_t value) : value{ value }, formatter{ fmt_int8 } {}
 
 	arg_wrapper::arg_wrapper(float value) : value{ value }, formatter{ fmt_float } {}
 
@@ -1387,7 +1665,7 @@ namespace och
 
 			_ASSERT(width_idx < argv.len());
 
-			width = static_cast<uint16_t>(argv[width_idx].value.u);
+			width = static_cast<uint16_t>(argv[width_idx].value.u64);
 		}
 		else
 		{
@@ -1413,7 +1691,7 @@ namespace och
 
 				_ASSERT(precision_idx < argv.len());
 
-				precision = static_cast<uint16_t>(argv[precision_idx].value.u);
+				precision = static_cast<uint16_t>(argv[precision_idx].value.u64);
 			}
 			else
 			{
