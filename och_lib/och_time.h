@@ -163,7 +163,7 @@ namespace och
 
 		static highres_time now() noexcept;
 
-		highres_timespan operator-(highres_time rhs) const noexcept { return { static_cast<int64_t>(val - rhs.val) }; }
+		highres_timespan operator-(highres_time rhs) const noexcept;
 
 		highres_time operator+(highres_timespan rhs) const noexcept;
 
