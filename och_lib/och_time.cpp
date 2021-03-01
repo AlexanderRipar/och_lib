@@ -169,12 +169,12 @@ namespace och
 		return timespan{ static_cast<int64_t>(val - rhs.val) };
 	}
 
-	timespan time::operator+(timespan rhs) const noexcept
+	time time::operator+(timespan rhs) const noexcept
 	{
 		return { static_cast<int64_t>(val + rhs.val) };
 	}
 
-	timespan time::operator-(timespan rhs) const noexcept
+	time time::operator-(timespan rhs) const noexcept
 	{
 		return { static_cast<int64_t>(val - rhs.val) };
 	}
@@ -410,12 +410,12 @@ namespace och
 		return { static_cast<int64_t>(val - rhs.val) };
 	}
 
-	highres_timespan highres_time::operator+(highres_timespan rhs) const noexcept
+	highres_time highres_time::operator+(highres_timespan rhs) const noexcept
 	{
 		return { static_cast<int64_t>(val + rhs.val) };
 	}
 
-	highres_timespan highres_time::operator-(highres_timespan rhs) const noexcept
+	highres_time highres_time::operator-(highres_timespan rhs) const noexcept
 	{
 		return { static_cast<int64_t>(val - rhs.val) };
 	}

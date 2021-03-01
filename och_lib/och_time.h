@@ -57,9 +57,9 @@ namespace och
 
 		timespan operator-(time rhs) const noexcept;
 
-		timespan operator+(timespan rhs) const noexcept;
+		time operator+(timespan rhs) const noexcept;
 
-		timespan operator-(timespan rhs) const noexcept;
+		time operator-(timespan rhs) const noexcept;
 
 		void operator+=(timespan rhs) noexcept;
 
@@ -165,9 +165,9 @@ namespace och
 
 		highres_timespan operator-(highres_time rhs) const noexcept { return { static_cast<int64_t>(val - rhs.val) }; }
 
-		highres_timespan operator+(highres_timespan rhs) const noexcept;
+		highres_time operator+(highres_timespan rhs) const noexcept;
 
-		highres_timespan operator-(highres_timespan rhs) const noexcept;
+		highres_time operator-(highres_timespan rhs) const noexcept;
 
 		void operator+=(highres_timespan rhs) noexcept;
 
