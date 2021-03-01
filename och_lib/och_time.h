@@ -10,37 +10,37 @@ namespace och
 	{
 		int64_t val;
 
-		timespan operator+(timespan rhs) const noexcept { return { val + rhs.val }; }
+		timespan operator+(timespan rhs) const noexcept;
 
-		timespan operator-(timespan rhs) const noexcept { return { val - rhs.val }; }
+		timespan operator-(timespan rhs) const noexcept;
 
-		void operator+=(timespan rhs) noexcept { val += rhs.val; }
+		void operator+=(timespan rhs) noexcept;
 
-		void operator-=(timespan rhs) noexcept { val -= rhs.val; }
+		void operator-=(timespan rhs) noexcept;
 
-		bool operator<(timespan rhs) const noexcept { return val < rhs.val; }
+		bool operator<(timespan rhs) const noexcept;
 
-		bool operator<=(timespan rhs) const noexcept { return val <= rhs.val; }
+		bool operator<=(timespan rhs) const noexcept;
 
-		bool operator>(timespan rhs) const noexcept { return val > rhs.val; }
+		bool operator>(timespan rhs) const noexcept;
 
-		bool operator>=(timespan rhs) const noexcept { return val >= rhs.val; }
+		bool operator>=(timespan rhs) const noexcept;
 
-		bool operator==(timespan rhs) const noexcept { return val == rhs.val; }
+		bool operator==(timespan rhs) const noexcept;
 
-		bool operator!=(timespan rhs) const noexcept { return val != rhs.val; }
+		bool operator!=(timespan rhs) const noexcept;
 
-		int64_t microseconds() const noexcept { return val / 10llu; }
+		int64_t microseconds() const noexcept;
 
-		int64_t milliseconds() const noexcept { return val / 10000llu; }
+		int64_t milliseconds() const noexcept;
 
-		int64_t seconds() const noexcept { return val / 10000000llu; }
+		int64_t seconds() const noexcept;
 
-		int64_t minutes() const noexcept { return val / 600000000llu; }
+		int64_t minutes() const noexcept;
 
-		int64_t hours() const noexcept { return val / (60 * 600000000llu); }
+		int64_t hours() const noexcept;
 
-		int64_t days() const noexcept { return val / (24 * 60 * 600000000llu); }
+		int64_t days() const noexcept;
 	};
 
 	struct time
@@ -55,27 +55,27 @@ namespace och
 
 		static time now() noexcept;
 
-		timespan operator-(time rhs) const noexcept { return { static_cast<int64_t>(val - rhs.val) }; }
+		timespan operator-(time rhs) const noexcept;
 
-		timespan operator+(timespan rhs) const noexcept { return { static_cast<int64_t>(val + rhs.val) }; }
+		timespan operator+(timespan rhs) const noexcept;
 
-		timespan operator-(timespan rhs) const noexcept { return { static_cast<int64_t>(val - rhs.val) }; }
+		timespan operator-(timespan rhs) const noexcept;
 
-		void operator+=(timespan rhs) noexcept { val += rhs.val; }
+		void operator+=(timespan rhs) noexcept;
 
-		void operator-=(timespan rhs) noexcept { val -= rhs.val; }
+		void operator-=(timespan rhs) noexcept;
 
-		bool operator<(time rhs) const noexcept { return val < rhs.val; }
+		bool operator<(time rhs) const noexcept;
 
-		bool operator<=(time rhs) const noexcept { return val <= rhs.val; }
+		bool operator<=(time rhs) const noexcept;
 
-		bool operator>(time rhs) const noexcept { return val > rhs.val; }
+		bool operator>(time rhs) const noexcept;
 
-		bool operator>=(time rhs) const noexcept { return val >= rhs.val; }
+		bool operator>=(time rhs) const noexcept;
 
-		bool operator==(time rhs) const noexcept { return val == rhs.val; }
+		bool operator==(time rhs) const noexcept;
 
-		bool operator!=(time rhs) const noexcept { return val != rhs.val; }
+		bool operator!=(time rhs) const noexcept;
 	};
 
 	struct date
@@ -128,25 +128,25 @@ namespace och
 	{
 		int64_t val;
 
-		highres_timespan operator+(highres_timespan rhs) const noexcept { return { val + rhs.val }; }
+		highres_timespan operator+(highres_timespan rhs) const noexcept;
 
-		highres_timespan operator-(highres_timespan rhs) const noexcept { return { val - rhs.val }; }
+		highres_timespan operator-(highres_timespan rhs) const noexcept;
 
-		void operator+=(highres_timespan rhs) noexcept { val += rhs.val; }
+		void operator+=(highres_timespan rhs) noexcept;
 
-		void operator-=(highres_timespan rhs) noexcept { val -= rhs.val; }
+		void operator-=(highres_timespan rhs) noexcept;
 
-		bool operator<(highres_timespan rhs) const noexcept { return val < rhs.val; }
+		bool operator<(highres_timespan rhs) const noexcept;
 
-		bool operator<=(highres_timespan rhs) const noexcept { return val <= rhs.val; }
+		bool operator<=(highres_timespan rhs) const noexcept;
 
-		bool operator>(highres_timespan rhs) const noexcept { return val > rhs.val; }
+		bool operator>(highres_timespan rhs) const noexcept;
 
-		bool operator>=(highres_timespan rhs) const noexcept { return val >= rhs.val; }
+		bool operator>=(highres_timespan rhs) const noexcept;
 
-		bool operator==(highres_timespan rhs) const noexcept { return val == rhs.val; }
+		bool operator==(highres_timespan rhs) const noexcept;
 
-		bool operator!=(highres_timespan rhs) const noexcept { return val != rhs.val; }
+		bool operator!=(highres_timespan rhs) const noexcept;
 
 		int64_t nanoseconds() const noexcept;
 
@@ -165,25 +165,25 @@ namespace och
 
 		highres_timespan operator-(highres_time rhs) const noexcept { return { static_cast<int64_t>(val - rhs.val) }; }
 
-		highres_timespan operator+(highres_timespan rhs) const noexcept { return { static_cast<int64_t>(val + rhs.val) }; }
+		highres_timespan operator+(highres_timespan rhs) const noexcept;
 
-		highres_timespan operator-(highres_timespan rhs) const noexcept { return { static_cast<int64_t>(val - rhs.val) }; }
+		highres_timespan operator-(highres_timespan rhs) const noexcept;
 
-		void operator+=(highres_timespan rhs) noexcept { val += rhs.val; }
+		void operator+=(highres_timespan rhs) noexcept;
 
-		void operator-=(highres_timespan rhs) noexcept { val -= rhs.val; }
+		void operator-=(highres_timespan rhs) noexcept;
 
-		bool operator<(highres_time rhs) const noexcept { return val < rhs.val; }
+		bool operator<(highres_time rhs) const noexcept;
 
-		bool operator<=(highres_time rhs) const noexcept { return val <= rhs.val; }
+		bool operator<=(highres_time rhs) const noexcept;
 
-		bool operator>(highres_time rhs) const noexcept { return val > rhs.val; }
+		bool operator>(highres_time rhs) const noexcept;
 
-		bool operator>=(highres_time rhs) const noexcept { return val >= rhs.val; }
+		bool operator>=(highres_time rhs) const noexcept;
 
-		bool operator==(highres_time rhs) const noexcept { return val == rhs.val; }
+		bool operator==(highres_time rhs) const noexcept;
 
-		bool operator!=(highres_time rhs) const noexcept { return val != rhs.val; }
+		bool operator!=(highres_time rhs) const noexcept;
 	};
 
 	timespan timezone_bias() noexcept;

@@ -58,6 +58,92 @@ namespace och
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*//////////////////////////////////////////////////////timespan/////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+	timespan timespan::operator+(timespan rhs) const noexcept
+	{
+		return { val + rhs.val };
+	}
+
+	timespan timespan::operator-(timespan rhs) const noexcept
+	{
+		return timespan{ val - rhs.val };
+	}
+
+	void timespan::operator+=(timespan rhs) noexcept
+	{
+		val += rhs.val;
+	}
+
+	void timespan::operator-=(timespan rhs) noexcept
+	{
+		val -= rhs.val;
+	}
+
+	bool timespan::operator<(timespan rhs) const noexcept
+	{
+		return val < rhs.val;
+	}
+
+	bool timespan::operator<=(timespan rhs) const noexcept
+	{
+		return val <= rhs.val;
+	}
+
+	bool timespan::operator>(timespan rhs) const noexcept
+	{
+		return val > rhs.val;
+	}
+
+	bool timespan::operator>=(timespan rhs) const noexcept
+	{
+		return val >= rhs.val;
+	}
+
+	bool timespan::operator==(timespan rhs) const noexcept
+	{
+		return val == rhs.val;
+	}
+
+	bool timespan::operator!=(timespan rhs) const noexcept
+	{
+		return val != rhs.val;
+	}
+
+	int64_t timespan::microseconds() const noexcept
+	{
+		return val / 10llu;
+	}
+
+	int64_t timespan::milliseconds() const noexcept
+	{
+		return val / 10000llu;
+	}
+
+	int64_t timespan::seconds() const noexcept
+	{
+		return val / 10000000llu;
+	}
+
+	int64_t timespan::minutes() const noexcept
+	{
+		return val / 600000000llu;
+	}
+
+	int64_t timespan::hours() const noexcept
+	{
+		return val / (60 * 600000000llu);
+	}
+
+	int64_t timespan::days() const noexcept
+	{
+		return val / (24 * 60 * 600000000llu);
+	}
+
+
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*////////////////////////////////////////////////////////time///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -79,6 +165,59 @@ namespace och
 		return t;
 	}
 
+	timespan time::operator-(time rhs) const noexcept {
+		return timespan{ static_cast<int64_t>(val - rhs.val) };
+	}
+
+	timespan time::operator+(timespan rhs) const noexcept
+	{
+		return { static_cast<int64_t>(val + rhs.val) };
+	}
+
+	timespan time::operator-(timespan rhs) const noexcept
+	{
+		return { static_cast<int64_t>(val - rhs.val) };
+	}
+
+	void time::operator+=(timespan rhs) noexcept
+	{
+		val += rhs.val;
+	}
+
+	void time::operator-=(timespan rhs) noexcept
+	{
+		val -= rhs.val;
+	}
+
+	bool time::operator<(time rhs) const noexcept
+	{
+		return val < rhs.val;
+	}
+
+	bool time::operator<=(time rhs) const noexcept
+	{
+		return val <= rhs.val;
+	}
+
+	bool time::operator>(time rhs) const noexcept
+	{
+		return val > rhs.val;
+	}
+
+	bool time::operator>=(time rhs) const noexcept
+	{
+		return val >= rhs.val;
+	}
+
+	bool time::operator==(time rhs) const noexcept
+	{
+		return val == rhs.val;
+	}
+
+	bool time::operator!=(time rhs) const noexcept
+	{
+		return val != rhs.val;
+	}
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -178,6 +317,82 @@ namespace och
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*//////////////////////////////////////////////////highres_timespan/////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+	int64_t highres_timespan::nanoseconds() const noexcept
+	{
+		return val * 1000'000'000i64 / time_data.highres_clock_ticks_per_second;
+	}
+
+	int64_t highres_timespan::microseconds() const noexcept
+	{
+		return val * 1000'000i64 / time_data.highres_clock_ticks_per_second;
+	}
+
+	int64_t highres_timespan::milliseconds() const noexcept
+	{
+		return val * 1000i64 / time_data.highres_clock_ticks_per_second;
+	}
+
+	int64_t highres_timespan::seconds() const noexcept
+	{
+		return val / time_data.highres_clock_ticks_per_second;
+	}
+
+	highres_timespan highres_timespan::operator+(highres_timespan rhs) const noexcept
+	{
+		return { val + rhs.val };
+	}
+
+	highres_timespan highres_timespan::operator-(highres_timespan rhs) const noexcept
+	{
+		return { val - rhs.val };
+	}
+
+	void highres_timespan::operator+=(highres_timespan rhs) noexcept
+	{
+		val += rhs.val;
+	}
+
+	void highres_timespan::operator-=(highres_timespan rhs) noexcept
+	{
+		val -= rhs.val;
+	}
+
+	bool highres_timespan::operator<(highres_timespan rhs) const noexcept
+	{
+		return val < rhs.val;
+	}
+
+	bool highres_timespan::operator<=(highres_timespan rhs) const noexcept
+	{
+		return val <= rhs.val;
+	}
+
+	bool highres_timespan::operator>(highres_timespan rhs) const noexcept
+	{
+		return val > rhs.val;
+	}
+
+	bool highres_timespan::operator>=(highres_timespan rhs) const noexcept
+	{
+		return val >= rhs.val;
+	}
+
+	bool highres_timespan::operator==(highres_timespan rhs) const noexcept
+	{
+		return val == rhs.val;
+	}
+
+	bool highres_timespan::operator!=(highres_timespan rhs) const noexcept
+	{
+		return val != rhs.val;
+	}
+
+
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*////////////////////////////////////////////////////highres_time///////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -190,27 +405,58 @@ namespace och
 		return t;
 	}
 
-	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-	/*//////////////////////////////////////////////////highres_timespan/////////////////////////////////////////////////////*/
-	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-	int64_t highres_timespan::nanoseconds() const noexcept
+	highres_timespan highres_time::operator-(highres_time rhs) const noexcept
 	{
-		return val * 1000'000'000 / time_data.highres_clock_ticks_per_second;
+		return { static_cast<int64_t>(val - rhs.val) };
 	}
 
-	int64_t highres_timespan::microseconds() const noexcept
+	highres_timespan highres_time::operator+(highres_timespan rhs) const noexcept
 	{
-		return val * 1000'000 / time_data.highres_clock_ticks_per_second;
+		return { static_cast<int64_t>(val + rhs.val) };
 	}
 
-	int64_t highres_timespan::milliseconds() const noexcept
+	highres_timespan highres_time::operator-(highres_timespan rhs) const noexcept
 	{
-		return val * 1000 / time_data.highres_clock_ticks_per_second;
+		return { static_cast<int64_t>(val - rhs.val) };
 	}
 
-	int64_t highres_timespan::seconds() const noexcept
+	void highres_time::operator+=(highres_timespan rhs) noexcept
 	{
-		return val / time_data.highres_clock_ticks_per_second;
+		val += rhs.val;
+	}
+
+	void highres_time::operator-=(highres_timespan rhs) noexcept
+	{
+		val -= rhs.val;
+	}
+
+	bool highres_time::operator<(highres_time rhs) const noexcept
+	{
+		return val < rhs.val;
+	}
+
+	bool highres_time::operator<=(highres_time rhs) const noexcept
+	{
+		return val <= rhs.val;
+	}
+
+	bool highres_time::operator>(highres_time rhs) const noexcept
+	{
+		return val > rhs.val;
+	}
+
+	bool highres_time::operator>=(highres_time rhs) const noexcept
+	{
+		return val >= rhs.val;
+	}
+
+	bool highres_time::operator==(highres_time rhs) const noexcept
+	{
+		return val == rhs.val;
+	}
+
+	bool highres_time::operator!=(highres_time rhs) const noexcept
+	{
+		return val != rhs.val;
 	}
 }
