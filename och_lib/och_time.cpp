@@ -9,6 +9,9 @@ namespace och
 	/*//////////////////////////////////////////////////////internals////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+	// Global internal needed by time-function.
+	// These must be determined at runtime, so this global struct,
+	// initialized on startup does the job just fine.
 	struct
 	{
 		const int32_t tz_bias_min{ query_tz_bias_min() };
@@ -53,7 +56,10 @@ namespace och
 	}
 	time_data;
 
-	timespan timezone_bias() noexcept { return{ time_data.tz_bias_100ns }; }
+	timespan timezone_bias() noexcept
+	{
+		return{ time_data.tz_bias_100ns };
+	}
 
 
 
@@ -63,7 +69,7 @@ namespace och
 
 	timespan timespan::operator+(timespan rhs) const noexcept
 	{
-		return { val + rhs.val };
+		return timespan{ val + rhs.val };
 	}
 
 	timespan timespan::operator-(timespan rhs) const noexcept
@@ -171,12 +177,12 @@ namespace och
 
 	time time::operator+(timespan rhs) const noexcept
 	{
-		return { static_cast<int64_t>(val + rhs.val) };
+		return time{val + rhs.val };
 	}
 
 	time time::operator-(timespan rhs) const noexcept
 	{
-		return { static_cast<int64_t>(val - rhs.val) };
+		return time{ val - rhs.val };
 	}
 
 	void time::operator+=(timespan rhs) noexcept
@@ -342,12 +348,12 @@ namespace och
 
 	highres_timespan highres_timespan::operator+(highres_timespan rhs) const noexcept
 	{
-		return { val + rhs.val };
+		return highres_timespan{ val + rhs.val };
 	}
 
 	highres_timespan highres_timespan::operator-(highres_timespan rhs) const noexcept
 	{
-		return { val - rhs.val };
+		return highres_timespan{ val - rhs.val };
 	}
 
 	void highres_timespan::operator+=(highres_timespan rhs) noexcept
@@ -407,17 +413,17 @@ namespace och
 
 	highres_timespan highres_time::operator-(highres_time rhs) const noexcept
 	{
-		return { static_cast<int64_t>(val - rhs.val) };
+		return highres_timespan{ static_cast<int64_t>(val - rhs.val) };
 	}
 
 	highres_time highres_time::operator+(highres_timespan rhs) const noexcept
 	{
-		return { static_cast<int64_t>(val + rhs.val) };
+		return highres_time{ val + rhs.val };
 	}
 
 	highres_time highres_time::operator-(highres_timespan rhs) const noexcept
 	{
-		return { static_cast<int64_t>(val - rhs.val) };
+		return highres_time{ val - rhs.val };
 	}
 
 	void highres_time::operator+=(highres_timespan rhs) noexcept
