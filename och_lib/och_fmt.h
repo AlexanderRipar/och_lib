@@ -100,6 +100,8 @@ namespace och
 
 		arg_wrapper(char32_t value);
 
+		arg_wrapper(char value);
+
 		arg_wrapper(const och::utf8_char& value);
 
 		arg_wrapper(och::timespan value);

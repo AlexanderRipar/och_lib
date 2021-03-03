@@ -1408,6 +1408,8 @@ namespace och
 
 	arg_wrapper::arg_wrapper(char32_t value) : value{ och::utf8_char(value) }, formatter{ fmt_codepoint } {}
 
+	arg_wrapper::arg_wrapper(char value) : value{ och::utf8_char(value) }, formatter{ fmt_codepoint } {}
+
 	arg_wrapper::arg_wrapper(const och::utf8_char& value) : value{ value }, formatter{ fmt_codepoint } {}
 
 	arg_wrapper::arg_wrapper(och::timespan value) : value{ value.val }, formatter{ fmt_timespan } {}
