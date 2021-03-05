@@ -415,4 +415,28 @@ namespace och
 	};
 
 	using string = utf8_string;
+
+	template<size_t N>
+	uint32_t most_codepoints(const char* (&arr)[N])
+	{
+		uint32_t longest_cpoints = 0;
+
+		for (auto& str : arr)
+		{
+			uint32_t curr_cpoints = 0;
+			uint32_t cunits = 0;
+
+			while (str[cunits])
+			{
+				++cunits;
+
+				curr_cpoints += !_is_utf8_surr(str[cunits]);
+			}
+
+			if (curr_cpoints > longest_cpoints)
+				longest_cpoints = curr_cpoints;
+		}
+
+		return longest_cpoints;
+	}
 }
