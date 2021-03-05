@@ -52,18 +52,22 @@ namespace och
 					return false;
 
 				m_head -= codeunits_added;
+
+				for (uint32_t i = 0; i != n; ++i)
+					for (uint32_t j = 0; j != c.get_codeunits(); ++j)
+						m_buf[m_head + i * c.get_codeunits() + j] = c.cbegin()[j];
 			}
 			else
 			{
 				if (m_head + codeunits_added >= N)
 					return false;
 
+				for (uint32_t i = 0; i != n; ++i)
+					for (uint32_t j = 0; j != c.get_codeunits(); ++j)
+						m_buf[m_head + i * c.get_codeunits() + j] = c.cbegin()[j];
+
 				m_head += (uint16_t)codeunits_added;
 			}
-
-			for (uint32_t i = 0; i != n; ++i)
-				for (uint32_t j = 0; j != c.get_codeunits(); ++j)
-					m_buf[m_head + i * c.get_codeunits() + j] = c.cbegin()[j];
 
 			return true;
 		}
