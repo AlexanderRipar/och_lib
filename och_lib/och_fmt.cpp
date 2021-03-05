@@ -80,13 +80,12 @@ namespace och
 	{
 		int32_t filler_cpoints = context.width - text_codepoints;
 
-		if (context.flags & 4)
-			while (filler_cpoints > 0)
-			{
-				if (!_vprint_buf.fill(context.filler, filler_cpoints & (_vprint_buf.size - 1)))
-					_vprint_buf.flush(out);
-				filler_cpoints -= _vprint_buf.size - 1;
-			}
+		while (filler_cpoints > 0)
+		{
+			if (!_vprint_buf.fill(context.filler, filler_cpoints & (_vprint_buf.size - 1)))
+				_vprint_buf.flush(out);
+			filler_cpoints -= _vprint_buf.size - 1;
+		}
 	}
 
 	void to_vbuf_with_padding(och::iohandle out, utf8_char c, const parsed_context& context)
