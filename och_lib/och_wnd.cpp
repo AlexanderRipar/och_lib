@@ -15,141 +15,141 @@ namespace och
 	const char* vk_names[]
 	{
 		"XXX",
-		"mouse_left              = 0x01",
-		"mouse_right             = 0x02",
-		"cancel                  = 0x03",
-		"mouse_mid               = 0x04",
-		"mouse_x1                = 0x05",
-		"mouse_x2                = 0x06",
-		"XXX",
-		"backspace               = 0x08",
-		"tab                     = 0x09",
-		"XXX",
-		"XXX",
-		"clear                   = 0x0C",
-		"enter                   = 0x0D",
-		"XXX",
-		"XXX",
-		"shift                   = 0x10",
-		"control                 = 0x11",
-		"alt                     = 0x12",
-		"pause                   = 0x13",
-		"capslock                = 0x14",
-		"ime_kana                = 0x15",
-		"ime_on                  = 0x16",
-		"ime_junja               = 0x17",
-		"ime_final               = 0x18",
-		"ime_hanja               = 0x19",
-		"ime_off                 = 0x1A",
-		"escape                  = 0x1B",
-		"ime_convert             = 0x1C",
-		"ime_nonconvert          = 0x1D",
-		"ime_accept              = 0x1E",
-		"ime_modechange          = 0x1F",
-		"space                   = 0x20",
-		"pageup                  = 0x21",
-		"pagedn                  = 0x22",
-		"end                     = 0x23",
-		"home                    = 0x24",
-		"arrow_left              = 0x25",
-		"arrow_up                = 0x26",
-		"arrow_right             = 0x27",
-		"arrow_down              = 0x28",
-		"select                  = 0x29",
-		"print                   = 0x2A",
-		"execute                 = 0x2B",
-		"printscreen             = 0x2C",
-		"ins                     = 0x2D",
-		"del                     = 0x2E",
-		"help                    = 0x2F",
-		"key_0                   = 0x30",
-		"key_1                   = 0x31",
-		"key_2                   = 0x32",
-		"key_3                   = 0x33",
-		"key_4                   = 0x34",
-		"key_5                   = 0x35",
-		"key_6                   = 0x36",
-		"key_7                   = 0x37",
-		"key_8                   = 0x38",
-		"key_9                   = 0x39",
-		"XXX",
-		"XXX",
-		"XXX",
-		"XXX",
-		"XXX",
-		"XXX",
-		"XXX",
-		"key_a                   = 0x41",
-		"key_b                   = 0x42",
-		"key_c                   = 0x43",
-		"key_d                   = 0x44",
-		"key_e                   = 0x45",
-		"key_f                   = 0x46",
-		"key_g                   = 0x47",
-		"key_h                   = 0x48",
-		"key_i                   = 0x49",
-		"key_j                   = 0x4A",
-		"key_k                   = 0x4B",
-		"key_l                   = 0x4C",
-		"key_m                   = 0x4D",
-		"key_n                   = 0x4E",
-		"key_o                   = 0x4F",
-		"key_p                   = 0x50",
-		"key_q                   = 0x51",
-		"key_r                   = 0x52",
-		"key_s                   = 0x53",
-		"key_t                   = 0x54",
-		"key_u                   = 0x55",
-		"key_v                   = 0x56",
-		"key_w                   = 0x57",
-		"key_x                   = 0x58",
-		"key_y                   = 0x59",
-		"key_z                   = 0x5A",
-		"windowsleft             = 0x5B",
-		"windowsright            = 0x5C",
-		"application             = 0x5D",
-		"XXX",
-		"sleep                   = 0x5F",
-		"numpad_0                = 0x60",
-		"numpad_1                = 0x61",
-		"numpad_2                = 0x62",
-		"numpad_3                = 0x63",
-		"numpad_4                = 0x64",
-		"numpad_5                = 0x65",
-		"numpad_6                = 0x66",
-		"numpad_7                = 0x67",
-		"numpad_8                = 0x68",
-		"numpad_9                = 0x69",
-		"multiply                = 0x6A",
-		"add                     = 0x6B",
-		"separator               = 0x6C",
-		"subtract                = 0x6D",
-		"decimal                 = 0x6E",
-		"divide                  = 0x6F",
-		"f1                      = 0x70",
-		"f2                      = 0x71",
-		"f3                      = 0x72",
-		"f4                      = 0x73",
-		"f5                      = 0x74",
-		"f6                      = 0x75",
-		"f7                      = 0x76",
-		"f8                      = 0x77",
-		"f9                      = 0x78",
-		"f10                     = 0x79",
-		"f11                     = 0x7A",
-		"f12                     = 0x7B",
-		"f13                     = 0x7C",
-		"f14                     = 0x7D",
-		"f15                     = 0x7E",
-		"f16                     = 0x7F",
-		"f17                     = 0x80",
-		"f18                     = 0x81",
-		"f19                     = 0x82",
-		"f20                     = 0x83",
-		"f21                     = 0x84",
-		"f22                     = 0x85",
-		"f23                     = 0x86",
-		"f24                     = 0x87",
+		"mouse_left",
+		"mouse_right",
+		"cancel",
+		"mouse_mid",
+		"mouse_x1",
+		"mouse_x2",
+		"XXX",
+		"backspace",
+		"tab",
+		"XXX",
+		"XXX",
+		"clear",
+		"enter",
+		"XXX",
+		"XXX",
+		"shift",
+		"control",
+		"alt",
+		"pause",
+		"capslock",
+		"ime_kana",
+		"ime_on",
+		"ime_junja",
+		"ime_final",
+		"ime_hanja",
+		"ime_off",
+		"escape",
+		"ime_convert",
+		"ime_nonconvert",
+		"ime_accept",
+		"ime_modechange",
+		"space",
+		"pageup",
+		"pagedn",
+		"end",
+		"home",
+		"arrow_left",
+		"arrow_up",
+		"arrow_right",
+		"arrow_down",
+		"select",
+		"print",
+		"execute",
+		"printscreen",
+		"ins",
+		"del",
+		"help",
+		"key_0",
+		"key_1",
+		"key_2",
+		"key_3",
+		"key_4",
+		"key_5",
+		"key_6",
+		"key_7",
+		"key_8",
+		"key_9",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"key_a",
+		"key_b",
+		"key_c",
+		"key_d",
+		"key_e",
+		"key_f",
+		"key_g",
+		"key_h",
+		"key_i",
+		"key_j",
+		"key_k",
+		"key_l",
+		"key_m",
+		"key_n",
+		"key_o",
+		"key_p",
+		"key_q",
+		"key_r",
+		"key_s",
+		"key_t",
+		"key_u",
+		"key_v",
+		"key_w",
+		"key_x",
+		"key_y",
+		"key_z",
+		"windowsleft",
+		"windowsright",
+		"application",
+		"XXX",
+		"sleep",
+		"numpad_0",
+		"numpad_1",
+		"numpad_2",
+		"numpad_3",
+		"numpad_4",
+		"numpad_5",
+		"numpad_6",
+		"numpad_7",
+		"numpad_8",
+		"numpad_9",
+		"multiply",
+		"add",
+		"separator",
+		"subtract",
+		"decimal",
+		"divide",
+		"f1",
+		"f2",
+		"f3",
+		"f4",
+		"f5",
+		"f6",
+		"f7",
+		"f8",
+		"f9",
+		"f10",
+		"f11",
+		"f12",
+		"f13",
+		"f14",
+		"f15",
+		"f16",
+		"f17",
+		"f18",
+		"f19",
+		"f20",
+		"f21",
+		"f22",
+		"f23",
+		"f24",
 		"XXX",
 		"XXX",
 		"XXX",
@@ -158,8 +158,8 @@ namespace och
 		"XXX",
 		"XXX",
 		"XXX",
-		"numlock                 = 0x90",
-		"scroll                  = 0x91",
+		"numlock",
+		"scroll_lock",
 		"XXX",
 		"XXX",
 		"XXX",
@@ -175,38 +175,38 @@ namespace och
 		"XXX",
 		"XXX",
 		"XXX",
-		"shift_right             = 0xA1",
-		"control_left            = 0xA2",
-		"control_right           = 0xA3",
-		"menu_left               = 0xA4",
-		"menu_right              = 0xA5",
-		"browser_back            = 0xA6",
-		"browser_forward         = 0xA7",
-		"browser_refresh         = 0xA8",
-		"browser_stop            = 0xA9",
-		"browser_search          = 0xAA",
-		"browser_favorites       = 0xAB",
-		"browser_home            = 0xAC",
-		"volume_mute             = 0xAD",
-		"volume_down             = 0xAE",
-		"volume_up               = 0xAF",
-		"media_nexttrack         = 0xB0",
-		"media_prevtrack         = 0xB1",
-		"media_stop              = 0xB2",
-		"media_play_pause        = 0xB3",
-		"launch_mail             = 0xB4",
-		"launch_media_select     = 0xB5",
-		"launch_app1             = 0xB6",
-		"launch_app2             = 0xB7",
+		"shift_right",
+		"control_left",
+		"control_right",
+		"alt_left",
+		"alt_right",
+		"browser_back",
+		"browser_forward",
+		"browser_refresh",
+		"browser_stop",
+		"browser_search",
+		"browser_favorites",
+		"browser_home",
+		"volume_mute",
+		"volume_down",
+		"volume_up",
+		"media_nexttrack",
+		"media_prevtrack",
+		"media_stop",
+		"media_play_pause",
+		"launch_mail",
+		"launch_media_select",
+		"launch_app1",
+		"launch_app2",
 		"XXX",
 		"XXX",
-		"oem_1                   = 0xBA",
-		"oem_plus                = 0xBB",
-		"oem_comma               = 0xBC",
-		"oem_minus               = 0xBD",
-		"oem_period              = 0xBE",
-		"oem_2                   = 0xBF",
-		"oem_3                   = 0xC0",
+		"oem_1",
+		"oem_plus",
+		"oem_comma",
+		"oem_minus",
+		"oem_period",
+		"oem_2",
+		"oem_3",
 		"XXX",
 		"XXX",
 		"XXX",
@@ -233,64 +233,51 @@ namespace och
 		"XXX",
 		"XXX",
 		"XXX",
-		"oem_4                   = 0xDB",
-		"oem_5                   = 0xDC",
-		"oem_6                   = 0xDD",
-		"oem_7                   = 0xDE",
-		"oem_9                   = 0xDF",
+		"oem_4",
+		"oem_5",
+		"oem_6",
+		"oem_7",
+		"oem_9",
 		"XXX",
-		"oem_102                 = 0xE2",
-		"processkey              = 0xE5",
-		"packet                  = 0xE7",
-		"attn                    = 0xF6",
-		"crsel                   = 0xF7",
-		"exsel                   = 0xF8",
-		"eof                     = 0xF9",
-		"play                    = 0xFA",
-		"zoom                    = 0xFB",
-		"pa1                     = 0xFD",
-		"oem_clear               = 0xFE",
+		"XXX",
+		"oem_102",
+		"XXX",
+		"XXX",
+		"ime_processkey",
+		"XXX",
+		"packet",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"XXX",
+		"attn",
+		"crsel",
+		"exsel",
+		"eof",
+		"play",
+		"zoom",
+		"XXX",
+		"pa1",
+		"oem_clear",
 	};
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*/////////////////////////////////////////////////////windowproc////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	void unicode_alt_up(och::window& dat) noexcept
-	{
-		if (dat.m_unicode_input_cpoint <= 1114112)
-		{
-			dat.enqueue_text(utf8_char(dat.m_unicode_input_cpoint));
-			dat.m_unicode_input_cpoint = 0xC000'0000;
-			//och::print(testout, "OWN: {}\n", dat.get_text());
-		}
-	}
-
-	void unicode_numpad(och::window& dat, WPARAM w) noexcept
-	{
-		if (w >= vk::numpad_0 && w <= vk::numpad_9)
-		{
-			if (dat.m_unicode_input_cpoint & 0x8000'0000)
-				dat.m_unicode_input_cpoint = 0;
-			dat.m_unicode_input_cpoint = (char32_t)(dat.m_unicode_input_cpoint * 10 + w - vk::numpad_0);
-		}
-	}
-
-	bool is_unicode_skip(och::window& dat)
-	{
-		if (dat.m_unicode_input_cpoint & 0x4000'0000)
-		{
-			dat.m_unicode_input_cpoint &= ~0x4000'0000;
-			return true;
-		}
-		return false;
-	}
-
 	LRESULT __stdcall och_window_function(HWND wnd, UINT msg, WPARAM w, LPARAM l)
 	{
 		och::window& dat = *reinterpret_cast<och::window*>(GetWindowLongPtrW(wnd, GWLP_USERDATA));
-
-		och::utf8_char alt_num_input;
 
 		switch (msg)
 		{
@@ -299,84 +286,43 @@ namespace och
 			return 0;
 
 		case WM_KEYDOWN:
-
-			dat.m_keyboard[w >> 2] |= 1 << (w & 3);
-			return 0;
-
-		case WM_KEYUP:
-			if (w == vk::alt)
-				unicode_alt_up(dat);
-
-			dat.m_keyboard[w >> 2] &= ~(1 << (w & 3));
-
-			return 0;
-
-		case WM_SYSKEYUP:
-
-			unicode_numpad(dat, w);
-
+		case WM_SYSKEYDOWN:
+			dat.set_key((uint8_t)w);
 			break;
 
-		case WM_CHAR:
-
-			if (is_unicode_skip(dat))
-				return 0;
-
-			dat.enqueue_text((uint32_t)w);
-			//och::print(testout, "WIN: {}\n", dat.get_text());
-
-			return 0;
-
-		case WM_MBUTTONDOWN:
-
+		case WM_KEYUP:
+		case WM_SYSKEYUP:
+			dat.unset_key((uint8_t)w);
 			break;
 
 		case WM_LBUTTONDOWN:
-
-			break;
-
 		case WM_RBUTTONDOWN:
-
-			break;
-
-		case WM_MBUTTONUP:
-
+		case WM_MBUTTONDOWN:
+		case WM_XBUTTONDOWN:
+			dat.update_mouse_pos(l);
+			dat.set_key(static_cast<uint8_t>(msg - (msg >> 1) - (msg == WM_XBUTTONDOWN && (w & (1 << 16)))));//Figure out key from low four bits of message
 			break;
 
 		case WM_LBUTTONUP:
-
-			break;
-
 		case WM_RBUTTONUP:
-
-			break;
-
-		case WM_MBUTTONDBLCLK:
-
-			break;
-
-		case WM_LBUTTONDBLCLK:
-
-			break;
-
-		case WM_RBUTTONDBLCLK:
-
+		case WM_MBUTTONUP:
+		case WM_XBUTTONUP:
+			dat.update_mouse_pos(l);
+				dat.unset_key(static_cast<uint8_t>((msg >> 1) - (msg == WM_XBUTTONUP && (w & (1 << 16)))));//Figure out key from low four bits of message
 			break;
 
 		case WM_MOUSEHWHEEL:
-
+			dat.update_mouse_pos(l);
+			dat.m_mouse_h_scroll += static_cast<int16_t>(w >> 16);
 			break;
 
 		case WM_MOUSEWHEEL:
-
-			break;
-
-		case WM_MOUSELEAVE:
-
+			dat.update_mouse_pos(l);
+			dat.m_mouse_scroll += static_cast<int16_t>(w >> 16);
 			break;
 
 		case WM_MOUSEMOVE:
-
+			dat.update_mouse_pos(l);
 			break;
 		}
 
@@ -422,7 +368,7 @@ namespace och
 
 	} _window_base;
 
-	void* create_window(uint32_t w, uint32_t h, bool is_resizable, bool disable_menu, const och::stringview& name) noexcept
+	void* create_window(uint32_t w, uint32_t h, bool is_resizable, bool disable_menu, const och::stringview& title) noexcept
 	{
 		const wchar_t* cls_id = _window_base.get_id();
 
@@ -430,7 +376,19 @@ namespace och
 
 		wchar_t utf16_name[256];
 
-		MultiByteToWideChar(65001, 0, name.raw_cbegin(), name.get_codeunits() + 1, utf16_name, 256);
+		uint32_t utf16_units = MultiByteToWideChar(65001, 0, title.raw_cbegin(), title.get_codeunits(), utf16_name, 25);
+
+		if (!utf16_units && title.get_codeunits())
+		{
+			utf16_name[0] = u'E';
+			utf16_name[1] = u'r';
+			utf16_name[2] = u'r';
+			utf16_name[3] = u'o';
+			utf16_name[4] = u'r';
+			utf16_name[5] = u'\0';
+		}
+		else
+			utf16_name[utf16_units] = 0;
 
 		return CreateWindowExW(0, cls_id, utf16_name, style, CW_USEDEFAULT, CW_USEDEFAULT, w, h, nullptr, nullptr, _window_base.instance_handle, nullptr);
 	}
@@ -441,7 +399,7 @@ namespace och
 	/*///////////////////////////////////////////////////////window//////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	window::window(uint32_t w, uint32_t h, bool is_resizable, bool disable_menu, const och::stringview& name) noexcept : m_window_handle(create_window(w, h, is_resizable, disable_menu, name)), m_window_title(name)
+	window::window(uint32_t w, uint32_t h, bool is_resizable, bool disable_menu, const och::stringview& title) noexcept : m_window_handle(create_window(w, h, is_resizable, disable_menu, title))
 	{
 		SetWindowLongPtrW((HWND)m_window_handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 	}
@@ -449,6 +407,20 @@ namespace och
 	window::~window() noexcept
 	{
 		DestroyWindow((HWND)m_window_handle);
+	}
+
+	bool window::set_title(const utf8_view& title) noexcept
+	{
+		wchar_t utf16_name[256];
+
+		uint32_t utf16_units = MultiByteToWideChar(65001, 0, title.raw_cbegin(), title.get_codeunits(), utf16_name, 25);
+
+		if (!utf16_units && title.get_codeunits())
+			return false;
+
+		utf16_name[utf16_units] = 0;
+
+		return SetWindowTextW((HWND)m_window_handle, utf16_name);
 	}
 
 	bool window::toggle_fullscreen() noexcept
@@ -507,69 +479,9 @@ namespace och
 		return ShowWindow((HWND)m_window_handle, SW_NORMAL);
 	}
 
-	bool window::key_pressed(uint8_t vk) const noexcept
+	bool window::key_is_down(uint8_t vk) const noexcept
 	{
-		return m_keyboard[vk >> 2] & (1 << (vk & 3));
-	}
-
-	bool window::key_up(uint8_t vk) const noexcept
-	{
-		bool curr_state = m_keyboard[vk >> 2] & (1 << (vk & 3));
-		bool last_state = m_keyboard[vk >> 2] & (16 << (vk & 3));
-
-		return (!curr_state) & last_state;
-	}
-
-	bool window::key_down(uint8_t vk) const noexcept
-	{
-		bool curr_state = m_keyboard[vk >> 2] & (1 << (vk & 3));
-		bool last_state = m_keyboard[vk >> 2] & (16 << (vk & 3));
-
-		return curr_state & (!last_state);
-	}
-
-	utf8_char window::get_text() noexcept
-	{
-		uint8_t old_head = m_input_first_unread;
-
-		m_input_first_unread = (++m_input_first_unread) & (max_text_queue_chars - 1);
-
-		return m_text_queue[old_head];
-	}
-
-	utf8_char window::peek_text() const noexcept
-	{
-		return m_text_queue[m_input_first_unread];
-	}
-
-	uint8_t window::input_queue_len() const noexcept
-	{
-		return (int32_t)m_input_first_unread - (int32_t)m_input_last < 0 ? m_input_last - m_input_first_unread : m_input_first_unread - m_input_last;
-	}
-
-	void window::cycle_keyboard() noexcept
-	{
-		for (auto& key : m_keyboard)
-			key <<= 4;
-	}
-
-	void window::enqueue_text(uint32_t utf16_cpoint) noexcept
-	{
-		const char16_t hi = utf16_cpoint & 0xFFFF;
-		const char16_t lo = utf16_cpoint >> 16;
-
-		bool is_surr_pair = hi >= 0xD800 && hi <= 0xDBFF && lo >= 0xDC00 && lo <= 0xDFFF;
-
-		char32_t cpoint = is_surr_pair ? ((static_cast<char32_t>(hi - 0xD800) << 10) | (lo - 0xDC00)) + 0x10000 : static_cast<char32_t>(hi);
-
-		enqueue_text(utf8_char(cpoint));
-	}
-
-	void window::enqueue_text(utf8_char c) noexcept
-	{
-		m_text_queue[m_input_last] = c;
-
-		m_input_last = (++m_input_last) & (max_text_queue_chars - 1);
+		return m_keyboard[vk >> 6] & (1ull << (vk & 63));
 	}
 
 	void window::update() noexcept
@@ -582,5 +494,21 @@ namespace och
 
 			DispatchMessageW(&m);
 		}
+	}
+
+	void window::set_key(uint8_t vk) noexcept
+	{
+		m_keyboard[vk >> 6] |= 1ull << (vk & 63);
+	}
+
+	void window::unset_key(uint8_t vk) noexcept
+	{
+		m_keyboard[vk >> 6] &= ~(1ull << (vk & 63));
+	}
+
+	void window::update_mouse_pos(int64_t lparam) noexcept
+	{
+		m_mouse_x = static_cast<int16_t>(lparam & 0xFFFF);
+		m_mouse_y = static_cast<int16_t>((lparam >> 16) & 0xFFFF);
 	}
 }
