@@ -168,6 +168,7 @@
     <ClCompile Include="och_utf8.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="och_bin.h" />
     <ClInclude Include="och_constexpr_util.h" />
     <ClInclude Include="och_debug.h" />
     <ClInclude Include="och_fio.h" />
