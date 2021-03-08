@@ -20,6 +20,7 @@ namespace och
 			float f32;
 			double f64;
 			const void* ptr;
+			och::utf8_char utf_c;
 		};
 
 		type_union(uint64_t u64) : u64{ u64 } {}
@@ -43,6 +44,8 @@ namespace och
 		type_union(double f64) : f64{ f64 } {}
 
 		type_union(const void* ptr) : ptr{ ptr } {}
+
+		type_union(och::utf8_char utf_c) : utf_c{ utf_c } {}
 
 		type_union() = default;
 	};
