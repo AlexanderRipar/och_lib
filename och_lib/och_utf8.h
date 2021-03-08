@@ -79,7 +79,7 @@ namespace och
 		union
 		{
 			char m_codeunits[4] alignas(uint32_t);
-			uint32_t m_intval{ 0 };
+			uint32_t m_intval;
 		};
 
 		constexpr uint32_t _init_intval_from_cstring(const char* cstring)
@@ -114,7 +114,7 @@ namespace och
 
 		constexpr utf8_char(char ascii_codepoint) noexcept : m_intval{ (uint32_t)ascii_codepoint } {}
 
-		constexpr utf8_char() = default;
+		utf8_char() = default;
 
 		constexpr uint32_t get_codeunits() const noexcept
 		{
@@ -149,6 +149,18 @@ namespace och
 		constexpr const char* end() noexcept
 		{
 			return m_codeunits + get_codeunits();
+		}
+
+		static constexpr utf8_char from_raw_value(uint32_t intval)
+		{
+			utf8_char c{ U'\0' };
+			c.m_intval = intval;
+			return c;
+		}
+
+		constexpr uint32_t get_raw_value() const noexcept
+		{
+			return m_intval;
 		}
 
 		constexpr bool operator==(const utf8_char& rhs) const noexcept
