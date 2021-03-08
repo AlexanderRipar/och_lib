@@ -189,7 +189,7 @@ namespace och
 
 	iohandle create_tempfile(uint32_t share_mode) noexcept
 	{
-		char filename[MAX_PATH];
+		char filename[MAX_PATH + 1];
 
 		if (!GetTempFileNameA(".", "och", 0, filename))
 			return nullptr;
@@ -208,8 +208,6 @@ namespace och
 	filehandle::filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
 
 	filehandle::filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
-
-	filehandle::filehandle(iohandle handle) noexcept : handle{ handle } {}
 
 	filehandle::~filehandle() noexcept { close_file(handle); }
 
