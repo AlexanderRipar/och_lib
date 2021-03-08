@@ -92,10 +92,10 @@
     <ClInclude Include="och_wnd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="och_bin.h">
+    <ClInclude Include="och_basic_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="och_type_union.h">
+    <ClInclude Include="och_ocd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -168,7 +168,7 @@
     <ClCompile Include="och_utf8.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="och_bin.h" />
+    <ClInclude Include="och_ocd.h" />
     <ClInclude Include="och_constexpr_util.h" />
     <ClInclude Include="och_debug.h" />
     <ClInclude Include="och_fio.h" />
@@ -178,7 +178,7 @@
     <ClInclude Include="och_net.h" />
     <ClInclude Include="och_rtv.h" />
     <ClInclude Include="och_time.h" />
-    <ClInclude Include="och_type_union.h" />
+    <ClInclude Include="och_basic_types.h" />
     <ClInclude Include="och_utf8buf.h" />
     <ClInclude Include="och_wnd.h" />
     <ClInclude Include="och_timer.h" />
