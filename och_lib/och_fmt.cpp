@@ -448,7 +448,7 @@ namespace och
 
 	void fmt_codepoint(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
-		och::utf8_char value = och::utf8_char::from_raw_value(arg_value.u32);
+		och::utf8_char value = arg_value.utf_c;
 
 		to_vbuf_with_padding(out, value, context);
 	}
@@ -1375,11 +1375,11 @@ namespace och
 
 	arg_wrapper::arg_wrapper(const och::date& value) : value{ (const void*)&value }, formatter{ fmt_date } {}
 
-	arg_wrapper::arg_wrapper(char32_t value) : value{ och::utf8_char(value).get_raw_value() }, formatter{ fmt_codepoint } {}
+	arg_wrapper::arg_wrapper(char32_t value) : value{ och::utf8_char(value) }, formatter{ fmt_codepoint } {}
 
-	arg_wrapper::arg_wrapper(char value) : value{ och::utf8_char(value).get_raw_value() }, formatter{ fmt_codepoint } {}
+	arg_wrapper::arg_wrapper(char value) : value{ och::utf8_char(value) }, formatter{ fmt_codepoint } {}
 
-	arg_wrapper::arg_wrapper(const och::utf8_char& value) : value{ value.get_raw_value() }, formatter{ fmt_codepoint } {}
+	arg_wrapper::arg_wrapper(const och::utf8_char& value) : value{ value }, formatter{ fmt_codepoint } {}
 
 	arg_wrapper::arg_wrapper(och::timespan value) : value{ value.val }, formatter{ fmt_timespan } {}
 
