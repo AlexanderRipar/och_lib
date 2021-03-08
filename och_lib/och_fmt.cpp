@@ -366,65 +366,65 @@ namespace och
 	/*///////////////////////////////////////////////formatting functions////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	void fmt_uint64(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_uint64(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		uint64_t value = arg_value.u64;
 
 		fmt_integer_base(out, value, context, 64);
 	}
 
-	void fmt_int64(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_int64(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		int64_t value = arg_value.i64;
 
 		fmt_integer_base(out, value, context, 64, _get_sign(value, context));
 	}
 
-	void fmt_uint32(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_uint32(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		uint32_t value = arg_value.u32;
 
 		fmt_integer_base(out, value, context, 32);
 	}
 
-	void fmt_int32(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_int32(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		int32_t value = arg_value.i32;
 
 		fmt_integer_base(out, value, context, 32, _get_sign(value, context));
 	}
 
-	void fmt_uint16(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_uint16(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		uint16_t value = arg_value.u16;
 
 		fmt_integer_base(out, value, context, 16);
 	}
 
-	void fmt_int16(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_int16(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		int16_t value = arg_value.i16;
 
 		fmt_integer_base(out, value, context, 16, _get_sign(value, context));
 	}
 
-	void fmt_uint8(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_uint8(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		uint8_t value = arg_value.u8;
 
 		fmt_integer_base(out, value, context, 8);
 	}
 
-	void fmt_int8(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_int8(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		int8_t value = arg_value.i8;
 
 		fmt_integer_base(out, value, context, 8, _get_sign(value, context));
 	}
 
-	void fmt_utf8_view(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_utf8_view(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
-		och::utf8_view value = *(const och::utf8_view*)arg_value.p;
+		och::utf8_view value = *(const och::utf8_view*)arg_value.ptr;
 
 		if (value.get_codepoints() > context.precision)
 			value = value.subview(0, context.precision);
@@ -432,29 +432,29 @@ namespace och
 		to_vbuf_with_padding(out, value, context);
 	}
 
-	void fmt_utf8_string(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_utf8_string(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
-		och::utf8_view value(*(const och::utf8_string*)arg_value.p);
+		och::utf8_view value(*(const och::utf8_string*)arg_value.ptr);
 
 		fmt_utf8_view(out, (const void*)&value, context);
 	}
 
-	void fmt_cstring(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_cstring(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
-		och::utf8_view value(reinterpret_cast<const char*>(arg_value.p));
+		och::utf8_view value(reinterpret_cast<const char*>(arg_value.ptr));
 
 		fmt_utf8_view(out, (const void*)&value, context);
 	}
 
-	void fmt_codepoint(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_codepoint(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
-		och::utf8_char value = arg_value.c;
+		och::utf8_char value = och::utf8_char::from_raw_value(arg_value.u32);
 
 		to_vbuf_with_padding(out, value, context);
 	}
 
 	//TODO implement
-	void fmt_float(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_float(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		arg_value;
 
@@ -598,7 +598,7 @@ namespace och
 	}
 
 	//TODO implement
-	void fmt_double(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_double(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		arg_value;
 
@@ -607,7 +607,7 @@ namespace och
 		och::write_to_file(out, och::range("[[fmt_double is not yet implemented]]"));
 	}
 
-	void fmt_date(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_date(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		//          [y]yyyy-mm-dd, hh:mm:ss.mmm
 		// d   ->   [y]yyyy-mm-dd
@@ -634,7 +634,7 @@ namespace och
 		//          | Capital letters (except U) indicate leading zeroes, or extended name                      |
 		//          +-------------------------------------------------------------------------------------------+
 
-		const och::date& value = *reinterpret_cast<const och::date*>(arg_value.p);
+		const och::date& value = *reinterpret_cast<const och::date*>(arg_value.ptr);
 
 		uint32_t utf8_cpoints = 0;
 
@@ -841,7 +841,7 @@ namespace och
 	}
 
 	//TODO improve (Not happy)
-	void fmt_timespan(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_timespan(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		//     ->   seconds (with format specifier)
 		// d   ->   days
@@ -874,7 +874,7 @@ namespace och
 
 		const char* specifier = nullptr;
 
-		int64_t fmt_value;
+		int64_t type_union;
 
 		switch (c)
 		{
@@ -990,13 +990,13 @@ namespace och
 		case 'D':
 			specifier = "d";
 		case 'd':
-			fmt_value = value.days();
+			type_union = value.days();
 			break;
 
 		case 'H':
 			specifier = "h";
 		case 'h':
-			fmt_value = value.hours();
+			type_union = value.hours();
 			break;
 
 		case 'M':
@@ -1010,13 +1010,13 @@ namespace och
 			{
 				specifier = "ms";
 
-				fmt_value = value.milliseconds();
+				type_union = value.milliseconds();
 			}
 			else if (context.raw_context[0] == 'I' && context.raw_context[1] == 'N')
 			{
 				specifier = "min";
 
-				fmt_value = value.minutes();
+				type_union = value.minutes();
 			}
 			else
 			{
@@ -1033,9 +1033,9 @@ namespace och
 				return;
 			}
 			else if (context.raw_context[0] == 's')
-				fmt_value = value.milliseconds();
+				type_union = value.milliseconds();
 			else if (context.raw_context[0] == 'i' && context.raw_context[1] == 'n')
-				fmt_value = value.minutes();
+				type_union = value.minutes();
 			else
 			{
 				to_vbuf_with_padding(out, invalid_specifier_msg, context);
@@ -1047,19 +1047,19 @@ namespace och
 		case 'S':
 			specifier = "s";
 		case 's':
-			fmt_value = value.seconds();
+			type_union = value.seconds();
 			break;
 
 		case U'μ':
 			specifier = u8"μs";
-			fmt_value = value.microseconds();
+			type_union = value.microseconds();
 			++utf_surr_count;
 			break;
 
 		case 'U':
 			specifier = "us";
 		case 'u':
-			fmt_value = value.microseconds();
+			type_union = value.microseconds();
 			break;
 
 		case 'L':
@@ -1205,7 +1205,7 @@ namespace och
 			return;
 		}
 
-		uint32_t log10_v = log10(fmt_value);
+		uint32_t log10_v = log10(type_union);
 
 		uint32_t chars = log10_v + (sign != 0) - utf_surr_count;
 
@@ -1219,7 +1219,7 @@ namespace och
 		if (is_rightadj(context))
 			pad_vbuf(out, chars, context);
 
-		_fmt_decimal(out, fmt_value, log10_v, sign);
+		_fmt_decimal(out, type_union, log10_v, sign);
 
 		if (specifier)
 			to_vbuf(out, och::stringview(specifier, specifier_len, 1));
@@ -1229,7 +1229,7 @@ namespace och
 	}
 
 	//TODO implement
-	void fmt_highres_timespan(och::iohandle out, fmt_value arg_value, const parsed_context& context)
+	void fmt_highres_timespan(och::iohandle out, type_union arg_value, const parsed_context& context)
 	{
 		out;
 
@@ -1344,36 +1344,6 @@ namespace och
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-	/*/////////////////////////////////////////////////////fmt_value/////////////////////////////////////////////////////////*/
-	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-	fmt_value::fmt_value(uint64_t u64) : u64{ u64 } {}
-
-	fmt_value::fmt_value(int64_t i64) : i64{ i64 } {}
-
-	fmt_value::fmt_value(uint32_t u32) : u32{ u32 } {}
-
-	fmt_value::fmt_value(int32_t i32) : i32{ i32 } {}
-
-	fmt_value::fmt_value(uint16_t u16) : u16{ u16 } {}
-
-	fmt_value::fmt_value(int16_t i16) : i16{ i16 } {}
-
-	fmt_value::fmt_value(uint8_t u8) : u8{ u8 } {}
-
-	fmt_value::fmt_value(int8_t i8) : i8{ i8 } {}
-
-	fmt_value::fmt_value(float f) : f{ f } {}
-
-	fmt_value::fmt_value(double d) : d{ d } {}
-
-	fmt_value::fmt_value(och::utf8_char c) : c{ c } {}
-
-	fmt_value::fmt_value(const void* p) : p{ p } {}
-
-
-
-	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*////////////////////////////////////////////////////arg_wrapper////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -1405,11 +1375,11 @@ namespace och
 
 	arg_wrapper::arg_wrapper(const och::date& value) : value{ (const void*)&value }, formatter{ fmt_date } {}
 
-	arg_wrapper::arg_wrapper(char32_t value) : value{ och::utf8_char(value) }, formatter{ fmt_codepoint } {}
+	arg_wrapper::arg_wrapper(char32_t value) : value{ och::utf8_char(value).get_raw_value() }, formatter{ fmt_codepoint } {}
 
-	arg_wrapper::arg_wrapper(char value) : value{ och::utf8_char(value) }, formatter{ fmt_codepoint } {}
+	arg_wrapper::arg_wrapper(char value) : value{ och::utf8_char(value).get_raw_value() }, formatter{ fmt_codepoint } {}
 
-	arg_wrapper::arg_wrapper(const och::utf8_char& value) : value{ value }, formatter{ fmt_codepoint } {}
+	arg_wrapper::arg_wrapper(const och::utf8_char& value) : value{ value.get_raw_value() }, formatter{ fmt_codepoint } {}
 
 	arg_wrapper::arg_wrapper(och::timespan value) : value{ value.val }, formatter{ fmt_timespan } {}
 

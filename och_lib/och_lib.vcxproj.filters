@@ -95,6 +95,9 @@
     <ClInclude Include="och_bin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="och_type_union.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="testout.txt">
