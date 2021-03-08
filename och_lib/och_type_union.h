@@ -19,7 +19,6 @@ namespace och
 			int8_t i8;
 			float f32;
 			double f64;
-			och::utf8_char c;
 			const void* ptr;
 		};
 
@@ -42,8 +41,6 @@ namespace och
 		type_union(float f32) : f32{ f32 } {}
 
 		type_union(double f64) : f64{ f64 } {}
-
-		type_union(och::utf8_char c) : c{ c } {}
 
 		type_union(const void* ptr) : ptr{ ptr } {}
 
