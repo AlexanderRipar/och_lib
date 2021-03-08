@@ -87,9 +87,9 @@ namespace och
 
 		filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
 
-		filehandle(iohandle handle) noexcept;
-
 		~filehandle() noexcept;
+		
+		filehandle(const filehandle&) = delete;
 
 		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept;
 
@@ -110,6 +110,10 @@ namespace och
 		void close() const noexcept;
 
 		[[nodiscard]] bool operator!() const noexcept;
+
+	protected:
+
+		filehandle(iohandle handle);
 	};
 
 	struct tempfilehandle : public filehandle

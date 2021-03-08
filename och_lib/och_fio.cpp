@@ -231,6 +231,8 @@ namespace och
 
 	[[nodiscard]] bool filehandle::operator!() const noexcept { return !handle.ptr; }
 
+	filehandle::filehandle(iohandle handle) : handle{ handle } {}
+
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
