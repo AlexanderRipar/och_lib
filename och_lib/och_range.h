@@ -24,7 +24,7 @@ namespace och
 		T* beg, * end;
 
 		template<size_t Len>
-		constexpr explicit range(T(&arr)[Len]) noexcept : beg{ arr }, end{ arr + Len } {}
+		constexpr range(T(&arr)[Len]) noexcept : beg{ arr }, end{ arr + Len } {}
 
 		constexpr range(T* beg, T* end) noexcept : beg{ beg }, end{ end } {}
 
