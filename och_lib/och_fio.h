@@ -168,7 +168,7 @@ namespace och
 		[[nodiscard]] T& operator[](uint32_t idx) { return reinterpret_cast<T*>(data.ptr)[idx]; }
 
 		template<typename U>
-		[[nodiscard]] U& get(uint32_t idx) { return reinterpret_cast<U*>(data.ptr)[idx] };
+		[[nodiscard]] U& get(uint32_t idx) { return reinterpret_cast<U*>(data.ptr)[idx]; }
 
 		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(file.ptr, buf); }
 
