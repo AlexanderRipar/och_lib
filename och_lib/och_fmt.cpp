@@ -20,10 +20,10 @@ namespace och
 	constexpr const char* weekdays = "Sunday\0\0\0\0" "Monday\0\0\0\0" "Tuesday\0\0\0" "Wednesday\0" "Thursday\0\0" "Friday\0\0\0\0" "Saturday\0";
 
 	constexpr const char* months = "January\0\0\0"    "February\0\0"   "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0"
-		                           "July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
+		"July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
 
 	och::forward_utf8_buffer<1024> _vprint_buf;
-	
+
 	uint32_t log2(uint64_t n)
 	{
 		uint32_t idx;
@@ -90,12 +90,12 @@ namespace och
 
 	void to_vbuf_with_padding(och::iohandle out, utf8_char c, const parsed_context& context)
 	{
-		if(is_rightadj(context))
+		if (is_rightadj(context))
 			pad_vbuf(out, 1, context);
 
 		to_vbuf(out, c);
 
-		if(!is_rightadj(context))
+		if (!is_rightadj(context))
 			pad_vbuf(out, 1, context);
 	}
 
@@ -275,13 +275,13 @@ namespace och
 				cpoints += 3;
 				break;
 			case 'N':
-				{
-					const char* monthname = months + (ptrdiff_t)(d.month() - 1) * 10;
+			{
+				const char* monthname = months + (ptrdiff_t)(d.month() - 1) * 10;
 
-					while (*monthname++)
-						++cpoints;
-				}
-				break;
+				while (*monthname++)
+					++cpoints;
+			}
+			break;
 			case 'd':
 				cpoints += d.monthday() >= 10 ? 2 : 1;
 				break;
@@ -292,13 +292,13 @@ namespace och
 				cpoints += 3;
 				break;
 			case 'W':
-				{
-					const char* dayname = weekdays + (ptrdiff_t)d.weekday() * 10;
+			{
+				const char* dayname = weekdays + (ptrdiff_t)d.weekday() * 10;
 
-					while (*dayname++)
-						++cpoints;
-				}
-				break;
+				while (*dayname++)
+					++cpoints;
+			}
+			break;
 			case 'i':
 				cpoints += d.hour() >= 10 ? 2 : 1;
 				break;
@@ -470,7 +470,7 @@ namespace och
 		// h,H ->   base 16 scientific ([+ -]N.NNNNp+-NNNN). h uses lowercase letters, H uppercase
 		// b   ->   bitpattern
 		// B   ->   bitpattern with ' separating sign, exponent and mantissa
-		
+
 		//char buf[64];
 		//
 		//char* curr = buf;
@@ -667,43 +667,43 @@ namespace och
 			switch (c)
 			{
 			case 'y':
+			{
+				uint16_t y = value.year();
+
+				char* curr = reserve_vbuf(out, log10(y)) + log10(y) - 1;
+
+				while (y >= 10)
 				{
-					uint16_t y = value.year();
+					*curr-- = (char)('0' + y % 10);
 
-					char* curr = reserve_vbuf(out, log10(y)) + log10(y) - 1;
-
-					while (y >= 10)
-					{
-						*curr-- = (char)('0' + y % 10);
-
-						y /= 10;
-					}
-
-					*curr = (char)('0' + y);
+					y /= 10;
 				}
-				break;
+
+				*curr = (char)('0' + y);
+			}
+			break;
 
 			case 'Y':
+			{
+				uint16_t y = value.year();
+
+				char* curr = reserve_vbuf(out, 4 + (y >= 10000));
+
+				if (y >= 10000)
 				{
-					uint16_t y = value.year();
-
-					char* curr = reserve_vbuf(out, 4 + (y >= 10000));
-
-					if (y >= 10000)
-					{
-						*curr++ = '0' + (char)(y / 10000);
-						y /= 10;
-					}
-
-					curr[3] = '0' + y % 10;
+					*curr++ = '0' + (char)(y / 10000);
 					y /= 10;
-					curr[2] = '0' + y % 10;
-					y /= 10;
-					curr[1] = '0' + y % 10;
-					y /= 10;
-					curr[0] = '0' + (char)y;
 				}
-				break;
+
+				curr[3] = '0' + y % 10;
+				y /= 10;
+				curr[2] = '0' + y % 10;
+				y /= 10;
+				curr[1] = '0' + y % 10;
+				y /= 10;
+				curr[0] = '0' + (char)y;
+			}
+			break;
 
 			case 'm':
 			case 'M':
@@ -711,21 +711,21 @@ namespace och
 				break;
 
 			case 'n':
-				{
-					to_vbuf(out, months[(value.month() - 1) * 10]);
-					to_vbuf(out, months[(value.month() - 1) * 10 + 1]);
-					to_vbuf(out, months[(value.month() - 1) * 10 + 2]);
-				}
-				break;
+			{
+				to_vbuf(out, months[(value.month() - 1) * 10]);
+				to_vbuf(out, months[(value.month() - 1) * 10 + 1]);
+				to_vbuf(out, months[(value.month() - 1) * 10 + 2]);
+			}
+			break;
 
 			case 'N':
-				{
-					const char* monthname = months + (ptrdiff_t)(value.month() - 1) * 10;
+			{
+				const char* monthname = months + (ptrdiff_t)(value.month() - 1) * 10;
 
-					while (*monthname)
-						to_vbuf(out, *monthname++);
-				}
-				break;
+				while (*monthname)
+					to_vbuf(out, *monthname++);
+			}
+			break;
 
 			case 'd':
 			case 'D':
@@ -733,21 +733,21 @@ namespace och
 				break;
 
 			case 'w':
-				{
-					to_vbuf(out, weekdays[value.weekday() * 10]);
-					to_vbuf(out, weekdays[value.weekday() * 10 + 1]);
-					to_vbuf(out, weekdays[value.weekday() * 10 + 2]);
-				}
-				break;
+			{
+				to_vbuf(out, weekdays[value.weekday() * 10]);
+				to_vbuf(out, weekdays[value.weekday() * 10 + 1]);
+				to_vbuf(out, weekdays[value.weekday() * 10 + 2]);
+			}
+			break;
 
 			case 'W':
-				{
-					const char* dayname = weekdays + (ptrdiff_t)value.weekday() * 10;
+			{
+				const char* dayname = weekdays + (ptrdiff_t)value.weekday() * 10;
 
-					while (*dayname)
-						to_vbuf(out, *dayname++);
-				}
-				break;
+				while (*dayname)
+					to_vbuf(out, *dayname++);
+			}
+			break;
 
 			case 'i':
 			case 'I':
@@ -765,66 +765,66 @@ namespace och
 				break;
 
 			case 'l':
-				{
-					if (value.millisecond() >= 100)
-						to_vbuf(out, (char)('0' + value.millisecond() / 100));
-					if (value.millisecond() >= 10)
-						to_vbuf(out, (char)('0' + (value.millisecond() / 10) % 10));
-					to_vbuf(out, (char)('0' + value.millisecond() % 10));
-				}
-				break;
+			{
+				if (value.millisecond() >= 100)
+					to_vbuf(out, (char)('0' + value.millisecond() / 100));
+				if (value.millisecond() >= 10)
+					to_vbuf(out, (char)('0' + (value.millisecond() / 10) % 10));
+				to_vbuf(out, (char)('0' + value.millisecond() % 10));
+			}
+			break;
 
 			case 'L':
-				{
-					to_vbuf(out, (char)('0' + (char)(value.millisecond() / 100)));
-					to_vbuf(out, (char)('0' + (value.millisecond() / 10) % 10));
-					to_vbuf(out, (char)('0' + value.millisecond() % 10));
-				}
-				break;
+			{
+				to_vbuf(out, (char)('0' + (char)(value.millisecond() / 100)));
+				to_vbuf(out, (char)('0' + (value.millisecond() / 10) % 10));
+				to_vbuf(out, (char)('0' + value.millisecond() % 10));
+			}
+			break;
 
 			case 'u':
+			{
+				if (value.is_utc())
 				{
-					if (value.is_utc())
-					{
-						to_vbuf(out, 'Z');
+					to_vbuf(out, 'Z');
 
-						break;
-					}
-
-					to_vbuf(out, value.utc_offset_is_negative() ? '-' : '+');
-
-					uint16_t h = value.utc_offset_hours();
-
-					to_vbuf(out, (char)('0' + h / 10));
-					to_vbuf(out, (char)('0' + h % 10));
+					break;
 				}
-				break;
+
+				to_vbuf(out, value.utc_offset_is_negative() ? '-' : '+');
+
+				uint16_t h = value.utc_offset_hours();
+
+				to_vbuf(out, (char)('0' + h / 10));
+				to_vbuf(out, (char)('0' + h % 10));
+			}
+			break;
 
 			case 'U':
-				{
-					if (value.is_utc())
-						break;
+			{
+				if (value.is_utc())
+					break;
 
-					uint16_t m = value.utc_offset_minutes();
+				uint16_t m = value.utc_offset_minutes();
 
-					to_vbuf(out, (char)('0' + m / 10));
-					to_vbuf(out, (char)('0' + m % 10));
-				}
-				break;
+				to_vbuf(out, (char)('0' + m / 10));
+				to_vbuf(out, (char)('0' + m % 10));
+			}
+			break;
 
 			case 's':
 			case 'S':
+			{
+				if ((c != 's') ^ (value.is_utc())) //Next char is inactive
 				{
-					if ((c != 's') ^ (value.is_utc())) //Next char is inactive
-					{
-						if (*++format == 'x')
-							++format;
+					if (*++format == 'x')
+						++format;
 
-						while (_is_utf8_surr(format[1]))
-							++format;
-					}
+					while (_is_utf8_surr(format[1]))
+						++format;
 				}
-				break;
+			}
+			break;
 
 			case 'x':
 				c = *++format;//Fallthrough...
@@ -836,8 +836,8 @@ namespace och
 
 #undef OCH_FMT_2DIGIT
 
-			if (!is_rightadj(context))
-				pad_vbuf(out, cpoints, context);
+		if (!is_rightadj(context))
+			pad_vbuf(out, cpoints, context);
 	}
 
 	//TODO improve (Not happy)
@@ -865,7 +865,7 @@ namespace och
 
 		char sign = _get_sign(value.val, context);
 
-		if(value.val < 0)
+		if (value.val < 0)
 			value.val = -value.val;
 
 		char32_t c = context.format_specifier.codepoint();
@@ -1063,57 +1063,57 @@ namespace och
 			break;
 
 		case 'L':
+		{
+			//[+ -][D+d, ]HH:MM:SS.MMM.UUU
+
+			int64_t days = value.days();
+
+			uint32_t log10_d = log10(days);
+
+			uint32_t day_chars = days ? 4 + log10_d : 0;
+
+			uint32_t chars = 17 + day_chars + (sign != 0);
+
+			if (is_rightadj(context))
+				pad_vbuf(out, chars, context);
+
+			if (sign)
+				to_vbuf(out, sign);
+
+			if (days)
 			{
-				//[+ -][D+d, ]HH:MM:SS.MMM.UUU
+				_fmt_decimal(out, value.days(), log10_d);
 
-				int64_t days = value.days();
-
-				uint32_t log10_d = log10(days);
-
-				uint32_t day_chars = days ? 4 + log10_d : 0;
-
-				uint32_t chars = 17 + day_chars + (sign != 0);
-
-				if (is_rightadj(context))
-					pad_vbuf(out, chars, context);
-
-				if (sign)
-					to_vbuf(out, sign);
-
-				if (days)
-				{
-					_fmt_decimal(out, value.days(), log10_d);
-
-					to_vbuf(out, 'd');
-					to_vbuf(out, ' ');
-					to_vbuf(out, '+');
-					to_vbuf(out, ' ');
-				}
-
-				_fmt_two_digit(out, value.hours() % 24);
-
-				to_vbuf(out, ':');
-
-				_fmt_two_digit(out, value.minutes() % 60);
-
-				to_vbuf(out, ':');
-
-				_fmt_two_digit(out, value.seconds() % 60);
-
-				to_vbuf(out, '.');
-
-				_fmt_three_digit(out, value.milliseconds() % 1000);
-
-				to_vbuf(out, '.');
-
-				_fmt_three_digit(out, value.microseconds() % 1000);
-
-				to_vbuf(out, 'h');
-
-				if (!is_rightadj(context))
-					pad_vbuf(out, chars, context);
+				to_vbuf(out, 'd');
+				to_vbuf(out, ' ');
+				to_vbuf(out, '+');
+				to_vbuf(out, ' ');
 			}
-			return;
+
+			_fmt_two_digit(out, value.hours() % 24);
+
+			to_vbuf(out, ':');
+
+			_fmt_two_digit(out, value.minutes() % 60);
+
+			to_vbuf(out, ':');
+
+			_fmt_two_digit(out, value.seconds() % 60);
+
+			to_vbuf(out, '.');
+
+			_fmt_three_digit(out, value.milliseconds() % 1000);
+
+			to_vbuf(out, '.');
+
+			_fmt_three_digit(out, value.microseconds() % 1000);
+
+			to_vbuf(out, 'h');
+
+			if (!is_rightadj(context))
+				pad_vbuf(out, chars, context);
+		}
+		return;
 
 		case 'l':
 			to_vbuf_with_padding(out, och::stringview("[[fmt_timespan - specifier 'l' is not yet implemented]]"), context);
@@ -1196,7 +1196,7 @@ namespace och
 			return;
 
 		case 'x':
-			
+
 			to_vbuf_with_padding(out, och::stringview("[[fmt_timespan - specifier 'x' is not yet implemented]]"), context);
 			return;
 
@@ -1224,7 +1224,7 @@ namespace och
 		if (specifier)
 			to_vbuf(out, och::stringview(specifier, specifier_len, 1));
 
-		if(!is_rightadj(context))
+		if (!is_rightadj(context))
 			pad_vbuf(out, chars, context);
 	}
 
@@ -1481,6 +1481,8 @@ namespace och
 
 			context += format_specifier.get_codeunits();
 		}
+		else
+			format_specifier = '\0';
 
 		if (*context != '}')
 			raw_context = context;
@@ -1512,7 +1514,7 @@ namespace och
 
 					continue;
 				}
-				
+
 				to_vbuf(out, och::stringview(last_fmt_end, (uint32_t)(curr - 1 - last_fmt_end), 1));
 
 				uint32_t arg_idx;
