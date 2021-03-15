@@ -174,7 +174,7 @@ namespace och
 
 	och::range<char> get_filepath(const iohandle file, och::range<char> buf) noexcept
 	{
-		return och::range<char>(buf.beg, GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD) buf.len(), 0));
+		return och::range<char>(buf.beg, GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD)buf.len(), 0));
 	}
 
 	och::time get_last_write_time(const iohandle file) noexcept
@@ -258,7 +258,7 @@ namespace och
 	/*/////////////////////////////////////////////////file_search///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	file_search::file_search(const char* path) noexcept : search_handle{FindFirstFileA(path, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4))} {}
+	file_search::file_search(const char* path) noexcept : search_handle{ FindFirstFileA(path, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4)) } {}
 
 	file_search::file_search(const och::utf8_string& path) noexcept : file_search(path.raw_cbegin()) {}
 
