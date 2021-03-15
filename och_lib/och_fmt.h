@@ -31,11 +31,11 @@ namespace och
 
 		fmt_fn formatter;
 
-		arg_wrapper( uint8_t valuer);
+		arg_wrapper( uint8_t value);
 		
 		arg_wrapper(uint16_t value);
 		
-		arg_wrapper(uint32_t valuer);
+		arg_wrapper(uint32_t value);
 		
 		arg_wrapper(uint64_t value);
 		
