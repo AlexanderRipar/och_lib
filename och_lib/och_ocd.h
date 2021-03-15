@@ -2,43 +2,20 @@
 
 #include "och_fio.h"
 #include "och_fmt.h"
+#include "och_utf8.h"
+#include "och_range.h"
+
 
 namespace och
 {
 	struct ocd_file
 	{
-		struct ocd_header
+		filehandle m_filehandle;
+		iohandle m_optional_header_handle = nullptr;
+
+		ocd_file(const och::stringview& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode) noexcept : m_filehandle{ filename, access_rights, existing_mode, new_mode }
 		{
 			
-		};
-
-		struct ocd_stub
-		{
-
-		};
-
-		struct ocd_data
-		{
-
-		};
-
-		filehandle f;
-
-		struct entry_idx
-		{
-			uint32_t offset;
-		};
-
-		entry_idx get_entry_idx_by_name(const och::stringview& id) const noexcept
-		{
-
-
-			return {};
-		}
-
-		och::type_union operator[](entry_idx idx) const noexcept
-		{
-			return {};
 		}
 	};
 }
