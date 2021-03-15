@@ -73,5 +73,5 @@ namespace och
 		type_union() = default;
 	};
 
-	static_assert(sizeof(type_union) == sizeof(uint64_t));
+	static_assert(sizeof(type_union) == sizeof(uint64_t), "One of the types in och::type_union is bigger than 8 bytes");
 }
