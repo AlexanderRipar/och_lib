@@ -3,7 +3,7 @@
 #include "och_time.h"
 namespace och
 {
-	struct timer
+	struct highres_timer
 	{
 	private:
 		highres_time t = highres_time::now();
@@ -20,6 +20,28 @@ namespace och
 			highres_time beg = t;
 
 			t = highres_time::now();
+
+			return beg - t;
+		}
+	};
+
+	struct timer
+	{
+	private:
+		time t = time::now();
+
+	public:
+
+		timespan read() const noexcept
+		{
+			return time::now() - t;
+		}
+
+		timespan reset() noexcept
+		{
+			time beg = t;
+
+			t = time::now();
 
 			return beg - t;
 		}
