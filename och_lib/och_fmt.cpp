@@ -850,7 +850,7 @@ namespace och
 		// s   ->   seconds
 		// ms  ->   milliseconds
 		// us,
-		// sμ ->   microseconds
+		// sμ  ->  microseconds
 		// l   ->  combination of all units which are greater than zero for the given timespan, separated by commas and with
 		//         their SI-symbols. Uppercase also prints units that are zero.
 		// x   ->  custom format, composed of the aforementioned letters. Other formatting rules are equivalent to fmt_date
