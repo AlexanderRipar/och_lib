@@ -851,9 +851,9 @@ namespace och
 		// ms  ->   milliseconds
 		// us,
 		// sμ ->   microseconds
-		// l   ->   combination of all units which are greater than zero for the given timespan, separated by commas and with
-		//          their SI-symbols. Uppercase also prints units that are zero.
-		// x   ->   custom format, composed of the aforementioned letters. Other formatting rules are equivalent to fmt_date
+		// l   ->  combination of all units which are greater than zero for the given timespan, separated by commas and with
+		//         their SI-symbols. Uppercase also prints units that are zero.
+		// x   ->  custom format, composed of the aforementioned letters. Other formatting rules are equivalent to fmt_date
 		//
 		// Uppercase letters also write the fitting SI-symbol.
 		//
@@ -874,7 +874,7 @@ namespace och
 
 		const char* specifier = nullptr;
 
-		int64_t type_union;
+		int64_t time_value;
 
 		switch (c)
 		{
@@ -990,13 +990,13 @@ namespace och
 		case 'D':
 			specifier = "d";
 		case 'd':
-			type_union = value.days();
+			time_value = value.days();
 			break;
 
 		case 'H':
 			specifier = "h";
 		case 'h':
-			type_union = value.hours();
+			time_value = value.hours();
 			break;
 
 		case 'M':
@@ -1010,13 +1010,13 @@ namespace och
 			{
 				specifier = "ms";
 
-				type_union = value.milliseconds();
+				time_value = value.milliseconds();
 			}
 			else if (context.raw_context[0] == 'I' && context.raw_context[1] == 'N')
 			{
 				specifier = "min";
 
-				type_union = value.minutes();
+				time_value = value.minutes();
 			}
 			else
 			{
@@ -1033,9 +1033,9 @@ namespace och
 				return;
 			}
 			else if (context.raw_context[0] == 's')
-				type_union = value.milliseconds();
+				time_value = value.milliseconds();
 			else if (context.raw_context[0] == 'i' && context.raw_context[1] == 'n')
-				type_union = value.minutes();
+				time_value = value.minutes();
 			else
 			{
 				to_vbuf_with_padding(out, invalid_specifier_msg, context);
@@ -1047,19 +1047,19 @@ namespace och
 		case 'S':
 			specifier = "s";
 		case 's':
-			type_union = value.seconds();
+			time_value = value.seconds();
 			break;
 
 		case U'μ':
 			specifier = u8"μs";
-			type_union = value.microseconds();
+			time_value = value.microseconds();
 			++utf_surr_count;
 			break;
 
 		case 'U':
 			specifier = "us";
 		case 'u':
-			type_union = value.microseconds();
+			time_value = value.microseconds();
 			break;
 
 		case 'L':
@@ -1205,7 +1205,7 @@ namespace och
 			return;
 		}
 
-		uint32_t log10_v = log10(type_union);
+		uint32_t log10_v = log10(time_value);
 
 		uint32_t chars = log10_v + (sign != 0) - utf_surr_count;
 
@@ -1219,7 +1219,7 @@ namespace och
 		if (is_rightadj(context))
 			pad_vbuf(out, chars, context);
 
-		_fmt_decimal(out, type_union, log10_v, sign);
+		_fmt_decimal(out, time_value, log10_v, sign);
 
 		if (specifier)
 			to_vbuf(out, och::stringview(specifier, specifier_len, 1));
