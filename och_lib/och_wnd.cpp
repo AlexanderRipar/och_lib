@@ -8,7 +8,7 @@
 #include "och_utf8.h"
 #include "och_fmt.h"
 
-och::filehandle testout("testout.txt", och::fio::access_write, och::fio::open_truncate, och::fio::open_normal);
+//och::filehandle testout("testout.txt", och::fio::access_write, och::fio::open_truncate, och::fio::open_normal);
 
 namespace och
 {
