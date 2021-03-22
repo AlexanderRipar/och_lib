@@ -180,6 +180,7 @@
     <ClInclude Include="och_time.h" />
     <ClInclude Include="och_basic_types.h" />
     <ClInclude Include="och_utf8buf.h" />
+    <ClInclude Include="och_virtual_keys.h" />
     <ClInclude Include="och_wnd.h" />
     <ClInclude Include="och_timer.h" />
     <ClInclude Include="och_tok.h" />
