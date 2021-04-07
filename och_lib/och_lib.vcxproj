@@ -159,23 +159,18 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="och_fio.cpp" />
     <ClCompile Include="och_fmt.cpp" />
-    <ClCompile Include="och_net.cpp" />
-    <ClCompile Include="och_rtv.cpp" />
     <ClCompile Include="och_time.cpp" />
     <ClCompile Include="och_tok.cpp" />
     <ClCompile Include="och_utf16.cpp" />
     <ClCompile Include="och_utf8.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="och_ocd.h" />
     <ClInclude Include="och_constexpr_util.h" />
     <ClInclude Include="och_debug.h" />
     <ClInclude Include="och_fio.h" />
     <ClInclude Include="och_fmt.h" />
     <ClInclude Include="och_lib.h" />
     <ClInclude Include="och_range.h" />
-    <ClInclude Include="och_net.h" />
-    <ClInclude Include="och_rtv.h" />
     <ClInclude Include="och_time.h" />
     <ClInclude Include="och_basic_types.h" />
     <ClInclude Include="och_utf8buf.h" />
