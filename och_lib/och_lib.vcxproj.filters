@@ -36,9 +36,6 @@
     <ClCompile Include="och_time.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="och_wnd.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="och_utf8.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -87,9 +84,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="och_utf8buf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="och_wnd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="och_basic_types.h">

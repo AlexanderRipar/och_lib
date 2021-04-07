@@ -18,6 +18,4 @@
 
 #include "och_time.h"
 
-#include "och_wnd.h"
-
 #include "och_ocd.h"

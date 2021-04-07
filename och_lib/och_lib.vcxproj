@@ -163,7 +163,6 @@
     <ClCompile Include="och_rtv.cpp" />
     <ClCompile Include="och_time.cpp" />
     <ClCompile Include="och_tok.cpp" />
-    <ClCompile Include="och_wnd.cpp" />
     <ClCompile Include="och_utf16.cpp" />
     <ClCompile Include="och_utf8.cpp" />
   </ItemGroup>
@@ -181,7 +180,6 @@
     <ClInclude Include="och_basic_types.h" />
     <ClInclude Include="och_utf8buf.h" />
     <ClInclude Include="och_virtual_keys.h" />
-    <ClInclude Include="och_wnd.h" />
     <ClInclude Include="och_timer.h" />
     <ClInclude Include="och_tok.h" />
     <ClInclude Include="och_utf16.h" />
