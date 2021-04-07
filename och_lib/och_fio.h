@@ -46,7 +46,7 @@ namespace och
 	{
 		iohandle() = default;
 
-		iohandle(void* h);
+		explicit iohandle(void* h) noexcept;
 
 		void* ptr;
 	};
