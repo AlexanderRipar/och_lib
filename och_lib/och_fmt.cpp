@@ -22,7 +22,29 @@ namespace och
 	constexpr const char* months = "January\0\0\0"    "February\0\0"   "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0"
 		"July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
 
+	union
+	{
+		och::iohandle file;
+		och::range<char> buffer;
+	} curr_output;
+
+	bool is_file_output;
+	uint32_t overrun_count;
+
 	och::forward_utf8_buffer<1024> _vprint_buf;
+
+	uint32_t get_writable(uint32_t wish)
+	{
+		uint32_t available = static_cast<uint32_t>(curr_output.buffer.len());
+
+		if (available < wish)
+		{
+			overrun_count += wish - available;
+			return available;
+		}
+		else
+			return wish;
+	}
 
 	uint32_t log2(uint64_t n)
 	{
@@ -64,88 +86,148 @@ namespace och
 
 
 
-	void to_vbuf(och::iohandle out, const och::stringview& text)
+	void to_vbuf(const och::stringview& text)
 	{
-		if (!_vprint_buf.push(text))
-			_vprint_buf.flush(out);
-	}
-
-	void to_vbuf(och::iohandle out, utf8_char c)
-	{
-		if (!_vprint_buf.push(c))
-			_vprint_buf.flush(out);
-	}
-
-	void pad_vbuf(och::iohandle out, uint32_t text_codepoints, const och::parsed_context& context)
-	{
-		int32_t filler_cpoints = context.width - text_codepoints;
-
-		while (filler_cpoints > 0)
+		if (is_file_output)
 		{
-			if (!_vprint_buf.fill(context.filler, filler_cpoints & (_vprint_buf.size - 1)))
-				_vprint_buf.flush(out);
-			filler_cpoints -= _vprint_buf.size - 1;
+			if (!_vprint_buf.push(text))
+				_vprint_buf.flush(curr_output.file);
+		}
+		else
+		{
+			uint32_t bytes = get_writable(text.get_codeunits());
+
+			for (uint32_t i = 0; i != bytes; ++i)
+				*curr_output.buffer.beg++ = text.raw_cbegin()[i];
 		}
 	}
 
-	void to_vbuf_with_padding(och::iohandle out, utf8_char c, const parsed_context& context)
+	void to_vbuf(utf8_char c)
+	{
+		if (is_file_output)
+		{
+			if (!_vprint_buf.push(c))
+				_vprint_buf.flush(curr_output.file);
+		}
+		else
+		{
+			uint32_t bytes = get_writable(c.get_codeunits());
+
+			for (uint32_t i = 0; i != bytes; ++i)
+				*curr_output.buffer.beg++ = c.cbegin()[i];
+		}
+	}
+
+	void pad_vbuf(uint32_t text_codepoints, const och::parsed_context& context)
+	{
+		int32_t filler_cpoints = context.width - text_codepoints;
+
+		if (filler_cpoints < 0)
+			return;
+
+		if (is_file_output)
+		{
+			while (filler_cpoints > 0)
+			{
+				if (!_vprint_buf.fill(context.filler, filler_cpoints & (_vprint_buf.size - 1)))
+					_vprint_buf.flush(curr_output.file);
+				filler_cpoints -= _vprint_buf.size - 1;
+			}
+		}
+		else
+		{
+			int32_t filler_cunits = filler_cpoints * context.filler.get_codeunits();
+
+			uint32_t writable = get_writable(filler_cunits);
+
+			for (uint32_t i = 0; i < writable; i += context.filler.get_codeunits())
+				for (uint32_t j = 0; j != context.filler.get_codeunits(); ++j)
+					*curr_output.buffer.beg++ = context.filler.cbegin()[j];
+		}
+	}
+
+	void to_vbuf_with_padding(utf8_char c, const parsed_context& context)
+	{
+			if (is_rightadj(context))
+				pad_vbuf(1, context);
+
+			to_vbuf(c);
+
+			if (!is_rightadj(context))
+				pad_vbuf(1, context);
+	}
+
+	void to_vbuf_with_padding(const och::stringview& v, const parsed_context& context)
+	{
+			if (is_rightadj(context))
+				pad_vbuf(v.get_codepoints(), context);
+
+			to_vbuf(v);
+
+			if (!is_rightadj(context))
+				pad_vbuf(v.get_codepoints(), context);
+	}
+
+	char* reserve_vbuf(uint32_t codeunits)
+	{
+		if (is_file_output)
+		{
+			return _vprint_buf.reserve((uint16_t)codeunits, curr_output.file);
+		}
+		else
+		{
+			uint32_t writable = get_writable(codeunits);
+
+			char* ret = curr_output.buffer.beg;
+
+			curr_output.buffer.beg += writable;
+
+			if (writable != codeunits)
+			{
+				//Act as if we filled the buffer to make counting of written chars possible
+				curr_output.buffer.beg = curr_output.buffer.end;
+
+				return nullptr;
+			}
+
+			return ret;
+		}
+	}
+
+	void pad_left(uint32_t text_codepoints, const parsed_context& context)
 	{
 		if (is_rightadj(context))
-			pad_vbuf(out, 1, context);
-
-		to_vbuf(out, c);
-
-		if (!is_rightadj(context))
-			pad_vbuf(out, 1, context);
+			pad_vbuf(text_codepoints, context);
 	}
 
-	void to_vbuf_with_padding(och::iohandle out, const och::stringview& v, const parsed_context& context)
-	{
-		if (is_rightadj(context))
-			pad_vbuf(out, v.get_codepoints(), context);
-
-		to_vbuf(out, v);
-
-		if (!is_rightadj(context))
-			pad_vbuf(out, v.get_codepoints(), context);
-	}
-
-	char* reserve_vbuf(och::iohandle out, uint32_t codeunits)
-	{
-		return _vprint_buf.reserve((uint16_t)codeunits, out);
-	}
-
-	void pad_left(och::iohandle out, uint32_t text_codepoints, const parsed_context& context)
-	{
-		if (is_rightadj(context))
-			pad_vbuf(out, text_codepoints, context);
-	}
-
-	void pad_right(och::iohandle out, uint32_t text_codepoints, const parsed_context& context)
+	void pad_right(uint32_t text_codepoints, const parsed_context& context)
 	{
 		if (!is_rightadj(context))
-			pad_vbuf(out, text_codepoints, context);
+			pad_vbuf(text_codepoints, context);
 	}
 
 
 
-	void _fmt_two_digit(och::iohandle out, uint64_t n)
+	void _fmt_two_digit(uint64_t n)
 	{
-		to_vbuf(out, (char)('0' + n / 10));
+		to_vbuf((char)('0' + n / 10));
 
-		to_vbuf(out, (char)('0' + n % 10));
+		to_vbuf((char)('0' + n % 10));
 	}
 
-	void _fmt_three_digit(och::iohandle out, uint64_t n)
+	void _fmt_three_digit(uint64_t n)
 	{
-		to_vbuf(out, (char)('0' + n / 100));
-		to_vbuf(out, (char)('0' + (n / 10) % 10));
-		to_vbuf(out, (char)('0' + n % 10));
+		to_vbuf((char)('0' + n / 100));
+		to_vbuf((char)('0' + (n / 10) % 10));
+		to_vbuf((char)('0' + n % 10));
 	}
 
-	void _fmt_decimal(och::iohandle out, uint64_t n, uint32_t log10_n, char sign = '\0')
+	void _fmt_decimal(uint64_t n, uint32_t log10_n, char sign = '\0')
 	{
-		char* curr = reserve_vbuf(out, log10_n + (sign != 0)) + log10_n - (sign == 0);
+		char* curr = reserve_vbuf(log10_n + (sign != 0)) + log10_n - (sign == 0);
+
+		if (!curr)
+			return;
 
 		while (n >= 10)
 		{
@@ -160,7 +242,7 @@ namespace och
 			*curr = sign;
 	}
 
-	void _fmt_hex(och::iohandle out, uint64_t value, const parsed_context& context, const char* hex_charset, uint32_t max_digits)
+	void _fmt_hex(uint64_t value, const parsed_context& context, const char* hex_charset, uint32_t max_digits)
 	{
 		uint32_t chars = log16(value);
 
@@ -168,24 +250,27 @@ namespace och
 			chars = max_digits;
 
 		if (is_rightadj(context))
-			pad_vbuf(out, chars, context);
+			pad_vbuf(chars, context);
 
-		char* curr = reserve_vbuf(out, chars) + chars - 1;
+		char* curr = reserve_vbuf(chars) + chars - 1;
 
-		while (value > 0xF && --max_digits != 0)
+		if (curr)
 		{
-			*curr-- = hex_charset[value & 0xF];
+			while (value > 0xF && --max_digits != 0)
+			{
+				*curr-- = hex_charset[value & 0xF];
 
-			value >>= 4;
+				value >>= 4;
+			}
+
+			*curr-- = hex_charset[value & 0xF];
 		}
 
-		*curr-- = hex_charset[value & 0xF];
-
 		if (!is_rightadj(context))
-			pad_vbuf(out, chars, context);
+			pad_vbuf(chars, context);
 	}
 
-	void _fmt_binary(och::iohandle out, uint64_t value, const parsed_context& context, uint32_t min_digits, uint32_t max_digits)
+	void _fmt_binary(uint64_t value, const parsed_context& context, uint32_t min_digits, uint32_t max_digits)
 	{
 		uint32_t chars = log2(value);
 
@@ -195,24 +280,27 @@ namespace och
 			chars = max_digits;
 
 		if (is_rightadj(context))
-			pad_vbuf(out, chars, context);
+			pad_vbuf(chars, context);
 
-		char* curr = reserve_vbuf(out, chars) + chars - 1;
+		char* curr = reserve_vbuf(chars) + chars - 1;
 
-		while ((value || --min_digits != 0) && --max_digits != 0)
+		if (curr)
 		{
-			*curr-- = '0' + value & 1;
+			while ((value || --min_digits != 0) && --max_digits != 0)
+			{
+				*curr-- = '0' + value & 1;
 
-			value >>= 1;
+				value >>= 1;
+			}
+
+			*curr-- = '0' + value & 1;
 		}
 
-		*curr-- = '0' + value & 1;
-
 		if (!is_rightadj(context))
-			pad_vbuf(out, chars, context);
+			pad_vbuf(chars, context);
 	}
 
-	void fmt_integer_base(och::iohandle out, uint64_t n, const parsed_context& context, uint32_t bit_width, char sign = '\0')
+	void fmt_integer_base(uint64_t n, const parsed_context& context, uint32_t bit_width, char sign = '\0')
 	{
 		switch (*context.format_specifier.cbegin())
 		{
@@ -222,32 +310,32 @@ namespace och
 
 			uint32_t log10_n = log10(abs_n) + (sign != 0);
 
-			pad_left(out, log10_n, context);
+			pad_left(log10_n, context);
 
-			_fmt_decimal(out, abs_n, log10_n, sign);
+			_fmt_decimal(abs_n, log10_n, sign);
 
-			pad_right(out, log10_n, context);
+			pad_right(log10_n, context);
 		}
 		break;
 
 		case 'x':
-			_fmt_hex(out, n, context, hex_lower_upper, bit_width >> 2);
+			_fmt_hex(n, context, hex_lower_upper, bit_width >> 2);
 			break;
 
 		case 'X':
-			_fmt_hex(out, n, context, hex_lower_upper + 16, bit_width >> 2);
+			_fmt_hex(n, context, hex_lower_upper + 16, bit_width >> 2);
 			break;
 
 		case 'b':
-			_fmt_binary(out, n, context, 1, bit_width);
+			_fmt_binary(n, context, 1, bit_width);
 			break;
 
 		case 'B':
-			_fmt_binary(out, n, context, bit_width, bit_width);
+			_fmt_binary(n, context, bit_width, bit_width);
 			break;
 
 		default:
-			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			to_vbuf_with_padding(invalid_specifier_msg, context);
 			break;
 		}
 	}
@@ -366,103 +454,99 @@ namespace och
 	/*///////////////////////////////////////////////formatting functions////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	void fmt_uint64(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_uint64(type_union arg_value, const parsed_context& context)
 	{
 		uint64_t value = arg_value.u64;
 
-		fmt_integer_base(out, value, context, 64);
+		fmt_integer_base(value, context, 64);
 	}
 
-	void fmt_int64(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_int64(type_union arg_value, const parsed_context& context)
 	{
 		int64_t value = arg_value.i64;
 
-		fmt_integer_base(out, value, context, 64, _get_sign(value, context));
+		fmt_integer_base(value, context, 64, _get_sign(value, context));
 	}
 
-	void fmt_uint32(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_uint32(type_union arg_value, const parsed_context& context)
 	{
 		uint32_t value = arg_value.u32;
 
-		fmt_integer_base(out, value, context, 32);
+		fmt_integer_base(value, context, 32);
 	}
 
-	void fmt_int32(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_int32(type_union arg_value, const parsed_context& context)
 	{
 		int32_t value = arg_value.i32;
 
-		fmt_integer_base(out, value, context, 32, _get_sign(value, context));
+		fmt_integer_base(value, context, 32, _get_sign(value, context));
 	}
 
-	void fmt_uint16(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_uint16(type_union arg_value, const parsed_context& context)
 	{
 		uint16_t value = arg_value.u16;
 
-		fmt_integer_base(out, value, context, 16);
+		fmt_integer_base(value, context, 16);
 	}
 
-	void fmt_int16(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_int16(type_union arg_value, const parsed_context& context)
 	{
 		int16_t value = arg_value.i16;
 
-		fmt_integer_base(out, value, context, 16, _get_sign(value, context));
+		fmt_integer_base(value, context, 16, _get_sign(value, context));
 	}
 
-	void fmt_uint8(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_uint8(type_union arg_value, const parsed_context& context)
 	{
 		uint8_t value = arg_value.u8;
 
-		fmt_integer_base(out, value, context, 8);
+		fmt_integer_base(value, context, 8);
 	}
 
-	void fmt_int8(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_int8(type_union arg_value, const parsed_context& context)
 	{
 		int8_t value = arg_value.i8;
 
-		fmt_integer_base(out, value, context, 8, _get_sign(value, context));
+		fmt_integer_base(value, context, 8, _get_sign(value, context));
 	}
 
-	void fmt_utf8_view(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_utf8_view(type_union arg_value, const parsed_context& context)
 	{
 		och::utf8_view value = *(const och::utf8_view*)arg_value.ptr;
 
 		if (value.get_codepoints() > context.precision)
 			value = value.subview(0, context.precision);
 
-		to_vbuf_with_padding(out, value, context);
+		to_vbuf_with_padding(value, context);
 	}
 
-	void fmt_utf8_string(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_utf8_string(type_union arg_value, const parsed_context& context)
 	{
 		och::utf8_view value(*(const och::utf8_string*)arg_value.ptr);
 
-		fmt_utf8_view(out, (const void*)&value, context);
+		fmt_utf8_view((const void*)&value, context);
 	}
 
-	void fmt_cstring(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_cstring(type_union arg_value, const parsed_context& context)
 	{
 		och::utf8_view value(reinterpret_cast<const char*>(arg_value.ptr));
 
-		fmt_utf8_view(out, (const void*)&value, context);
+		fmt_utf8_view((const void*)&value, context);
 	}
 
-	void fmt_codepoint(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_codepoint(type_union arg_value, const parsed_context& context)
 	{
 		och::utf8_char value = arg_value.utf_c;
 
-		to_vbuf_with_padding(out, value, context);
+		to_vbuf_with_padding(value, context);
 	}
 
 	//TODO implement
-	void fmt_float(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_float(type_union arg_value, const parsed_context& context)
 	{
 		arg_value;
 
-		context;
-
-		out;
-
-		to_vbuf_with_padding(out, och::stringview("[[fmt_float is not yet implemented]]"), context);
+		to_vbuf_with_padding(och::stringview("[[fmt_float is not yet implemented]]"), context);
 
 		//     ->   base 10 decimal
 		// e   ->   base 10 scientific ([+ -]N.NNNNe+-NNNN)
@@ -598,16 +682,14 @@ namespace och
 	}
 
 	//TODO implement
-	void fmt_double(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_double(type_union arg_value, const parsed_context& context)
 	{
 		arg_value;
 
-		context;
-
-		och::write_to_file(out, och::range("[[fmt_double is not yet implemented]]"));
+		to_vbuf_with_padding(och::stringview("[[fmt_double is not yet implemented]]"), context);
 	}
 
-	void fmt_date(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_date(type_union arg_value, const parsed_context& context)
 	{
 		//          [y]yyyy-mm-dd, hh:mm:ss.mmm
 		// d   ->   [y]yyyy-mm-dd
@@ -652,16 +734,16 @@ namespace och
 			format = context.raw_context;
 		else
 		{
-			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			to_vbuf_with_padding(invalid_specifier_msg, context);
 			return;
 		}
 
 		uint32_t cpoints = _get_date_cpoints(format, value);
 
 		if (is_rightadj(context))
-			pad_vbuf(out, cpoints, context);
+			pad_vbuf(cpoints, context);
 
-#define OCH_FMT_2DIGIT(x) if(c & 0x20) { if(x >= 10) to_vbuf(out, (char)('0' + x / 10)); to_vbuf(out, (char)('0' + x % 10)); } else { to_vbuf(out, (char)('0' + x / 10)); to_vbuf(out, (char)('0' + x % 10)); }
+#define OCH_FMT_2DIGIT(x) if(c & 0x20) { if(x >= 10) to_vbuf((char)('0' + x / 10)); to_vbuf((char)('0' + x % 10)); } else { to_vbuf((char)('0' + x / 10)); to_vbuf((char)('0' + x % 10)); }
 
 		for (char c = *format; c != '}'; c = *++format)
 			switch (c)
@@ -670,16 +752,19 @@ namespace och
 			{
 				uint16_t y = value.year();
 
-				char* curr = reserve_vbuf(out, log10(y)) + log10(y) - 1;
+				char* curr = reserve_vbuf(log10(y)) + log10(y) - 1;
 
-				while (y >= 10)
+				if (curr)
 				{
-					*curr-- = (char)('0' + y % 10);
+					while (y >= 10)
+					{
+						*curr-- = (char)('0' + y % 10);
 
-					y /= 10;
+						y /= 10;
+					}
+
+					*curr = (char)('0' + y);
 				}
-
-				*curr = (char)('0' + y);
 			}
 			break;
 
@@ -687,21 +772,24 @@ namespace och
 			{
 				uint16_t y = value.year();
 
-				char* curr = reserve_vbuf(out, 4 + (y >= 10000));
+				char* curr = reserve_vbuf(4 + (y >= 10000));
 
-				if (y >= 10000)
+				if (curr)
 				{
-					*curr++ = '0' + (char)(y / 10000);
-					y /= 10;
-				}
+					if (y >= 10000)
+					{
+						*curr++ = '0' + (char)(y / 10000);
+						y /= 10;
+					}
 
-				curr[3] = '0' + y % 10;
-				y /= 10;
-				curr[2] = '0' + y % 10;
-				y /= 10;
-				curr[1] = '0' + y % 10;
-				y /= 10;
-				curr[0] = '0' + (char)y;
+					curr[3] = '0' + y % 10;
+					y /= 10;
+					curr[2] = '0' + y % 10;
+					y /= 10;
+					curr[1] = '0' + y % 10;
+					y /= 10;
+					curr[0] = '0' + (char)y;
+				}
 			}
 			break;
 
@@ -712,9 +800,9 @@ namespace och
 
 			case 'n':
 			{
-				to_vbuf(out, months[(value.month() - 1) * 10]);
-				to_vbuf(out, months[(value.month() - 1) * 10 + 1]);
-				to_vbuf(out, months[(value.month() - 1) * 10 + 2]);
+				to_vbuf(months[(value.month() - 1) * 10]);
+				to_vbuf(months[(value.month() - 1) * 10 + 1]);
+				to_vbuf(months[(value.month() - 1) * 10 + 2]);
 			}
 			break;
 
@@ -723,7 +811,7 @@ namespace och
 				const char* monthname = months + (ptrdiff_t)(value.month() - 1) * 10;
 
 				while (*monthname)
-					to_vbuf(out, *monthname++);
+					to_vbuf(*monthname++);
 			}
 			break;
 
@@ -734,9 +822,9 @@ namespace och
 
 			case 'w':
 			{
-				to_vbuf(out, weekdays[value.weekday() * 10]);
-				to_vbuf(out, weekdays[value.weekday() * 10 + 1]);
-				to_vbuf(out, weekdays[value.weekday() * 10 + 2]);
+				to_vbuf(weekdays[value.weekday() * 10]);
+				to_vbuf(weekdays[value.weekday() * 10 + 1]);
+				to_vbuf(weekdays[value.weekday() * 10 + 2]);
 			}
 			break;
 
@@ -745,7 +833,7 @@ namespace och
 				const char* dayname = weekdays + (ptrdiff_t)value.weekday() * 10;
 
 				while (*dayname)
-					to_vbuf(out, *dayname++);
+					to_vbuf(*dayname++);
 			}
 			break;
 
@@ -767,18 +855,18 @@ namespace och
 			case 'l':
 			{
 				if (value.millisecond() >= 100)
-					to_vbuf(out, (char)('0' + value.millisecond() / 100));
+					to_vbuf((char)('0' + value.millisecond() / 100));
 				if (value.millisecond() >= 10)
-					to_vbuf(out, (char)('0' + (value.millisecond() / 10) % 10));
-				to_vbuf(out, (char)('0' + value.millisecond() % 10));
+					to_vbuf((char)('0' + (value.millisecond() / 10) % 10));
+				to_vbuf((char)('0' + value.millisecond() % 10));
 			}
 			break;
 
 			case 'L':
 			{
-				to_vbuf(out, (char)('0' + (char)(value.millisecond() / 100)));
-				to_vbuf(out, (char)('0' + (value.millisecond() / 10) % 10));
-				to_vbuf(out, (char)('0' + value.millisecond() % 10));
+				to_vbuf((char)('0' + (char)(value.millisecond() / 100)));
+				to_vbuf((char)('0' + (value.millisecond() / 10) % 10));
+				to_vbuf((char)('0' + value.millisecond() % 10));
 			}
 			break;
 
@@ -786,17 +874,17 @@ namespace och
 			{
 				if (value.is_utc())
 				{
-					to_vbuf(out, 'Z');
+					to_vbuf('Z');
 
 					break;
 				}
 
-				to_vbuf(out, value.utc_offset_is_negative() ? '-' : '+');
+				to_vbuf(value.utc_offset_is_negative() ? '-' : '+');
 
 				uint16_t h = value.utc_offset_hours();
 
-				to_vbuf(out, (char)('0' + h / 10));
-				to_vbuf(out, (char)('0' + h % 10));
+				to_vbuf((char)('0' + h / 10));
+				to_vbuf((char)('0' + h % 10));
 			}
 			break;
 
@@ -807,8 +895,8 @@ namespace och
 
 				uint16_t m = value.utc_offset_minutes();
 
-				to_vbuf(out, (char)('0' + m / 10));
-				to_vbuf(out, (char)('0' + m % 10));
+				to_vbuf((char)('0' + m / 10));
+				to_vbuf((char)('0' + m % 10));
 			}
 			break;
 
@@ -829,7 +917,7 @@ namespace och
 			case 'x':
 				c = *++format;//Fallthrough...
 			default:
-				to_vbuf(out, c);
+				to_vbuf(c);
 				utf8_cpoints -= _is_utf8_surr(c);
 				break;
 			}
@@ -837,11 +925,11 @@ namespace och
 #undef OCH_FMT_2DIGIT
 
 		if (!is_rightadj(context))
-			pad_vbuf(out, cpoints, context);
+			pad_vbuf(cpoints, context);
 	}
 
 	//TODO improve (Not happy)
-	void fmt_timespan(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_timespan(type_union arg_value, const parsed_context& context)
 	{
 		//     ->   seconds (with format specifier)
 		// d   ->   days
@@ -882,75 +970,75 @@ namespace och
 			if (value.val < 10000ll && value.val > -10000ll)
 			{
 				if (is_rightadj(context))
-					pad_vbuf(out, 5 + (sign != 0), context);
+					pad_vbuf(5 + (sign != 0), context);
 
 				if (sign)
-					to_vbuf(out, sign);
+					to_vbuf(sign);
 
-				_fmt_three_digit(out, value.microseconds());
-				to_vbuf(out, 'u');
-				to_vbuf(out, 's');
+				_fmt_three_digit(value.microseconds());
+				to_vbuf('u');
+				to_vbuf('s');
 
 				if (!is_rightadj(context))
-					pad_vbuf(out, 5 + (sign != 0), context);
+					pad_vbuf(5 + (sign != 0), context);
 			}
 			else if (value.val < 10000000ll && value.val > -10000000ll)
 			{
 				if (is_rightadj(context))
-					pad_vbuf(out, 9 + (sign != 0), context);
+					pad_vbuf(9 + (sign != 0), context);
 
 				if (sign)
-					to_vbuf(out, sign);
+					to_vbuf(sign);
 
-				_fmt_three_digit(out, value.milliseconds());
+				_fmt_three_digit(value.milliseconds());
 
-				to_vbuf(out, '.');
+				to_vbuf('.');
 
-				_fmt_three_digit(out, value.microseconds() % 1000);
+				_fmt_three_digit(value.microseconds() % 1000);
 
-				to_vbuf(out, 'm');
-				to_vbuf(out, 's');
+				to_vbuf('m');
+				to_vbuf('s');
 
 				if (!is_rightadj(context))
-					pad_vbuf(out, 9 + (sign != 0), context);
+					pad_vbuf(9 + (sign != 0), context);
 			}
 			else if (value.val < 600000000ll && value.val > -600000000ll)
 			{
 				if (is_rightadj(context))
-					pad_vbuf(out, 7 + (sign != 0), context);
+					pad_vbuf(7 + (sign != 0), context);
 
-				_fmt_two_digit(out, value.seconds());
+				_fmt_two_digit(value.seconds());
 
-				to_vbuf(out, '.');
+				to_vbuf('.');
 
-				_fmt_three_digit(out, value.milliseconds() % 1000);
+				_fmt_three_digit(value.milliseconds() % 1000);
 
-				to_vbuf(out, 's');
+				to_vbuf('s');
 
 				if (!is_rightadj(context))
-					pad_vbuf(out, 7 + (sign != 0), context);
+					pad_vbuf(7 + (sign != 0), context);
 			}
 			else if (value.val < 60 * 600000000ll && value.val > -60 * 600000000ll)
 			{
 				if (is_rightadj(context))
-					pad_vbuf(out, 12 + (sign != 0), context);
+					pad_vbuf(12 + (sign != 0), context);
 
-				_fmt_two_digit(out, value.minutes());
+				_fmt_two_digit(value.minutes());
 
-				to_vbuf(out, ':');
+				to_vbuf(':');
 
-				_fmt_two_digit(out, value.seconds() % 60);
+				_fmt_two_digit(value.seconds() % 60);
 
-				to_vbuf(out, '.');
+				to_vbuf('.');
 
-				_fmt_three_digit(out, value.milliseconds() % 1000);
+				_fmt_three_digit(value.milliseconds() % 1000);
 
-				to_vbuf(out, 'm');
-				to_vbuf(out, 'i');
-				to_vbuf(out, 'n');
+				to_vbuf('m');
+				to_vbuf('i');
+				to_vbuf('n');
 
 				if (!is_rightadj(context))
-					pad_vbuf(out, 12 + (sign != 0), context);
+					pad_vbuf(12 + (sign != 0), context);
 			}
 			else
 			{
@@ -961,29 +1049,29 @@ namespace och
 				uint32_t chars = 6 + (days ? log10_d + 4 : 0) + (sign != 0);
 
 				if (is_rightadj(context))
-					pad_vbuf(out, chars, context);
+					pad_vbuf(chars, context);
 
 				if (sign)
-					to_vbuf(out, sign);
+					to_vbuf(sign);
 
 				if (days)
 				{
-					_fmt_decimal(out, value.days(), log10_d);
+					_fmt_decimal(value.days(), log10_d);
 
-					to_vbuf(out, 'd');
-					to_vbuf(out, ' ');
-					to_vbuf(out, '+');
-					to_vbuf(out, ' ');
+					to_vbuf('d');
+					to_vbuf(' ');
+					to_vbuf('+');
+					to_vbuf(' ');
 				}
 
-				_fmt_two_digit(out, value.hours() % 24);
+				_fmt_two_digit(value.hours() % 24);
 
-				to_vbuf(out, ':');
+				to_vbuf(':');
 
-				_fmt_two_digit(out, value.minutes() % 60);
+				_fmt_two_digit(value.minutes() % 60);
 
 				if (!is_rightadj(context))
-					pad_vbuf(out, chars, context);
+					pad_vbuf(chars, context);
 			}
 			return;
 
@@ -1002,7 +1090,7 @@ namespace och
 		case 'M':
 			if (!context.raw_context)
 			{
-				to_vbuf_with_padding(out, invalid_specifier_msg, context);
+				to_vbuf_with_padding(invalid_specifier_msg, context);
 
 				return;
 			}
@@ -1020,7 +1108,7 @@ namespace och
 			}
 			else
 			{
-				to_vbuf_with_padding(out, invalid_specifier_msg, context);
+				to_vbuf_with_padding(invalid_specifier_msg, context);
 
 				return;
 			}
@@ -1028,7 +1116,7 @@ namespace och
 		case 'm':
 			if (!context.raw_context)
 			{
-				to_vbuf_with_padding(out, invalid_specifier_msg, context);
+				to_vbuf_with_padding(invalid_specifier_msg, context);
 
 				return;
 			}
@@ -1038,7 +1126,7 @@ namespace och
 				time_value = value.minutes();
 			else
 			{
-				to_vbuf_with_padding(out, invalid_specifier_msg, context);
+				to_vbuf_with_padding(invalid_specifier_msg, context);
 
 				return;
 			}
@@ -1075,48 +1163,48 @@ namespace och
 			uint32_t chars = 17 + day_chars + (sign != 0);
 
 			if (is_rightadj(context))
-				pad_vbuf(out, chars, context);
+				pad_vbuf(chars, context);
 
 			if (sign)
-				to_vbuf(out, sign);
+				to_vbuf(sign);
 
 			if (days)
 			{
-				_fmt_decimal(out, value.days(), log10_d);
+				_fmt_decimal(value.days(), log10_d);
 
-				to_vbuf(out, 'd');
-				to_vbuf(out, ' ');
-				to_vbuf(out, '+');
-				to_vbuf(out, ' ');
+				to_vbuf('d');
+				to_vbuf(' ');
+				to_vbuf('+');
+				to_vbuf(' ');
 			}
 
-			_fmt_two_digit(out, value.hours() % 24);
+			_fmt_two_digit(value.hours() % 24);
 
-			to_vbuf(out, ':');
+			to_vbuf(':');
 
-			_fmt_two_digit(out, value.minutes() % 60);
+			_fmt_two_digit(value.minutes() % 60);
 
-			to_vbuf(out, ':');
+			to_vbuf(':');
 
-			_fmt_two_digit(out, value.seconds() % 60);
+			_fmt_two_digit(value.seconds() % 60);
 
-			to_vbuf(out, '.');
+			to_vbuf('.');
 
-			_fmt_three_digit(out, value.milliseconds() % 1000);
+			_fmt_three_digit(value.milliseconds() % 1000);
 
-			to_vbuf(out, '.');
+			to_vbuf('.');
 
-			_fmt_three_digit(out, value.microseconds() % 1000);
+			_fmt_three_digit(value.microseconds() % 1000);
 
-			to_vbuf(out, 'h');
+			to_vbuf('h');
 
 			if (!is_rightadj(context))
-				pad_vbuf(out, chars, context);
+				pad_vbuf(chars, context);
 		}
 		return;
 
 		case 'l':
-			to_vbuf_with_padding(out, och::stringview("[[fmt_timespan - specifier 'l' is not yet implemented]]"), context);
+			to_vbuf_with_padding(och::stringview("[[fmt_timespan - specifier 'l' is not yet implemented]]"), context);
 
 			{
 				////[+ -][D+d, ][HHh, ][MMmin, ][SSs, ][MMMms, ]UUUus
@@ -1197,11 +1285,11 @@ namespace och
 
 		case 'x':
 
-			to_vbuf_with_padding(out, och::stringview("[[fmt_timespan - specifier 'x' is not yet implemented]]"), context);
+			to_vbuf_with_padding(och::stringview("[[fmt_timespan - specifier 'x' is not yet implemented]]"), context);
 			return;
 
 		default:
-			to_vbuf_with_padding(out, invalid_specifier_msg, context);
+			to_vbuf_with_padding(invalid_specifier_msg, context);
 			return;
 		}
 
@@ -1217,27 +1305,25 @@ namespace och
 		chars += specifier_len;
 
 		if (is_rightadj(context))
-			pad_vbuf(out, chars, context);
+			pad_vbuf(chars, context);
 
-		_fmt_decimal(out, time_value, log10_v, sign);
+		_fmt_decimal(time_value, log10_v, sign);
 
 		if (specifier)
-			to_vbuf(out, och::stringview(specifier, specifier_len, 1));
+			to_vbuf(och::stringview(specifier, specifier_len, 1));
 
 		if (!is_rightadj(context))
-			pad_vbuf(out, chars, context);
+			pad_vbuf(chars, context);
 	}
 
 	//TODO implement
-	void fmt_highres_timespan(och::iohandle out, type_union arg_value, const parsed_context& context)
+	void fmt_highres_timespan(type_union arg_value, const parsed_context& context)
 	{
-		out;
-
 		arg_value;
 
 		context;
 
-		to_vbuf_with_padding(out, och::stringview("[[fmt_highres_timespan is not yet implemented]]"), context);
+		to_vbuf_with_padding(och::stringview("[[fmt_highres_timespan is not yet implemented]]"), context);
 
 		////     ->   microseconds (with format specifier)
 		//// ns  ->   nanoseconds
@@ -1497,8 +1583,21 @@ namespace och
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 	//{[argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]}
-	void vprint(och::iohandle out, const och::stringview& format, const och::range<const arg_wrapper>& argv)
+	uint32_t vprint(och::iohandle out, const och::stringview& format, const och::range<const arg_wrapper>& argv, uint32_t buffer_sz)
 	{
+		char* const initial_buffer_start = buffer_sz == 0xFFFF'FFFF ? nullptr : static_cast<char*>(out.ptr);
+
+		if (buffer_sz == 0xFFFF'FFFF)
+		{
+			curr_output.file = out;
+			is_file_output = true;
+		}
+		else
+		{
+			curr_output.buffer = { static_cast<char*>(out.ptr), buffer_sz - 1 };
+			is_file_output = false;
+		}
+
 		uint32_t arg_counter = 0;
 
 		const char* last_fmt_end = format.raw_cbegin();
@@ -1515,7 +1614,7 @@ namespace och
 					continue;
 				}
 
-				to_vbuf(out, och::stringview(last_fmt_end, (uint32_t)(curr - 1 - last_fmt_end), 1));
+				to_vbuf(och::stringview(last_fmt_end, (uint32_t)(curr - 1 - last_fmt_end), 1));
 
 				uint32_t arg_idx;
 
@@ -1540,7 +1639,7 @@ namespace och
 
 				parsed_context format_context(curr, argv);
 
-				argv[arg_idx].formatter(out, argv[arg_idx].value, format_context);
+				argv[arg_idx].formatter(argv[arg_idx].value, format_context);
 
 				while (*curr++ != '}');
 
@@ -1549,9 +1648,18 @@ namespace och
 
 		och::stringview _temp(last_fmt_end, (uint32_t)(curr - last_fmt_end), 1);
 
-		to_vbuf(out, _temp);
+		to_vbuf(_temp);
 
-		_vprint_buf.flush(out);
+		if (is_file_output)
+		{
+			_vprint_buf.flush(out);
+			return 0;
+		}
+		else
+		{
+			to_vbuf(utf8_char('\0'));
+			return static_cast<uint32_t>(curr_output.buffer.beg - initial_buffer_start + overrun_count);
+		}
 	}
 
 
@@ -1607,5 +1715,34 @@ namespace och
 	void print(const och::utf8_string& format)
 	{
 		print(och::standard_out, format);
+	}
+
+
+
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////sprint//////////////////////////////////////////////////////////*/
+	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+	uint32_t sprint(range<char> buf, const stringview& format)
+	{
+		uint32_t wish = format.get_codeunits();
+
+		if (wish <= buf.len())
+		{
+			for (uint32_t i = 0; i != wish; ++i)
+				buf[i] = format.raw_cbegin()[i];
+		}
+
+		return wish;
+	}
+
+	uint32_t sprint(range<char> buf, const char* format)
+	{
+		return sprint(buf, och::stringview(format));
+	}
+
+	uint32_t sprint(range<char> buf, const utf8_string& format)
+	{
+		return sprint(buf, och::stringview(format));
 	}
 }

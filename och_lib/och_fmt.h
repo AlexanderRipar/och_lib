@@ -13,17 +13,17 @@ namespace och
 	struct parsed_context
 	{
 		const char* raw_context;
-		och::range<const och::arg_wrapper> argv;
-		och::utf8_char filler;
-		och::utf8_char format_specifier;
+		range<const arg_wrapper> argv;
+		utf8_char filler;
+		utf8_char format_specifier;
 		uint16_t precision;
 		uint16_t width;
 		uint8_t flags;
 
-		parsed_context(const char* context, const och::range<const och::arg_wrapper> argv);
+		parsed_context(const char* context, const range<const arg_wrapper> argv);
 	};
 
-	using fmt_fn = void (*) (och::iohandle out, type_union arg_value, const parsed_context& context);
+	using fmt_fn = void (*) (type_union arg_value, const parsed_context& context);
 
 	struct arg_wrapper
 	{
@@ -53,27 +53,28 @@ namespace och
 
 		arg_wrapper(const char* value);
 
-		arg_wrapper(const och::utf8_string& value);
+		arg_wrapper(const utf8_string& value);
 
-		arg_wrapper(const och::utf8_view& value);
+		arg_wrapper(const utf8_view& value);
 
-		arg_wrapper(const och::date& value);
+		arg_wrapper(const date& value);
 
 		arg_wrapper(char32_t value);
 
 		arg_wrapper(char value);
 
-		arg_wrapper(const och::utf8_char& value);
+		arg_wrapper(const utf8_char& value);
 
-		arg_wrapper(och::timespan value);
+		arg_wrapper(timespan value);
 
-		arg_wrapper(och::highres_timespan value);
+		arg_wrapper(highres_timespan value);
 	};
-	void vprint(och::iohandle out, const och::stringview& format, const och::range<const arg_wrapper>& argv);
+
+	uint32_t vprint(iohandle out, const stringview& format, const range<const arg_wrapper>& argv, uint32_t buffer_bytes = 0xFFFF'FFFF);
 
 	//{[argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [format specifier]]}
 	template<typename... Args>
-	void print(och::iohandle out, const och::stringview& format, Args... args)
+	void print(iohandle out, const stringview& format, Args... args)
 	{
 		const arg_wrapper argv[]{ arg_wrapper(args)... };
 
@@ -81,13 +82,13 @@ namespace och
 	}
 
 	template<typename... Args>
-	void print(och::iohandle out, const char* format, Args... args)
+	void print(iohandle out, const char* format, Args... args)
 	{
 		print(out, och::stringview(format), args...);
 	}
 
 	template<typename... Args>
-	void print(och::iohandle out, const och::utf8_string& format, Args... args)
+	void print(iohandle out, const utf8_string& format, Args... args)
 	{
 		print(out, och::stringview(format), args...);
 	}
@@ -95,19 +96,19 @@ namespace och
 
 
 	template<typename... Args>
-	void print(const och::filehandle& out, const och::stringview& format, Args... args)
+	void print(const filehandle& out, const stringview& format, Args... args)
 	{
 		print(out.handle, format, args...);
 	}
 
 	template<typename... Args>
-	void print(const och::filehandle& out, const char* format, Args... args)
+	void print(const filehandle& out, const char* format, Args... args)
 	{
 		print(out.handle, och::stringview(format), args...);
 	}
 
 	template<typename... Args>
-	void print(const och::filehandle& out, const och::utf8_string& format, Args... args)
+	void print(const filehandle& out, const utf8_string& format, Args... args)
 	{
 		print(out.handle, och::stringview(format), args...);
 	}
@@ -115,7 +116,7 @@ namespace och
 
 
 	template<typename... Args>
-	void print(const och::stringview& format, Args... args)
+	void print(const stringview& format, Args... args)
 	{
 		print(och::standard_out, format, args...);
 	}
@@ -127,32 +128,63 @@ namespace och
 	}
 
 	template<typename... Args>
-	void print(const och::utf8_string& format, Args... args)
+	void print(const utf8_string& format, Args... args)
 	{
 		print(och::standard_out, och::stringview(format), args...);
 	}
 
 
 
-	void print(och::iohandle out, const och::stringview& format);
+	void print(iohandle out, const stringview& format);
 
-	void print(och::iohandle out, const char* format);
+	void print(iohandle out, const char* format);
 
-	void print(och::iohandle out, const och::utf8_string& format);
-
-
-
-	void print(const och::filehandle& out, const och::stringview& format);
-
-	void print(const och::filehandle& out, const char* format);
-
-	void print(const och::filehandle& out, const och::utf8_string& format);
+	void print(iohandle out, const utf8_string& format);
 
 
 
-	void print(const och::stringview& format);
+	void print(const filehandle& out, const stringview& format);
+
+	void print(const filehandle& out, const char* format);
+
+	void print(const filehandle& out, const utf8_string& format);
+
+
+
+	void print(const stringview& format);
 
 	void print(const char* format);
 
-	void print(const och::utf8_string& format);
+	void print(const utf8_string& format);
+
+
+
+
+	template<typename... Args>
+	uint32_t sprint(range<char> buf, const stringview& format, Args... args)
+	{
+		const arg_wrapper argv[]{ arg_wrapper(args)... };
+
+		return vprint(och::iohandle(static_cast<void*>(buf.beg)), format, och::range<const arg_wrapper>(argv), static_cast<uint32_t>(buf.len()));
+	}
+
+	template<typename... Args>
+	uint32_t sprint(range<char> buf, const char* format, Args... args)
+	{
+		return sprint(buf, och::stringview(format), args...);
+	}
+
+	template<typename... Args>
+	uint32_t sprint(range<char> buf, const utf8_string& format, Args... args)
+	{
+		return sprint(buf, och::stringview(format), args...);
+	}
+
+	
+	
+	uint32_t sprint(range<char> buf, const stringview& format);
+
+	uint32_t sprint(range<char> buf, const char* format);
+
+	uint32_t sprint(range<char> buf, const char* format);
 }
