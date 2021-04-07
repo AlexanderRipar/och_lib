@@ -19,7 +19,7 @@ constexpr const char* find_substr_after(const char* str, char c)
 
 //#define OCH_DEPRECATED_ERRLOG(errmsg) printf("\nERROR: %s\n\t+----------------------------\n\t| File: %s\n\t| Func: " __FUNCTION__ "\n\t| Line: " S__LINE__ "\n\t+----------------------------\n", (errmsg), find_substr_after(__FILE__, '\\'));
 
-#define OCH_ERRLOG(errmsg) och::print("\nERROR: {}\n\t+----------------------------\n\type| File: {}\n\t| Func: {}\n\t| Line: %d\n\t+----------------------------\n", (errmsg), find_substr_after(__FILE__, '\\'), __FUNCSIG__, __LINE__);
+#define OCH_ERRLOG(errmsg) och::print("\nERROR: {}\n\t+----------------------------\n\t| File: {}\n\t| Func: {}\n\t| Line: %d\n\t+----------------------------\n", (errmsg), find_substr_after(__FILE__, '\\'), __FUNCSIG__, __LINE__);
 
 #define OCH_DEBUG 1
 
