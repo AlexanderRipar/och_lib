@@ -67,7 +67,7 @@ namespace och
 			return 4;
 	}
 
-	constexpr bool _is_utf8_surr(char c) noexcept
+	constexpr bool is_utf8_surr(char c) noexcept
 	{
 		return (c & 0xC0) == 0x80;
 	}
@@ -88,7 +88,7 @@ namespace och
 
 			int32_t i = 1;
 
-			while (i != 4 && _is_utf8_surr(*cstring))
+			while (i != 4 && is_utf8_surr(*cstring))
 				val |= ((uint32_t) * (const uint8_t*)cstring++) << (i++ * 8);
 
 			return val;
@@ -230,7 +230,7 @@ namespace och
 			uint32_t cpoints = 0;
 
 			while (*cstring)
-				cpoints += !_is_utf8_surr(*cstring++);
+				cpoints += !is_utf8_surr(*cstring++);
 
 			return cpoints;
 		}
@@ -442,7 +442,7 @@ namespace och
 			{
 				++cunits;
 
-				curr_cpoints += !_is_utf8_surr(str[cunits]);
+				curr_cpoints += !is_utf8_surr(str[cunits]);
 			}
 
 			if (curr_cpoints > longest_cpoints)

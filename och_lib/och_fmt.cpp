@@ -165,7 +165,7 @@ namespace och
 	/*////////////////////////////////////////////////formatting helpers/////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	uint32_t log2(uint64_t n)
+	uint32_t log2(uint64_t n) noexcept
 	{
 		uint32_t idx;
 
@@ -174,7 +174,7 @@ namespace och
 		return idx + 1;
 	}
 
-	uint32_t log10(uint64_t n)
+	uint32_t log10(uint64_t n) noexcept
 	{
 		uint32_t log{ 0 };
 
@@ -193,7 +193,7 @@ namespace och
 			return log + 1;
 	}
 
-	uint32_t log16(uint64_t n)
+	uint32_t log16(uint64_t n) noexcept
 	{
 		return (log2(n) + 3) >> 2;
 	}
@@ -331,92 +331,6 @@ namespace och
 
 		if (!is_rightadj(context))
 			pad_vbuf(digits, context);
-	}
-
-	uint32_t h_get_date_cpoints(const char* fmt, const och::date& d) noexcept
-	{
-		uint32_t cpoints = 0;
-
-		for (char c = *fmt; c != '}'; c = *++fmt)
-			switch (c)
-			{
-			case 'y':
-				cpoints += log10(d.year());
-				break;
-			case 'Y':
-				cpoints += d.year() >= 10000 ? 5 : 4;
-				break;
-			case 'm':
-				cpoints += d.month() >= 10 ? 2 : 1;
-				break;
-			case 'N':
-			{
-				const char* monthname = months + (ptrdiff_t)(d.month() - 1) * 10;
-
-				while (*monthname++)
-					++cpoints;
-			}
-			break;
-			case 'd':
-				cpoints += d.monthday() >= 10 ? 2 : 1;
-				break;
-			case 'W':
-			{
-				const char* dayname = weekdays + (ptrdiff_t)d.weekday() * 10;
-
-				while (*dayname++)
-					++cpoints;
-			}
-			break;
-			case 'i':
-				cpoints += d.hour() >= 10 ? 2 : 1;
-				break;
-			case 'j':
-				cpoints += d.minute() >= 10 ? 2 : 1;
-				break;
-			case 'k':
-				cpoints += d.second() >= 10 ? 2 : 1;
-				break;
-			case 'l':
-				cpoints += d.millisecond() >= 100 ? 3 : d.millisecond() >= 10 ? 2 : 1;
-				break;
-			case 'D':
-			case 'I':
-			case 'J':
-			case 'K':
-			case 'M':
-				cpoints += 2;
-				break;
-			case 'L':
-			case 'w':
-			case 'n':
-				cpoints += 3;
-				break;
-			case 'u':
-				cpoints += d.is_utc() ? 1 : 3;
-				break;
-			case 'U':
-				cpoints += d.is_utc() ? 0 : 2;
-				break;
-			case 's':
-			case 'S':
-				if ((c != 's') ^ (d.is_utc())) //Next char is inactive
-				{
-					if (*++fmt == 'x')
-						++fmt;
-
-					while (_is_utf8_surr(fmt[1]))
-						++fmt;
-				}
-				break;
-			case 'x':
-				c = *++fmt; //Fallthrough...
-			default:
-				cpoints += !_is_utf8_surr(c);
-				break;
-			}
-
-		return cpoints;
 	}
 
 	char h_get_sign(int64_t n, const parsed_context& context)
@@ -710,7 +624,7 @@ namespace och
 	{
 		//          [y]yyyy-mm-dd, hh:mm:ss.mmm
 		// d   ->   [y]yyyy-mm-dd
-		// t   ->   is_utc ? hh:mm:ss.mmm : hh:mm:ss:mmm
+		// t   ->   hh:mm:ss.mmm : hh:mm:ss:mmm
 		// u   ->   is_utc ? [y]yyyy-mm-ddThh:mm:ss.mmmZ : [y]yyyy-mm-ddThh:mm:ss.mmm+-hh:mm
 		// x   ->   custom format:
 		//          +-------------------------------------------------------------------------------------------+
@@ -755,194 +669,186 @@ namespace och
 			return;
 		}
 
-		uint32_t cpoints = h_get_date_cpoints(format, value);
+#define OCH_FMT_2DIGIT(x) if(c & 0x20) { if(x >= 10) to_vbuf((char)('0' + x / 10)); to_vbuf((char)('0' + x % 10)); } else { to_vbuf((char)('0' + x / 10)); to_vbuf((char)('0' + x % 10)); }
+
+		uint16_t year = value.year();
+		uint16_t month = value.month();
+		uint16_t weekday = value.weekday();
+		uint16_t monthday = value.monthday();
+		uint16_t hour = value.hour();
+		uint16_t minute = value.minute();
+		uint16_t second = value.second();
+		uint16_t millisecond = value.millisecond();
+
+		uint32_t cpoints = 0;
+
+		//Count required codepoints
+		{
+			const char* fmt = format;
+
+			for (char c = *fmt; c != '}'; c = *++fmt)
+				switch (c)
+				{
+				case 'y':
+					cpoints += log10(year); 	break;
+				case 'Y':
+					cpoints += year >= 10000 ? 5 : 4; break;
+				case 'm':
+					cpoints += month >= 10 ? 2 : 1; break;
+				case 'N':
+					cpoints += static_cast<uint32_t>(strlen(months + static_cast<ptrdiff_t>(month - 1) * 10)); break;
+				case 'd':
+					cpoints += 1 + (monthday >= 10); break;
+				case 'W':
+					cpoints += static_cast<uint32_t>(strlen(weekdays + static_cast<ptrdiff_t>(weekday) * 10)); break;
+				case 'i':
+					cpoints += 1 + (hour >= 10); break;
+				case 'j':
+					cpoints += 1 + (minute >= 10); break;
+				case 'k':
+					cpoints += 1 + (second >= 10); break;
+				case 'l':
+					cpoints += millisecond >= 100 ? 3 : millisecond >= 10 ? 2 : 1; break;
+				case 'D':
+				case 'I':
+				case 'J':
+				case 'K':
+				case 'M':
+					cpoints += 2; break;
+				case 'L':
+				case 'w':
+				case 'n':
+					cpoints += 3; break;
+				case 'u':
+					cpoints += value.is_utc() ? 1 : 3; break;
+				case 'U':
+					cpoints += value.is_utc() ? 0 : 2; break;
+				case 's':
+				case 'S':
+					if ((c != 's') ^ (value.is_utc())) //Next char is inactive
+					{
+						if (*++fmt == 'x')
+							++fmt;
+
+						while (is_utf8_surr(fmt[1]))
+							++fmt;
+					}
+					break;
+				case 'x':
+					c = *++fmt; //Fallthrough...
+				default:
+					cpoints += !is_utf8_surr(c); break;
+				}
+		}
+
+		//Actually start formatting
 
 		if (is_rightadj(context))
 			pad_vbuf(cpoints, context);
-
-#define OCH_FMT_2DIGIT(x) if(c & 0x20) { if(x >= 10) to_vbuf((char)('0' + x / 10)); to_vbuf((char)('0' + x % 10)); } else { to_vbuf((char)('0' + x / 10)); to_vbuf((char)('0' + x % 10)); }
 
 		for (char c = *format; c != '}'; c = *++format)
 			switch (c)
 			{
 			case 'y':
-			{
-				uint16_t y = value.year();
-
-				char* curr = reserve_vbuf(log10(y)) + log10(y) - 1;
-
-				if (curr)
-				{
-					while (y >= 10)
-					{
-						*curr-- = (char)('0' + y % 10);
-
-						y /= 10;
-					}
-
-					*curr = (char)('0' + y);
-				}
-			}
-			break;
+				h_fmt_decimal(year, log10(year));
+				break;
 
 			case 'Y':
-			{
-				uint16_t y = value.year();
-
-				char* curr = reserve_vbuf(4 + (y >= 10000));
-
-				if (curr)
-				{
-					if (y >= 10000)
-					{
-						*curr++ = '0' + (char)(y / 10000);
-						y /= 10;
-					}
-
-					curr[3] = '0' + y % 10;
-					y /= 10;
-					curr[2] = '0' + y % 10;
-					y /= 10;
-					curr[1] = '0' + y % 10;
-					y /= 10;
-					curr[0] = '0' + (char)y;
-				}
-			}
-			break;
+				h_fmt_decimal(year, log10(year));
+				for (int i = log10(year); i != 4; ++i)
+					to_vbuf('0');
+				break;
 
 			case 'm':
 			case 'M':
-				OCH_FMT_2DIGIT(value.month());
+				OCH_FMT_2DIGIT(month);
 				break;
 
 			case 'n':
-			{
-				to_vbuf(months[(value.month() - 1) * 10]);
-				to_vbuf(months[(value.month() - 1) * 10 + 1]);
-				to_vbuf(months[(value.month() - 1) * 10 + 2]);
-			}
-			break;
+				for (int i = 0; i != 3; ++i)
+					to_vbuf(months[(month - 1) * 10 + i]);
+				break;
 
 			case 'N':
-			{
-				const char* monthname = months + (ptrdiff_t)(value.month() - 1) * 10;
-
-				while (*monthname)
-					to_vbuf(*monthname++);
-			}
-			break;
+				to_vbuf(och::stringview(months + (ptrdiff_t)(month - 1) * 10));
+				break;
 
 			case 'd':
 			case 'D':
-				OCH_FMT_2DIGIT(value.monthday());
+				OCH_FMT_2DIGIT(monthday);
 				break;
 
 			case 'w':
-			{
-				to_vbuf(weekdays[value.weekday() * 10]);
-				to_vbuf(weekdays[value.weekday() * 10 + 1]);
-				to_vbuf(weekdays[value.weekday() * 10 + 2]);
-			}
-			break;
+				for(int i = 0; i != 3; ++i)
+					to_vbuf(weekdays[weekday * 10 + i]);
+				break;
 
 			case 'W':
-			{
-				const char* dayname = weekdays + (ptrdiff_t)value.weekday() * 10;
-
-				while (*dayname)
-					to_vbuf(*dayname++);
-			}
-			break;
+				to_vbuf(och::stringview(weekdays + (ptrdiff_t)weekday * 10));
+				break;
 
 			case 'i':
 			case 'I':
-				OCH_FMT_2DIGIT(value.hour());
+				OCH_FMT_2DIGIT(hour);
 				break;
 
 			case 'j':
 			case 'J':
-				OCH_FMT_2DIGIT(value.minute());
+				OCH_FMT_2DIGIT(minute);
 				break;
 
 			case 'k':
 			case 'K':
-				OCH_FMT_2DIGIT(value.second());
+				OCH_FMT_2DIGIT(second);
 				break;
 
 			case 'l':
-			{
-				if (value.millisecond() >= 100)
-					to_vbuf((char)('0' + value.millisecond() / 100));
-				if (value.millisecond() >= 10)
-					to_vbuf((char)('0' + (value.millisecond() / 10) % 10));
-				to_vbuf((char)('0' + value.millisecond() % 10));
-			}
-			break;
+				h_fmt_decimal(millisecond, log10(millisecond));
+				break;
 
 			case 'L':
-			{
-				to_vbuf((char)('0' + (char)(value.millisecond() / 100)));
-				to_vbuf((char)('0' + (value.millisecond() / 10) % 10));
-				to_vbuf((char)('0' + value.millisecond() % 10));
-			}
-			break;
+				h_fmt_three_digit(millisecond);
+				break;
 
 			case 'u':
-			{
-				if (value.is_utc())
+				if (!value.is_utc())
 				{
-					to_vbuf('Z');
-
-					break;
+					to_vbuf(value.utc_offset_is_negative() ? '-' : '+');
+					h_fmt_two_digit(value.utc_offset_hours());
 				}
-
-				to_vbuf(value.utc_offset_is_negative() ? '-' : '+');
-
-				uint16_t h = value.utc_offset_hours();
-
-				to_vbuf((char)('0' + h / 10));
-				to_vbuf((char)('0' + h % 10));
-			}
-			break;
+				else
+					to_vbuf('Z');
+				break;
 
 			case 'U':
-			{
-				if (value.is_utc())
-					break;
-
-				uint16_t m = value.utc_offset_minutes();
-
-				to_vbuf((char)('0' + m / 10));
-				to_vbuf((char)('0' + m % 10));
-			}
-			break;
+				if (!value.is_utc())
+					h_fmt_two_digit(value.utc_offset_minutes());
+				break;
 
 			case 's':
 			case 'S':
-			{
 				if ((c != 's') ^ (value.is_utc())) //Next char is inactive
 				{
 					if (*++format == 'x')
 						++format;
 
-					while (_is_utf8_surr(format[1]))
+					while (is_utf8_surr(format[1]))
 						++format;
 				}
-			}
-			break;
+				break;
 
 			case 'x':
 				c = *++format;//Fallthrough...
 			default:
 				to_vbuf(c);
-				utf8_cpoints -= _is_utf8_surr(c);
+				utf8_cpoints -= is_utf8_surr(c);
 				break;
 			}
 
-#undef OCH_FMT_2DIGIT
-
 		if (!is_rightadj(context))
 			pad_vbuf(cpoints, context);
+
+#undef OCH_FMT_2DIGIT
 	}
 
 	//TODO improve (Not happy)
@@ -1496,8 +1402,6 @@ namespace och
 
 	parsed_context::parsed_context(const char*& context, const och::range<const och::arg_wrapper> argv) : argv{ argv }
 	{
-		//[width] [.precision] [rightadj] [~filler] [signmode] [format specifier]}
-
 		width = h_parse_fmt_index_relative(context, argv);
 
 		if (*context == '.')
@@ -1506,14 +1410,11 @@ namespace och
 
 			precision = h_parse_fmt_index_relative(context, argv);
 		}
-		else
-			precision = 0xFFFF;
-
-		flags = 0;
 
 		if (*context == '>')
 		{
 			flags |= 4;
+
 			++context;
 		}
 		else if (*context == '<')
@@ -1525,8 +1426,6 @@ namespace och
 
 			context += filler.get_codeunits();
 		}
-		else
-			filler = ' ';
 
 		if (*context == '+')
 		{
@@ -1552,8 +1451,6 @@ namespace och
 
 		if (*context != '}')
 			raw_context = context;
-		else
-			raw_context = nullptr;
 
 		for (int32_t opening_bracket_cnt = 1; opening_bracket_cnt; ++context)
 			if (*context == '{')

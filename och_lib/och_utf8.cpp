@@ -11,7 +11,7 @@ namespace och
 		{
 			++cunits;
 
-			cpoints += !_is_utf8_surr(str[cunits]);
+			cpoints += !is_utf8_surr(str[cunits]);
 		}
 	}
 
@@ -30,7 +30,7 @@ namespace och
 
 	void utf8_iterator::operator++() noexcept
 	{
-		while (_is_utf8_surr(*++cstring));
+		while (is_utf8_surr(*++cstring));
 	}
 
 	bool utf8_iterator::operator!=(const utf8_iterator& rhs) const noexcept
@@ -327,7 +327,7 @@ namespace och
 
 		while (curr_cunit > 0 && codepts_popped < n)
 		{
-			codepts_popped += !_is_utf8_surr(raw_cbegin()[--curr_cunit]);
+			codepts_popped += !is_utf8_surr(raw_cbegin()[--curr_cunit]);
 		}
 
 		raw_begin()[curr_cunit] = '\0';

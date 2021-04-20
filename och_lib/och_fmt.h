@@ -12,13 +12,13 @@ namespace och
 
 	struct parsed_context
 	{
-		const char* raw_context;
+		const char* raw_context = nullptr;
 		range<const arg_wrapper> argv;
-		utf8_char filler;
-		utf8_char format_specifier;
-		uint16_t precision;
+		utf8_char filler = ' ';
+		utf8_char format_specifier = '\0';
+		uint16_t precision = 0xFFFF;
 		uint16_t width;
-		uint8_t flags;
+		uint8_t flags = 0;
 
 		parsed_context(const char*& context, const range<const arg_wrapper> argv);
 	};

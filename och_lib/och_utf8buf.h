@@ -76,10 +76,10 @@ namespace och
 		{
 			if constexpr (Reverse)
 				while (n && m_head != N)
-					n -= !_is_utf8_surr(m_buf[m_head++]);
+					n -= !is_utf8_surr(m_buf[m_head++]);
 			else
 				while (n && m_head != ~0)
-					n -= !_is_utf8_surr(m_buf[m_head--]);
+					n -= !is_utf8_surr(m_buf[m_head--]);
 
 		}
 
