@@ -20,7 +20,7 @@ namespace och
 		uint16_t width;
 		uint8_t flags;
 
-		parsed_context(const char* context, const range<const arg_wrapper> argv);
+		parsed_context(const char*& context, const range<const arg_wrapper> argv);
 	};
 
 	using fmt_fn = void (*) (type_union arg_value, const parsed_context& context);
