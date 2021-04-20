@@ -170,7 +170,7 @@ namespace och
 		template<typename U>
 		[[nodiscard]] U& get_at(uint32_t idx) { return *reinterpret_cast<U*>(reinterpret_cast<uint8_t*>(data.ptr) + idx); }
 
-		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(file.ptr, buf); }
+		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(file, buf); }
 
 		[[nodiscard]] bool is_valid() const noexcept { return data.ptr; }
 

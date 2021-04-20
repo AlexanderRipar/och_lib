@@ -8,7 +8,7 @@
 
 namespace och
 {
-	iohandle::iohandle(void* h) : ptr{ h } {}
+	iohandle::iohandle(void* h) noexcept : ptr{ h } {}
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*////////////////////////////////////////////////Free functions/////////////////////////////////////////////////////////*/
@@ -68,24 +68,24 @@ namespace och
 
 	iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode, uint32_t flags) noexcept
 	{
-		iohandle file = CreateFileA(filename, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr);
+		iohandle file(CreateFileA(filename, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr));
 
 		if (existing_mode == fio::open_append)
 			file_seek(file, 0, fio::setptr_end);
 
-		return file.ptr == INVALID_HANDLE_VALUE ? nullptr : file;
+		return file.ptr == INVALID_HANDLE_VALUE ? iohandle(nullptr) : file;
 	}
 
 	iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name) noexcept
 	{
 		if (!file.ptr)
-			return nullptr;
+			return iohandle(nullptr);
 
 		LARGE_INTEGER _size;
 
 		_size.QuadPart = size;
 
-		return CreateFileMappingA(file.ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name);
+		return iohandle(CreateFileMappingA(file.ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name));
 	}
 
 	iohandle file_as_array(const iohandle file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end) noexcept
@@ -94,7 +94,7 @@ namespace och
 
 		_beg.QuadPart = beg;
 
-		return MapViewOfFile(file_mapping.ptr, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg));
+		return iohandle(MapViewOfFile(file_mapping.ptr, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg)));
 	}
 
 	bool close_file(const iohandle file) noexcept
@@ -192,7 +192,7 @@ namespace och
 		char filename[MAX_PATH + 1];
 
 		if (!GetTempFileNameA(".", "och", 0, filename))
-			return nullptr;
+			return iohandle(nullptr);
 
 		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail, share_mode, fio::flag_temporary);
 	}
@@ -282,17 +282,17 @@ namespace och
 
 	iohandle get_stdout()
 	{
-		return GetStdHandle(STD_OUTPUT_HANDLE);
+		return iohandle(GetStdHandle(STD_OUTPUT_HANDLE));
 	}
 
 	iohandle get_stdin()
 	{
-		return GetStdHandle(STD_INPUT_HANDLE);
+		return iohandle(GetStdHandle(STD_INPUT_HANDLE));
 	}
 
 	iohandle get_stderr()
 	{
-		return GetStdHandle(STD_ERROR_HANDLE);
+		return iohandle(GetStdHandle(STD_ERROR_HANDLE));
 	}
 }
 
