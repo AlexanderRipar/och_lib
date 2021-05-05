@@ -471,12 +471,185 @@ namespace och
 		to_vbuf_with_padding(value, context);
 	}
 
-	//TODO implement
 	void fmt_float(type_union arg_value, const parsed_context& context)
 	{
-		arg_value;
+		struct chonker
+		{
+			uint32_t bits[10]{};
 
-		to_vbuf_with_padding(och::stringview("[[fmt_float is not yet implemented]]"), context);
+			chonker(int32_t raw_exp, int32_t mnt)
+			{
+				if (!raw_exp)
+					raw_exp = 1;
+				else
+					mnt |= 1 << 23;
+
+				int32_t shift = raw_exp + 10;
+
+				int32_t block = shift >> 5;
+
+				int32_t rest = shift & 31;
+
+				bits[block    ] = mnt << rest;;
+				bits[block + 1] = static_cast<uint32_t>(static_cast<uint64_t>(mnt) >> (32 - rest));
+			}
+
+			__forceinline bool div10_part(uint32_t& n, uint32_t& rem)
+			{
+				uint64_t nl = (static_cast<uint64_t>(rem) << 32) | n;
+
+				rem = nl % 10;
+
+				n = static_cast<uint32_t>(nl / 10);
+
+				return n;
+			}
+
+			bool moddiv10(int32_t& out_rem)
+			{
+				uint32_t rem = 0;
+
+				bool is_nonzero = false;
+
+				for (int i = 9; i != 4; --i)
+					is_nonzero |= div10_part(bits[i], rem);
+
+				out_rem = rem;
+
+				return is_nonzero;
+			}
+
+			__forceinline bool mul10_part(uint32_t& n, uint32_t& rem)
+			{
+				uint64_t nl = (static_cast<uint64_t>(rem) + n);
+
+				nl *= 10;
+
+				n = nl & 0xFFFF'FFFF;
+
+				rem = static_cast<uint32_t>(nl >> 32);
+
+				return n;
+			}
+
+			bool modmul10(int32_t& out_rem)
+			{
+				uint32_t rem = 0;
+
+				bool is_nonzero = false;
+
+				for (int i = 0; i != 5; ++i)
+					is_nonzero |= mul10_part(bits[i], rem);
+
+				out_rem = rem;
+
+				return is_nonzero;
+			}
+		};
+
+		const int32_t value = arg_value.i32;
+
+		const int32_t sgn = value & (1 << 31);
+		const int32_t exp = ((value >> 23) & 0xFF);
+		const int32_t mnt = value & 0x7FFFFF;
+
+		if (exp == 0xFF)
+		{
+			if (mnt) //Handle NaN
+			{
+				to_vbuf_with_padding(och::stringview("nan"), context);
+
+				return;
+			}
+			else //Handle INF
+			{
+				char buf[]{ 'X', 'i', 'n', 'f', '0' };
+
+				char* beg = buf;
+
+				if (sgn)
+					*beg = '-';
+				else if (context.flags & 1)
+					*beg = '+';
+				else if (context.flags & 2)
+					*beg = ' ';
+				else
+					++beg;
+
+				uint32_t len = static_cast<uint32_t>(buf - beg + 4);
+
+				to_vbuf_with_padding(och::stringview(beg, len, len), context);
+
+				return;
+			}
+		}
+
+		chonker num(exp, mnt);
+
+		char buf[512];
+
+		char* integral_part = buf + 60;
+
+		int32_t rem;
+		
+		bool nonzero;
+
+		do
+		{
+			nonzero = num.moddiv10(rem);
+
+			*--integral_part = '0' + static_cast<char>(rem);
+		}
+		while (nonzero);
+
+			buf[60] = '.';
+
+		char* fractional_part = buf + 60;
+
+		int32_t fract_digits = 0, precision = context.precision == 0xFFFF ? 6 : static_cast<int32_t>(context.precision);
+
+		do
+		{
+			nonzero = num.modmul10(rem);
+
+			*++fractional_part = '0' + static_cast<char>(rem);
+		}
+		while (nonzero && ++fract_digits <= precision);
+
+		if (precision != 0x7FFF)
+		{
+			if (fract_digits > precision) //Round...
+			{
+				while (fractional_part != buf + 128)
+				{
+					char falloff = *fractional_part;
+
+					*--fractional_part += falloff >= '5';
+
+					if (*fractional_part != '9' + 1)
+						break;
+				}
+			}
+
+			while (++fract_digits < precision)
+			{
+				*++fractional_part = '0';
+			}
+		}
+
+		if (sgn)
+			*--integral_part = '-';
+		else if (context.flags & 1)
+			*--integral_part = '+';
+		else if (context.flags & 2)
+			*--integral_part = ' ';
+
+		if (!precision)
+			fractional_part = buf + 59;
+
+		uint32_t len = static_cast<uint32_t>(fractional_part - integral_part + 1);
+
+		to_vbuf_with_padding(och::stringview(integral_part, len, len), context);
 
 		//     ->   base 10 decimal
 		// e   ->   base 10 scientific ([+ -]N.NNNNe+-NNNN)
@@ -619,7 +792,6 @@ namespace och
 		to_vbuf_with_padding(och::stringview("[[fmt_double is not yet implemented]]"), context);
 	}
 
-	//TODO improve (Not happy)
 	void fmt_date(type_union arg_value, const parsed_context& context)
 	{
 		//          [y]yyyy-mm-dd, hh:mm:ss.mmm
@@ -854,7 +1026,7 @@ namespace och
 	//TODO improve (Not happy)
 	void fmt_timespan(type_union arg_value, const parsed_context& context)
 	{
-		//     ->   seconds (with format specifier)
+		//     ->   appropriate format (with format specifier)
 		// d   ->   days
 		// h   ->   hours
 		// min ->   minutes
@@ -1408,7 +1580,10 @@ namespace och
 		{
 			++context;
 
-			precision = h_parse_fmt_index_relative(context, argv);
+			if (*context != '{' && (*context < '0' || *context > '9'))
+				precision = 0x7FFF;
+			else
+				precision = h_parse_fmt_index_relative(context, argv);
 		}
 
 		if (*context == '>')
@@ -1476,9 +1651,7 @@ namespace och
 
 		uint32_t arg_counter = 0;
 
-		const char* last_fmt_end = format.raw_cbegin();
-
-		const char* curr = format.raw_cbegin();
+		const char* last_fmt_end = format.raw_cbegin(), * curr = format.raw_cbegin();
 
 		while (curr < format.raw_cend())
 			if (*curr++ == '{')
