@@ -108,7 +108,7 @@ namespace och
 
 	public:
 
-		constexpr utf8_char(const char* cstring) noexcept : m_intval{ _init_intval_from_cstring(cstring) } {}
+		constexpr explicit utf8_char(const char* cstring) noexcept : m_intval{ _init_intval_from_cstring(cstring) } {}
 
 		constexpr utf8_char(char32_t codepoint) noexcept : m_intval{ _init_intval_from_codepoint(codepoint) } {}
 
