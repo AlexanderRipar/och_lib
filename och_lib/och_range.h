@@ -34,7 +34,7 @@ namespace och
 
 		[[nodiscard]] size_t len() const noexcept { return end - beg; }
 
-		[[nodiscard]] size_t bytes() const noexcept { return end - beg * sizeof(T); }
+		[[nodiscard]] size_t bytes() const noexcept { return (end - beg) * sizeof(T); }
 
 		[[nodiscard]] T& operator[](size_t i) noexcept { return beg[i]; }
 
