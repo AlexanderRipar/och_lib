@@ -91,11 +91,19 @@ namespace och
 
 		filehandle(const filehandle&) = delete;
 
-		[[nodiscard]] och::range<char> read(och::range<char> buf) const noexcept;
+		template<typename T>
+		[[nodiscard]] och::range<T> read(och::range<T> buf) const noexcept
+		{
+			och::range<char> ret = read_from_file(handle, och::range<char>(reinterpret_cast<char*>(buf.beg), buf.bytes()));
 
-		uint32_t write(const och::range<const char> buf) const noexcept;
+			return och::range<T>(reinterpret_cast<T*>(ret.beg), ret.bytes() / sizeof(T));
+		}
 
-		uint32_t write(const och::range<char> buf) const noexcept;
+		template<typename T>
+		uint32_t write(const och::range<T> buf) const noexcept
+		{
+			return write_to_file(handle, och::range<const char>(reinterpret_cast<const char*>(buf.beg), buf.bytes()));
+		}
 
 		[[nodiscard]] uint64_t get_size() const noexcept;
 

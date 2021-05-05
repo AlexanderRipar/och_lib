@@ -211,12 +211,6 @@ namespace och
 
 	filehandle::~filehandle() noexcept { close_file(handle); }
 
-	[[nodiscard]] och::range<char> filehandle::read(och::range<char> buf) const noexcept { return read_from_file(handle, buf); }
-
-	uint32_t filehandle::write(const och::range<const char> buf) const noexcept { return write_to_file(handle, buf); }
-
-	uint32_t filehandle::write(const och::range<char> buf) const noexcept { return write_to_file(handle, { buf.beg, buf.end }); }
-
 	[[nodiscard]] uint64_t filehandle::get_size() const noexcept { return get_filesize(handle); }
 
 	bool filehandle::set_size(uint64_t bytes) const noexcept { return set_filesize(handle, bytes); }
