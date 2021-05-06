@@ -473,6 +473,8 @@ namespace och
 
 	void fmt_float(type_union arg_value, const parsed_context& context)
 	{
+		constexpr uint64_t radix_pos = 60;
+
 		struct chonker
 		{
 			uint32_t bits[10]{};
@@ -521,11 +523,11 @@ namespace och
 
 			__forceinline bool mul10_part(uint32_t& n, uint32_t& rem)
 			{
-				uint64_t nl = (static_cast<uint64_t>(rem) + n);
+				uint64_t nl = static_cast<uint64_t>(n);
 
-				nl *= 10;
+				nl = nl * 10 + rem;
 
-				n = nl & 0xFFFF'FFFF;
+				n = static_cast<uint32_t>(nl);
 
 				rem = static_cast<uint32_t>(nl >> 32);
 
@@ -555,13 +557,13 @@ namespace och
 
 		if (exp == 0xFF)
 		{
-			if (mnt) //Handle NaN
+			if (mnt)
 			{
 				to_vbuf_with_padding(och::stringview("nan"), context);
 
 				return;
 			}
-			else //Handle INF
+			else
 			{
 				char buf[]{ 'X', 'i', 'n', 'f', '0' };
 
@@ -586,55 +588,60 @@ namespace och
 
 		chonker num(exp, mnt);
 
-		char buf[512];
+		char buf[256];
 
-		char* integral_part = buf + 60;
+		char* integral_part = buf + radix_pos;
 
 		int32_t rem;
 		
-		bool nonzero;
+		bool nonzero = true;
 
-		do
+		while (nonzero)
 		{
 			nonzero = num.moddiv10(rem);
 
 			*--integral_part = '0' + static_cast<char>(rem);
 		}
-		while (nonzero);
 
-			buf[60] = '.';
+		buf[radix_pos] = '.';
 
-		char* fractional_part = buf + 60;
+		char* fractional_part = buf + radix_pos;
 
 		int32_t fract_digits = 0, precision = context.precision == 0xFFFF ? 6 : static_cast<int32_t>(context.precision);
 
-		do
+		nonzero = true;
+
+		while (nonzero && fract_digits <= precision)
 		{
 			nonzero = num.modmul10(rem);
 
 			*++fractional_part = '0' + static_cast<char>(rem);
+
+			++fract_digits;
 		}
-		while (nonzero && ++fract_digits <= precision);
 
 		if (precision != 0x7FFF)
 		{
 			if (fract_digits > precision) //Round...
 			{
-				while (fractional_part != buf + 128)
+				while (fractional_part != buf + radix_pos + 1)
 				{
 					char falloff = *fractional_part;
 
 					*--fractional_part += falloff >= '5';
+
+					--fract_digits;
 
 					if (*fractional_part != '9' + 1)
 						break;
 				}
 			}
 
-			while (++fract_digits < precision)
-			{
+			if (precision > 96)
+				precision = 96;
+
+			while (fract_digits++ < precision)
 				*++fractional_part = '0';
-			}
 		}
 
 		if (sgn)
@@ -645,143 +652,11 @@ namespace och
 			*--integral_part = ' ';
 
 		if (!precision)
-			fractional_part = buf + 59;
+			fractional_part = buf + radix_pos - 1;
 
 		uint32_t len = static_cast<uint32_t>(fractional_part - integral_part + 1);
 
 		to_vbuf_with_padding(och::stringview(integral_part, len, len), context);
-
-		//     ->   base 10 decimal
-		// e   ->   base 10 scientific ([+ -]N.NNNNe+-NNNN)
-		// x,X ->   base 16 decimal. x uses lowercase letters, H uppercase
-		// h,H ->   base 16 scientific ([+ -]N.NNNNp+-NNNN). h uses lowercase letters, H uppercase
-		// b   ->   bitpattern
-		// B   ->   bitpattern with ' separating sign, exponent and mantissa
-
-		//char buf[64];
-		//
-		//char* curr = buf;
-		//
-		//const uint32_t value = (uint32_t)arg_value.u;
-		//
-		//const bool is_negative = value & 0x8000'0000;
-		//const int8_t exponent = (int8_t)(((value & 0x7F80'0000) >> 23) - 127);
-		//const uint32_t mantissa = value & 0x007F'FFFF;
-		//
-		//if /*TODO Implement*/ (context.format_specifier == '\0')
-		//{
-		//
-		//}
-		//else if (context.format_specifier == 'b')
-		//{
-		//	uint32_t mask = 0x8000'0000;
-		//
-		//	while (mask)
-		//	{
-		//		*curr++ = '0' + ((value & mask) == mask);
-		//		mask >>= 1;
-		//	}
-		//}
-		//else if (context.format_specifier == 'B')
-		//{
-		//	uint32_t mask = 0x8000'0000;
-		//
-		//	*curr++ = '0' + ((value & mask) == mask);
-		//	mask >>= 1;
-		//
-		//	*curr++ = '\'';
-		//
-		//	for (uint32_t i = 0; i != 8; ++i)
-		//	{
-		//		*curr++ = '0' + ((value & mask) == mask);
-		//		mask >>= 1;
-		//	}
-		//
-		//	*curr++ = '\'';
-		//
-		//	while (mask)
-		//	{
-		//		*curr++ = '0' + ((value & mask) == mask);
-		//		mask >>= 1;
-		//	}
-		//}
-		//else if /*TODO Implement*/ (context.format_specifier == 'x' || context.format_specifier == 'X')
-		//{
-		//
-		//}
-		//else if/*TODO Implement*/ (context.format_specifier == 'e')
-		//{
-		//
-		//}
-		//else if /*TODO Rounding*/ (context.format_specifier == 'h' || context.format_specifier == 'H')
-		//{
-		//	const char* hex = context.format_specifier == 'h' ? hex_lower_upper : hex_lower_upper + 16;
-		//
-		//	int8_t hex_exponent = exponent >> 2;
-		//
-		//	const uint32_t hex_mantissa = ((1 << 23) | mantissa) << (exponent & 3);
-		//
-		//	const uint32_t predec = hex_mantissa >> 23;
-		//
-		//	const uint32_t postdec = hex_mantissa & ((1 << 23) - 1);
-		//
-		//	if (is_negative)
-		//		*curr++ = '-';
-		//	else if (context.flags & 1)
-		//		*curr++ = '+';
-		//	else if (context.flags & 2)
-		//		*curr++ = ' ';
-		//
-		//	*curr++ = hex[predec];
-		//
-		//	const char* const decimal_point = curr;
-		//
-		//	*curr++ = '.';
-		//
-		//	uint32_t shift = 19;
-		//
-		//	while (shift >= 4)
-		//	{
-		//		*curr++ = hex[(postdec >> shift) & 0xF];
-		//		shift -= 4;
-		//	}
-		//
-		//	*curr++ = hex[postdec & 3];
-		//
-		//	while (curr[-1] == '0' && curr[-2] != '.')
-		//		--curr;
-		//
-		//	if (context.precision != 0xFFFF)
-		//	{
-		//		//Cut off until precision is equal to curr - decimal_point
-		//		while (curr - decimal_point - 1 > context.precision)
-		//			--curr;
-		//
-		//		//Add '0' until precision is equal to curr - decimal_point
-		//		while (curr - decimal_point - 1 < context.precision)
-		//			*curr++ = '0';
-		//	}
-		//
-		//	*curr++ = 'p';
-		//
-		//	if (hex_exponent < 0)
-		//	{
-		//		*curr++ = '-';
-		//		hex_exponent = -hex_exponent;
-		//	}
-		//
-		//	if (hex_exponent > 0xF)
-		//		*curr++ = hex[hex_exponent >> 4];
-		//
-		//	*curr++ = hex[hex_exponent & 0xF];
-		//}
-		//else
-		//{
-		//	och::write_with_padding(out, "[[Invalid format-specifier", context);
-		//	return;
-		//}
-		//
-		//och::write_with_padding(out, och::stringview(buf, (uint32_t)(curr - buf), (uint32_t)(curr - buf)), context);
 	}
 
 	//TODO implement
@@ -1659,6 +1534,10 @@ namespace och
 				if (*curr == '{')
 				{
 					++curr;
+
+					to_vbuf(och::stringview(last_fmt_end, static_cast<uint32_t>(curr - 1 - last_fmt_end), 1));
+
+					last_fmt_end = curr;
 
 					continue;
 				}
