@@ -586,41 +586,94 @@ namespace och
 			}
 		}
 
-		chonker num(exp, mnt);
+		int32_t norm_exp = exp - 127;
 
 		char buf[256];
 
 		char* integral_part = buf + radix_pos;
 
-		int32_t rem;
-		
-		bool nonzero = true;
-
-		while (nonzero)
-		{
-			nonzero = num.moddiv10(rem);
-
-			*--integral_part = '0' + static_cast<char>(rem);
-		}
+		char* fractional_part = buf + radix_pos;
 
 		buf[radix_pos] = '.';
 
-		char* fractional_part = buf + radix_pos;
-
 		int32_t fract_digits = 0, precision = context.precision == 0xFFFF ? 6 : static_cast<int32_t>(context.precision);
 
-		nonzero = true;
+#ifdef _M_AMD64
+		constexpr int32_t mul_offset = 0;
+#else
+		constexpr int32_t mul_offset = 4;
+#endif // _M_AMD64
 
-		while (nonzero && fract_digits <= precision)
+		if (norm_exp < 64 && norm_exp > -41 + mul_offset) //Fast path
 		{
-			nonzero = num.modmul10(rem);
 
-			*++fractional_part = '0' + static_cast<char>(rem);
+			uint64_t norm_mnt = (1 << 23) | mnt;
 
-			++fract_digits;
+			uint64_t whole = norm_exp < 0 ? 0ull : norm_exp <= 23 ? norm_mnt >> (23 - norm_exp) : norm_mnt << (norm_exp - 23);
+
+			uint64_t fract = norm_exp >= 23 ? 0ull : (norm_mnt << (41 + norm_exp - mul_offset)) & ((1ull << (64 - mul_offset)) - 1);
+
+			while (whole >= 10)
+			{
+				*--integral_part = '0' + (whole % 10);
+
+				whole /= 10;
+			}
+
+			*--integral_part = '0' + static_cast<char>(whole);
+
+			do
+#ifdef _M_AMD64
+			{
+				uint64_t ovflo;
+
+				fract = _umul128(10, fract, &ovflo);
+
+				*++fractional_part = '0' + static_cast<char>(ovflo);
+
+				++fract_digits;
+			}
+#else		
+			{
+				fract *= 10;
+
+				*++fractional_part = '0' + static_cast<char>(fract >> (64 - mul_offset));
+
+				fract &= (1ull << (64 - mul_offset)) - 1;
+
+				++fract_digits;
+			}
+#endif // _M_AMD64
+			while (fract && fract_digits < precision);
+		}
+		else //Slow path
+		{
+			chonker num(exp, mnt);
+
+			int32_t rem;
+
+			bool nonzero = true;
+
+			while (nonzero)
+			{
+				nonzero = num.moddiv10(rem);
+
+				*--integral_part = '0' + static_cast<char>(rem);
+			}
+
+			nonzero = true;
+
+			while (nonzero && fract_digits <= precision)
+			{
+				nonzero = num.modmul10(rem);
+
+				*++fractional_part = '0' + static_cast<char>(rem);
+
+				++fract_digits;
+			}
 		}
 
-		if (precision != 0x7FFF)
+		if (precision != 0x7FFF) //Rounding / padding
 		{
 			if (fract_digits > precision) //Round...
 			{
@@ -637,10 +690,10 @@ namespace och
 				}
 			}
 
-			if (precision > 96)
-				precision = 96;
+			if (precision > 128) //Prevent a buffer overflow
+				precision = 128;
 
-			while (fract_digits++ < precision)
+			while (fract_digits++ < precision) //Pad...
 				*++fractional_part = '0';
 		}
 

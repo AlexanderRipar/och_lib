@@ -2,13 +2,81 @@
 
 #include<limits>
 
-#include <cstdio>
+void time_float_print(int32_t precision)
+{
+	och::print("Running...\n\n");
+
+	char std_format[32];
+
+	och::sprint(std_format, "%.{}f", precision);
+
+	char och_format[32];
+
+	och::sprint(och_format, "{{:.{}}", precision);
+
+	char std_format_ext[32];
+
+	och::sprint(std_format_ext, "%.{}f", precision + 1);
+
+	char och_format_ext[32];
+
+	och::sprint(och_format_ext, "{{:.{}}", precision + 1);
+
+	och::print("Formats: \"{}\", \"{}\"\nExt. Formats: \"{}\", \"{}\"\n\n", std_format, och_format, std_format_ext, och_format_ext);
+
+	for (uint64_t exponent = 0; exponent != 256; ++exponent)
+	{
+		uint64_t lo_i = exponent << 23, hi_i = (exponent << 23) | 0x7FFFFF;
+
+		float lo_f, hi_f;
+
+		memcpy(&lo_f, &lo_i, 4);
+
+		memcpy(&hi_f, &hi_i, 4);
+
+		och::print("\n\n0x{:2>~0X} ({} - {})", exponent, lo_f, hi_f);
+
+		char buf[256];
+
+		och::timer timer;
+
+		for(uint64_t sign = 0; sign != 2; ++sign)
+			for (uint64_t i = lo_i | (sign << 31); i != ((hi_i + 1) | (sign << 31)); ++i)
+			{
+				if ((i & 0x7F80'0000) == 0x7F80'0000)
+					continue;
+
+				float f;
+
+				memcpy(&f, &i, 4);
+
+				och::sprint(buf, och_format, f);
+			}
+
+		och::timespan och_time = timer.reset();
+
+		for (uint64_t sign = 0; sign != 2; ++sign)
+			for (uint64_t i = lo_i | (sign << 31); i != ((hi_i + 1) | (sign << 31)); ++i)
+			{
+				if ((i & 0x7F80'0000) == 0x7F80'0000)
+					continue;
+
+				float f;
+
+				memcpy(&f, &i, 4);
+
+				sprintf_s(buf, std_format, f);
+			}
+
+		och::timespan std_time = timer.reset();
+
+		och::print(", {}, {}", och_time, std_time);
+	}
+}
 
 void test_float_print(int32_t precision)
 {
-	constexpr int32_t total_files = 256;
-
-	constexpr uint64_t floats_per_file = 0x1'0000'0000ull / total_files;
+	och::timer function_timer;
 
 	och::print("Running...\n\n");
 
@@ -30,66 +98,85 @@ void test_float_print(int32_t precision)
 
 	och::print("Formats: \"{}\", \"{}\"\nExt. Formats: \"{}\", \"{}\"\n\n", std_format, och_format, std_format_ext, och_format_ext);
 
-	for (uint64_t file = 0; file != total_files; ++file)
+	for (uint64_t exponent = 0; exponent != 256; ++exponent)
 	{
-		och::print("0x{:8>~0X} - 0x{:8>~0X}...\n", file * floats_per_file, (file + 1) * floats_per_file - 1);
+		uint64_t lo_i = exponent << 23, hi_i = (exponent << 23) | 0x7FFFFF;
+
+		float lo_f, hi_f;
+
+		memcpy(&lo_f, &lo_i, 4);
+
+		memcpy(&hi_f, &hi_i, 4);
+
+		och::print("\n\n0x{:2>~0X} ({} - {})...\n", exponent, lo_f, hi_f);
 
 		uint64_t errcnt = 0, std_lo = 0, std_hi = 0;
 
-		for(uint64_t i = file * floats_per_file; i != (file + 1) * floats_per_file; ++i)
-		{
-			if ((i & 0x7F80'0000) == 0x7F80'0000)
-				continue;
-
-			float f;
-
-			memcpy(&f, &i, 4);
-
-			char och_buf[256];
-
-			och::sprint(och_buf, och_format, f);
-
-			char std_buf[256];
-
-			sprintf_s(std_buf, std_format, f);
-
-			bool is_equal = true;
-
-			for (int j = 0; j != 256; ++j)
-				if (och_buf[j] != std_buf[j])
-				{
-					if (och_buf[j + 1] == '\0' && std_buf[j + 1] == '\0' && och_buf[j] == std_buf[j] + 1)
-						if (och_buf[j] == std_buf[j] + 1)
-						{
-							++std_lo;
-
-							break;
-						}
-						else if (och_buf[j] == std_buf[j] - 1)
-						{
-							++std_hi;
-
-							break;
-						}
-
-					is_equal = false;
-				}
-				else if (och_buf[j] == '\0')
-					break;
-
-			if (!is_equal)
+		for(uint64_t sign = 0; sign != 2; ++sign)
+			for (uint64_t i = lo_i | (sign << 31); i != ((hi_i + 1) | (sign << 31)); ++i)
 			{
-				if (errcnt < 8)
-					och::print("\noch={}\nstd={}\n", och_buf, std_buf);
+				if ((i & 0x7F80'0000) == 0x7F80'0000)
+					continue;
 
-				++errcnt;
+				float f;
+
+				memcpy(&f, &i, 4);
+
+				char och_buf[256];
+
+				och::sprint(och_buf, och_format, f);
+
+				char std_buf[256];
+
+				sprintf_s(std_buf, std_format, f);
+
+				bool is_equal = true;
+
+				for (int j = 0; j != 256; ++j)
+					if (och_buf[j] != std_buf[j])
+					{
+						if (och_buf[j + 1] == '\0' && std_buf[j + 1] == '\0' && och_buf[j] == std_buf[j] + 1)
+							if (och_buf[j] == std_buf[j] + 1)
+							{
+								++std_lo;
+
+								break;
+							}
+							else if (och_buf[j] == std_buf[j] - 1)
+							{
+								++std_hi;
+
+								break;
+							}
+
+						is_equal = false;
+					}
+					else if (och_buf[j] == '\0')
+						break;
+
+				if (!is_equal)
+				{
+					if (errcnt < 8)
+						och::print("\noch={}\nstd={}\n", och_buf, std_buf);
+
+					++errcnt;
+				}
 			}
 
-			++i;
-		}
+		if (errcnt)
+			och::print("!!! ERR: {} !!!  ", errcnt);
 
-		och::print("Err: {}; StdLo: {}; StdHi: {}\n\n", errcnt, std_lo, std_hi);
+		if (std_lo)
+			och::print("std_lo: {}  ", std_lo);
+
+		if (std_hi)
+			och::print("std_hi: {}  ", std_hi);
+
+		if (!(errcnt | std_lo | std_hi))
+			och::print("All good");
 	}
+
+	och::print("\n\nTotal time taken: {}.\n", function_timer.read());
 }
 
 void print_bits_as_float(uint32_t bpat)
@@ -109,7 +196,7 @@ void load_floats(int beg = 0)
 	
 	if (!floats)
 	{
-		och::print("Could not open file...\n");
+		och::print("Could not open section...\n");
 
 		return;
 	}
@@ -128,25 +215,7 @@ void load_floats(int beg = 0)
 
 int main()
 {
-	test_float_print(70);
+	//test_float_print(70);
 
-	//load_floats();
-
-	//float f = 0.000000000000000006144265330000F;
-	//
-	//uint32_t n;
-	//
-	//memcpy(&n, &f, 4);
-	//
-	//och::print("{:8>~0X}\n", n);
-	//
-	//printf("%.70f\n", 0.0000000000000000000000000000000000000000003363116314379560970216951000F);
-	//
-	//och::print("{:.70}\n", 0.0000000000000000000000000000000000000000003363116314379560970216951000F);
-
-	//print_bits_as_float(0x3505AF2D - 1);
-
-	//print_bits_as_float(0x3505AF2D);
-
-	//print_bits_as_float(0x3505AF2D + 1);
+	time_float_print(70);
 }
