@@ -10,6 +10,8 @@ namespace och
 {
 	struct arg_wrapper;
 
+	struct output_t;
+
 	struct parsed_context
 	{
 		const char* raw_context = nullptr;
@@ -19,8 +21,9 @@ namespace och
 		uint16_t precision = 0xFFFF;
 		uint16_t width;
 		uint8_t flags = 0;
+		output_t& output;
 
-		parsed_context(const char*& context, const range<const arg_wrapper> argv);
+		parsed_context(const char*& context, const range<const arg_wrapper> argv, output_t& output);
 	};
 
 	using fmt_fn = void (*) (type_union arg_value, const parsed_context& context);

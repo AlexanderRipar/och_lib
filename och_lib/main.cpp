@@ -1,7 +1,5 @@
 ﻿#include "och_lib.h"
 
-#include<limits>
-
 void time_float_print(int32_t precision)
 {
 	och::print("Running...\n\n");
