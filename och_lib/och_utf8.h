@@ -263,6 +263,18 @@ namespace och
 		utf8_iterator end() const noexcept;
 
 		utf8_char at(uint32_t pos) const noexcept;
+
+		bool operator==(const utf8_view& rhs) const noexcept;
+
+		bool operator!=(const utf8_view& rhs) const noexcept;
+
+		bool operator>(const utf8_view& rhs) const noexcept;
+
+		bool operator>=(const utf8_view& rhs) const noexcept;
+
+		bool operator<(const utf8_view& rhs) const noexcept;
+
+		bool operator<=(const utf8_view& rhs) const noexcept;
 	};
 
 	using stringview = utf8_view;

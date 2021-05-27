@@ -107,6 +107,61 @@ namespace och
 		return *it;
 	}
 
+	bool utf8_view::operator==(const utf8_view& rhs) const noexcept
+	{
+		if (get_codeunits() != rhs.get_codeunits() || get_codepoints() != rhs.get_codepoints())
+			return false;
+
+		for (uint32_t i = 0; i != get_codeunits(); ++i)
+			if (raw_cbegin()[i] != rhs.raw_cbegin()[i])
+				return false;
+
+		return true;
+	}
+
+	bool utf8_view::operator!=(const utf8_view& rhs) const noexcept
+	{
+		return !operator==(rhs);
+	}
+
+	bool utf8_view::operator>(const utf8_view& rhs) const noexcept
+	{
+		uint32_t min_cps = get_codepoints() < rhs.get_codepoints() ? get_codepoints() : rhs.get_codepoints();
+
+		const char* l_ptr = raw_cbegin();
+		const char* r_ptr = rhs.raw_cbegin();
+
+		for (uint32_t i = 0; i != min_cps; ++i)
+			if (l_ptr[i] != r_ptr[i])
+				return l_ptr[i] > r_ptr[i];
+
+		return get_codepoints() > rhs.get_codepoints();
+	}
+
+	bool utf8_view::operator>=(const utf8_view& rhs) const noexcept
+	{
+		return !operator<(rhs);
+	}
+
+	bool utf8_view::operator<(const utf8_view& rhs) const noexcept
+	{
+		uint32_t min_cps = get_codepoints() < rhs.get_codepoints() ? get_codepoints() : rhs.get_codepoints();
+
+		const char* l_ptr = raw_cbegin();
+		const char* r_ptr = rhs.raw_cbegin();
+
+		for (uint32_t i = 0; i != min_cps; ++i)
+			if (l_ptr[i] != r_ptr[i])
+				return l_ptr[i] < r_ptr[i];
+
+		return get_codepoints() < rhs.get_codepoints();
+	}
+
+	bool utf8_view::operator<=(const utf8_view& rhs) const noexcept
+	{
+		return !operator>(rhs);
+	}
+
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
