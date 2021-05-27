@@ -1,4 +1,121 @@
-﻿#include "och_lib.h"
+﻿//#include "och_lib.h"
+
+#include "och_fmt.h"
+
+/*
+void time_int_print()
+{
+	och::print("Running...\n\n");
+
+	for (uint64_t exponent = 0; exponent != 256; ++exponent)
+	{
+		uint64_t lo_i = exponent << 23, hi_i = (exponent << 23) | 0x7FFFFF;
+
+		float lo_f, hi_f;
+
+		memcpy(&lo_f, &lo_i, 4);
+
+		memcpy(&hi_f, &hi_i, 4);
+
+		och::print("\n\n0x{:2>~0X} ({} - {})", exponent, lo_f, hi_f);
+
+		char buf[256];
+
+		och::timer timer;
+
+		for (uint64_t sign = 0; sign != 2; ++sign)
+			for (uint64_t i = lo_i | (sign << 31); i != ((hi_i + 1) | (sign << 31)); ++i)
+			{
+				if ((i & 0x7F80'0000) == 0x7F80'0000)
+					continue;
+
+				och::sprint(buf, "{}", (int32_t)i);
+			}
+
+		och::timespan och_time = timer.reset();
+
+		for (uint64_t sign = 0; sign != 2; ++sign)
+			for (uint64_t i = lo_i | (sign << 31); i != ((hi_i + 1) | (sign << 31)); ++i)
+			{
+				if ((i & 0x7F80'0000) == 0x7F80'0000)
+					continue;
+
+				sprintf_s(buf, "%d", (int32_t)(i));
+			}
+
+		och::timespan std_time = timer.read();
+
+		och::print(", {}, {}", och_time, std_time);
+	}
+}
+
+void time_float_vs_int_print(int32_t precision)
+{
+	och::print("Running...\n\n");
+
+	char std_format[32];
+
+	och::sprint(std_format, "%.{}f", precision);
+
+	char och_format[32];
+
+	och::sprint(och_format, "{{:.{}}", precision);
+
+	char std_format_ext[32];
+
+	och::sprint(std_format_ext, "%.{}f", precision + 1);
+
+	char och_format_ext[32];
+
+	och::sprint(och_format_ext, "{{:.{}}", precision + 1);
+
+	och::print("Formats: \"{}\", \"{}\"\nExt. Formats: \"{}\", \"{}\"\n\n", std_format, och_format, std_format_ext, och_format_ext);
+
+	for (uint64_t exponent = 0; exponent != 256; ++exponent)
+	{
+		uint64_t lo_i = exponent << 23, hi_i = (exponent << 23) | 0x7FFFFF;
+
+		float lo_f, hi_f;
+
+		memcpy(&lo_f, &lo_i, 4);
+
+		memcpy(&hi_f, &hi_i, 4);
+
+		och::print("\n\n0x{:2>~0X} ({} - {})", exponent, lo_f, hi_f);
+
+		char buf[256];
+
+		och::timer timer;
+
+		for (uint64_t sign = 0; sign != 2; ++sign)
+			for (uint64_t i = lo_i | (sign << 31); i != ((hi_i + 1) | (sign << 31)); ++i)
+			{
+				if ((i & 0x7F80'0000) == 0x7F80'0000)
+					continue;
+
+				float f;
+
+				memcpy(&f, &i, 4);
+
+				och::sprint(buf, och_format, f);
+			}
+
+		och::timespan flt_time = timer.reset();
+
+		for (uint64_t sign = 0; sign != 2; ++sign)
+			for (uint64_t i = lo_i | (sign << 31); i != ((hi_i + 1) | (sign << 31)); ++i)
+			{
+				if ((i & 0x7F80'0000) == 0x7F80'0000)
+					continue;
+
+				och::sprint(buf, "{}", i);
+			}
+
+		och::timespan int_time = timer.read();
+
+		och::print(", {}, {}", flt_time, int_time);
+	}
+}
 
 void time_float_print(int32_t precision)
 {
@@ -38,7 +155,7 @@ void time_float_print(int32_t precision)
 
 		och::timer timer;
 
-		for(uint64_t sign = 0; sign != 2; ++sign)
+		for (uint64_t sign = 0; sign != 2; ++sign)
 			for (uint64_t i = lo_i | (sign << 31); i != ((hi_i + 1) | (sign << 31)); ++i)
 			{
 				if ((i & 0x7F80'0000) == 0x7F80'0000)
@@ -66,7 +183,7 @@ void time_float_print(int32_t precision)
 				sprintf_s(buf, std_format, f);
 			}
 
-		och::timespan std_time = timer.reset();
+		och::timespan std_time = timer.read();
 
 		och::print(", {}, {}", och_time, std_time);
 	}
@@ -210,10 +327,21 @@ void load_floats(int beg = 0)
 	for (uint32_t i : in)
 		print_bits_as_float(i);
 }
+*/
 
 int main()
 {
 	//test_float_print(70);
 
-	time_float_print(70);
+	//time_float_print(70);
+
+	//och::utf8_string str;
+
+	//och::sprint(str, "Hello there {} no. {}.\n", "Michael", 755.3F);
+
+	//och::print(str);
+
+	//time_float_vs_int_print(70);
+
+	//time_int_print();
 }

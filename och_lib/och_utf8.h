@@ -395,6 +395,8 @@ namespace och
 
 		utf8_string substr(uint32_t pos, uint32_t len = ~0) const noexcept;
 
+		void fmt_prepare_for_raw_write(uint32_t n);
+
 	private:
 
 		utf8_string(const char* cstr, uint32_t wds, uint32_t cps) noexcept;

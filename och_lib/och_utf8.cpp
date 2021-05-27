@@ -495,6 +495,12 @@ namespace och
 		return utf8_string(raw_cbegin() + first_cunit, last_cunit - first_cunit, len);
 	}
 
+	void utf8_string::fmt_prepare_for_raw_write(uint32_t n)
+	{
+		set_codeunits(get_codeunits() + n);
+		set_codepoints(get_codepoints() + n);
+	}
+
 	/////////////////////////////////////////////////Private///////////////////////////////////////////////////////////////////
 
 	utf8_string::utf8_string(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept

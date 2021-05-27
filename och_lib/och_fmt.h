@@ -10,7 +10,7 @@ namespace och
 {
 	struct arg_wrapper;
 
-	struct output_t;
+	struct output_buffer;
 
 	struct parsed_context
 	{
@@ -21,9 +21,9 @@ namespace och
 		uint16_t precision = 0xFFFF;
 		uint16_t width;
 		uint8_t flags = 0;
-		output_t& output;
+		output_buffer& output;
 
-		parsed_context(const char*& context, const range<const arg_wrapper> argv, output_t& output);
+		parsed_context(const char*& context, const range<const arg_wrapper> argv, output_buffer& output);
 	};
 
 	using fmt_fn = void (*) (type_union arg_value, const parsed_context& context);
@@ -190,4 +190,34 @@ namespace och
 	uint32_t sprint(range<char> buf, const char* format);
 
 	uint32_t sprint(range<char> buf, const char* format);
+
+
+
+	template<typename... Args>
+	uint32_t sprint(och::utf8_string& buf, const stringview& format, Args... args)
+	{
+		const arg_wrapper argv[]{ arg_wrapper(args)... };
+
+		return vprint(och::iohandle(static_cast<void*>(&buf)), format, och::range<const arg_wrapper>(argv), 0xFFFF'FFFE);
+	}
+
+	template<typename... Args>
+	uint32_t sprint(och::utf8_string& buf, const char* format, Args... args)
+	{
+		return sprint(buf, och::stringview(format), args...);
+	}
+
+	template<typename... Args>
+	uint32_t sprint(och::utf8_string& buf, const utf8_string& format, Args... args)
+	{
+		return sprint(buf, och::stringview(format), args...);
+	}
+
+
+
+	uint32_t sprint(och::utf8_string& buf, const stringview& format);
+
+	uint32_t sprint(och::utf8_string& buf, const char* format);
+
+	uint32_t sprint(och::utf8_string& buf, const char* format);
 }

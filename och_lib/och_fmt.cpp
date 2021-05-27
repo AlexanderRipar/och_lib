@@ -18,42 +18,58 @@ namespace och
 		return context.flags & 4;
 	}
 
-	struct output_t
+	struct output_buffer
 	{
-		static constexpr uint64_t buffer_capacity = 1024;
+		static constexpr uint64_t file_buffer_capacity = 1024;
 
 		och::range<char> buffer;
 
-		och::iohandle backing_file;
+		union
+		{
+			och::iohandle backing_file;
+			och::utf8_string* backing_string;
+		};
 
 		uint64_t overrun_count{};
 
-		output_t(och::range<char> buffer, och::iohandle backing_file) : buffer{ buffer }, backing_file{ backing_file } {}
-
+		output_buffer(och::range<char> buffer, och::iohandle backing_file) : buffer{ buffer }, backing_file{ backing_file } {}
+		
 		char* reserve(uint32_t codeunits)
 		{
-			if (buffer.len() >= codeunits)
-			{
-				char* retval = buffer.beg;
+			if(buffer.beg)
+				if (buffer.len() >= codeunits)
+				{
+					char* retval = buffer.beg;
 
-				buffer.beg += codeunits;
+					buffer.beg += codeunits;
 
-				return retval;
-			}
-			else if (backing_file.ptr)
-			{
-				och::write_to_file(backing_file, och::range<const char>(buffer.end - buffer_capacity, buffer.beg));
+					return retval;
+				}
+				else if (backing_file.ptr)
+				{
+					och::write_to_file(backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg));
 
-				buffer.beg = buffer.end - buffer_capacity;
+					buffer.beg = buffer.end - file_buffer_capacity;
 
-				if (codeunits <= buffer_capacity)
-					return buffer.beg;
-			}
+					if (codeunits <= file_buffer_capacity)
+						return buffer.beg;
+				}
+				else
+				{
+					overrun_count += codeunits - buffer.len();
+
+					buffer.beg = buffer.end;
+				}
 			else
 			{
-				overrun_count += codeunits - buffer.len();
+				if (backing_string->reserve(backing_string->get_codeunits() + codeunits))
+				{
+					char* ret = backing_string->raw_end();
 
-				buffer.beg = buffer.end;
+					backing_string->fmt_prepare_for_raw_write(codeunits);
+
+					return ret;
+				}
 			}
 
 			return nullptr;
@@ -61,50 +77,59 @@ namespace och
 
 		void flush()
 		{
-			if (backing_file.ptr && buffer.len() != buffer_capacity)
-				och::write_to_file(backing_file, och::range<const char>(buffer.end - buffer_capacity, buffer.beg));
-			else
-				put(utf8_char('\0'));
+			if (buffer.beg)
+				if (backing_file.ptr && buffer.len() != file_buffer_capacity)
+					och::write_to_file(backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg));
+				else
+					put(utf8_char('\0'));
+			else if (backing_string->raw_cend()[-1] != '\0')
+				backing_string += '\0';
 		}
 
 		void put(utf8_char c)
 		{
-			if (buffer.len() < c.get_codeunits())
-				if (backing_file.ptr)
-				{
-					och::write_to_file(backing_file, och::range<const char>(buffer.end - buffer_capacity, buffer.beg));
+			if (buffer.beg)
+				if (buffer.len() < c.get_codeunits())
+					if (backing_file.ptr)
+					{
+						och::write_to_file(backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg));
 
-					buffer.beg = buffer.end - buffer_capacity;
-				}
+						buffer.beg = buffer.end - file_buffer_capacity;
+					}
+					else
+					{
+						overrun_count += c.get_codeunits() - buffer.len();
+
+						buffer.beg = buffer.end;
+					}
 				else
-				{
-					overrun_count += c.get_codeunits() - buffer.len();
-
-					buffer.beg = buffer.end;
-				}
+					for (uint32_t i = 0; i != c.get_codeunits(); ++i)
+						*buffer.beg++ = c.cbegin()[i];
 			else
-				for (uint32_t i = 0; i != c.get_codeunits(); ++i)
-					*buffer.beg++ = c.cbegin()[i];
+				backing_string->operator+=(c);
 		}
 
 		void put(const och::stringview& v)
 		{
-			if (buffer.len() < v.get_codeunits())
-				if (backing_file.ptr)
-				{
-					och::write_to_file(backing_file, och::range<const char>(buffer.end - buffer_capacity, buffer.beg));
+			if (buffer.beg)
+				if (buffer.len() < v.get_codeunits())
+					if (backing_file.ptr)
+					{
+						och::write_to_file(backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg));
 
-					och::write_to_file(backing_file, och::range<const char>(v.raw_cbegin(), v.raw_cend()));
-				}
+						och::write_to_file(backing_file, och::range<const char>(v.raw_cbegin(), v.raw_cend()));
+					}
+					else
+					{
+						overrun_count += v.get_codeunits() - buffer.len();
+
+						buffer.beg = buffer.end;
+					}
 				else
-				{
-					overrun_count += v.get_codeunits() - buffer.len();
-
-					buffer.beg = buffer.end;
-				}
+					for (uint32_t i = 0; i != v.get_codeunits(); ++i)
+						*buffer.beg++ = v.raw_cbegin()[i];
 			else
-				for (uint32_t i = 0; i != v.get_codeunits(); ++i)
-					*buffer.beg++ = v.raw_cbegin()[i];
+				backing_string->operator+=(v);
 		}
 
 		void pad(uint32_t text_codepoints, const och::parsed_context& context)
@@ -118,38 +143,48 @@ namespace och
 
 			utf8_char c = context.filler;
 
-			if (filler_cunits > buffer.len())
-				if (backing_file.ptr)
-				{
-					och::write_to_file(backing_file, och::range<const char>(buffer.end - buffer_capacity, buffer.beg));
-
-					buffer.beg = buffer.end - buffer_capacity;
-
-					while (filler_cunits >= buffer_capacity)
+			if (buffer.beg)
+			{
+				if (filler_cunits > buffer.len())
+					if (backing_file.ptr)
 					{
-						uint32_t i = 0;
+						och::write_to_file(backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg));
 
-						for (i = 0; i <= buffer_capacity - c.get_codeunits(); i += c.get_codeunits())
-							for (uint32_t j = 0; j != c.get_codeunits(); ++j)
-								buffer[static_cast<ptrdiff_t>(i) + j] = c.cbegin()[i];
+						buffer.beg = buffer.end - file_buffer_capacity;
 
-						filler_cunits -= i;
+						while (filler_cunits >= file_buffer_capacity)
+						{
+							uint32_t i = 0;
 
-						och::write_to_file(backing_file, och::range<const char>(buffer.beg, buffer.beg + i));
+							for (i = 0; i <= file_buffer_capacity - c.get_codeunits(); i += c.get_codeunits())
+								for (uint32_t j = 0; j != c.get_codeunits(); ++j)
+									buffer[static_cast<ptrdiff_t>(i) + j] = c.cbegin()[i];
+
+							filler_cunits -= i;
+
+							och::write_to_file(backing_file, och::range<const char>(buffer.beg, buffer.beg + i));
+						}
 					}
-				}
-				else
-				{
-					overrun_count += filler_cunits - buffer.len();
+					else
+					{
+						overrun_count += filler_cunits - buffer.len();
 
-					buffer.beg = buffer.end;
+						buffer.beg = buffer.end;
 
-					return;
-				}
+						return;
+					}
 
-			for (int i = 0; i != filler_cunits; i += c.get_codeunits())
-				for (uint32_t j = 0; j != c.get_codeunits(); ++j)
-					*buffer.beg++ = c.cbegin()[j];
+				for (int i = 0; i != filler_cunits; i += c.get_codeunits())
+					for (uint32_t j = 0; j != c.get_codeunits(); ++j)
+						*buffer.beg++ = c.cbegin()[j];
+			}
+			else
+			{
+				backing_string->reserve(backing_string->get_codeunits() + filler_cunits);
+
+				for (int i = 0; i != filler_cpoints; ++i)
+					backing_string->operator+=(c);
+			}
 		}
 
 		void put_padded(utf8_char c, const parsed_context& context)
@@ -192,11 +227,16 @@ namespace och
 
 	uint32_t log2(uint64_t n) noexcept
 	{
-		uint32_t idx;
+		uint32_t ret = 0;
 
-		_BitScanReverse64((unsigned long*)&idx, n);
+		do
+		{
+			n >>= 1;
+			++ret;
+		}
+		while (n);
 
-		return idx + 1;
+		return ret;
 	}
 
 	uint32_t log10(uint64_t n) noexcept
@@ -220,24 +260,33 @@ namespace och
 
 	uint32_t log16(uint64_t n) noexcept
 	{
-		return (log2(n) + 3) >> 2;
+		uint32_t ret = 1;
+
+		do
+		{
+			n >>= 4;
+			++ret;
+		} 
+		while (n > 15);
+
+		return ret;
 	}
 
-	void h_fmt_two_digit(output_t& out, uint64_t n)
+	void h_fmt_two_digit(output_buffer& out, uint64_t n)
 	{
 		out.put(utf8_char((char)('0' + n / 10)));
 
 		out.put(utf8_char((char)('0' + n % 10)));
 	}
 
-	void h_fmt_three_digit(output_t& out, uint64_t n)
+	void h_fmt_three_digit(output_buffer& out, uint64_t n)
 	{
 		out.put((char)('0' + n / 100));
 		out.put((char)('0' + (n / 10) % 10));
 		out.put((char)('0' + n % 10));
 	}
 
-	void h_fmt_decimal(output_t& out, uint64_t n, int32_t digits, char sign = '\0')
+	void h_fmt_decimal(output_buffer& out, uint64_t n, int32_t digits, char sign = '\0')
 	{
 		char* curr = out.reserve(digits + (sign != 0)) + digits - (sign == 0);
 
@@ -257,7 +306,7 @@ namespace och
 		}
 	}
 
-	void h_fmt_hex(output_t& out, uint64_t value, int32_t digits, const char* hex_charset)
+	void h_fmt_hex(output_buffer& out, uint64_t value, int32_t digits, const char* hex_charset)
 	{
 		char* curr = out.reserve(digits) + digits - 1;
 
@@ -274,7 +323,7 @@ namespace och
 		}
 	}
 
-	void h_fmt_binary(output_t& out, uint64_t value, int32_t digits)
+	void h_fmt_binary(output_buffer& out, uint64_t value, int32_t digits)
 	{
 		char* curr = out.reserve(digits) + digits - 1;
 
@@ -291,7 +340,7 @@ namespace och
 		}
 	}
 
-	void h_fmt_integer_base(output_t& out, uint64_t n, const parsed_context& context, uint32_t bit_width, char sign = '\0')
+	void h_fmt_integer_base(output_buffer& out, uint64_t n, const parsed_context& context, uint32_t bit_width, char sign = '\0')
 	{
 		const char* hex_fmt = hex_lower_upper;
 		
@@ -702,39 +751,48 @@ namespace och
 			}
 		}
 
-		if (precision != 0x7FFF) //Rounding / padding
+		if (context.format_specifier == och::utf8_char('\0')) //Default formatting
 		{
-			if (fract_digits > precision) //Round...
+			if (precision != 0x7FFF) //Rounding / padding
 			{
-				while (fractional_part != buf + radix_pos + 1)
+				if (fract_digits > precision) //Round...
 				{
-					char falloff = *fractional_part;
+					while (fractional_part != buf + radix_pos + 1)
+					{
+						char falloff = *fractional_part;
 
-					*--fractional_part += falloff >= '5';
+						*--fractional_part += falloff >= '5';
 
-					--fract_digits;
+						--fract_digits;
 
-					if (*fractional_part != '9' + 1)
-						break;
+						if (*fractional_part != '9' + 1)
+							break;
+					}
 				}
+
+				if (precision > 128) //Prevent a buffer overflow
+					precision = 128;
+
+				while (fract_digits++ < precision) //Pad...
+					*++fractional_part = '0';
 			}
 
-			if (precision > 128) //Prevent a buffer overflow
-				precision = 128;
+			if (sgn)
+				*--integral_part = '-';
+			else if (context.flags & 1)
+				*--integral_part = '+';
+			else if (context.flags & 2)
+				*--integral_part = ' ';
 
-			while (fract_digits++ < precision) //Pad...
-				*++fractional_part = '0';
+			if (!precision)
+				fractional_part = buf + radix_pos - 1;
 		}
+		else
+		{
+			context.output.put_padded(invalid_specifier_msg, context);
 
-		if (sgn)
-			*--integral_part = '-';
-		else if (context.flags & 1)
-			*--integral_part = '+';
-		else if (context.flags & 2)
-			*--integral_part = ' ';
-
-		if (!precision)
-			fractional_part = buf + radix_pos - 1;
+			return;
+		}
 
 		uint32_t len = static_cast<uint32_t>(fractional_part - integral_part + 1);
 
@@ -778,7 +836,7 @@ namespace och
 
 		const och::date& value = *reinterpret_cast<const och::date*>(arg_value.ptr);
 
-		output_t& out = context.output;
+		output_buffer& out = context.output;
 
 		uint32_t utf8_cpoints = 0;
 
@@ -1005,7 +1063,7 @@ namespace och
 
 		value.val = arg_value.i64;
 		
-		output_t& out = context.output;
+		output_buffer& out = context.output;
 
 		char sign = h_get_sign(value.val, context);
 
@@ -1531,7 +1589,7 @@ namespace och
 	/*///////////////////////////////////////////////////parsed_context//////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	parsed_context::parsed_context(const char*& context, const och::range<const och::arg_wrapper> argv, output_t& output) : argv{ argv }, output{ output }
+	parsed_context::parsed_context(const char*& context, const och::range<const och::arg_wrapper> argv, output_buffer& output) : argv{ argv }, output{ output }
 	{
 		width = h_parse_fmt_index_relative(context, argv);
 
@@ -1608,16 +1666,22 @@ namespace och
 
 		if (buffer_bytes == 0xFFFF'FFFF)
 		{
-			char buffer_array[output_t::buffer_capacity];
+			char buffer_array[output_buffer::file_buffer_capacity];
 
 			buffer = buffer_array;
+
+			backing_file = out;
+		}
+		else if (buffer_bytes == 0xFFFF'FFFE)
+		{
+			buffer = och::range<char>(nullptr, nullptr);
 
 			backing_file = out;
 		}
 		else
 			buffer = och::range<char>(static_cast<char*>(out.ptr), buffer_bytes);
 
-		output_t output(buffer, backing_file);
+		output_buffer output(buffer, backing_file);
 
 		uint32_t arg_counter = 0;
 
@@ -1746,5 +1810,30 @@ namespace och
 	uint32_t sprint(range<char> buf, const utf8_string& format)
 	{
 		return sprint(buf, och::stringview(format));
+	}
+
+
+
+	uint32_t sprint(och::utf8_string& buf, const stringview& format)
+	{
+		buf += format;
+
+		return format.get_codeunits();
+	}
+
+	uint32_t sprint(och::utf8_string& buf, const char* format)
+	{
+		uint32_t prev_cunits = buf.get_codeunits();
+
+		buf += format;
+
+		return buf.get_codeunits() - prev_cunits;
+	}
+
+	uint32_t sprint(och::utf8_string& buf, const utf8_string& format)
+	{
+		buf += format;
+
+		return format.get_codeunits();
 	}
 }
