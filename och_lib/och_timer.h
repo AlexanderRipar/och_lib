@@ -21,7 +21,7 @@ namespace och
 
 			t = highres_time::now();
 
-			return beg - t;
+			return t - beg;
 		}
 	};
 
@@ -43,7 +43,7 @@ namespace och
 
 			t = time::now();
 
-			return beg - t;
+			return t - beg;
 		}
 	};
 }
