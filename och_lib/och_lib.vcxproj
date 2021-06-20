@@ -170,6 +170,7 @@
     <ClInclude Include="och_fio.h" />
     <ClInclude Include="och_fmt.h" />
     <ClInclude Include="och_lib.h" />
+    <ClInclude Include="och_matmath.h" />
     <ClInclude Include="och_range.h" />
     <ClInclude Include="och_time.h" />
     <ClInclude Include="och_basic_types.h" />
