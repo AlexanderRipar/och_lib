@@ -223,7 +223,7 @@ namespace och
 
 	void filehandle::close() const noexcept { close_file(handle); }
 
-	[[nodiscard]] bool filehandle::operator!() const noexcept { return !handle.ptr; }
+	filehandle::operator bool() const noexcept { return handle.ptr; }
 
 	filehandle::filehandle(iohandle handle) : handle{ handle } {}
 

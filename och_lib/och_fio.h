@@ -117,7 +117,7 @@ namespace och
 
 		void close() const noexcept;
 
-		[[nodiscard]] bool operator!() const noexcept;
+		[[nodiscard]] operator bool() const noexcept;
 
 	protected:
 
@@ -181,6 +181,8 @@ namespace och
 		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(file, buf); }
 
 		[[nodiscard]] bool is_valid() const noexcept { return data.ptr; }
+
+		operator bool() const noexcept { return data.ptr; }
 
 		[[nodiscard]] bool operator!() const noexcept { return !is_valid(); }
 	};
