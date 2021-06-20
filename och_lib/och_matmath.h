@@ -7,22 +7,22 @@ namespace och
 {
 	struct mat2
 	{
-		float f[4];
+		float f[4] alignas(8);
 	};
 
 	struct vec2
 	{
-		float f[2];
+		float f[2] alignas(8);
 	};
 
 	struct mat3
 	{
-		float f[9];
+		float f[9] alignas(16);
 	};
 
 	struct vec3
 	{
-		float f[3];
+		float f[3] alignas(16);
 
 		vec3() = default;
 
@@ -37,7 +37,7 @@ namespace och
 
 	struct mat4
 	{
-		float f[16];
+		float f[16] alignas(16);
 
 		mat4() = default;
 
@@ -173,7 +173,7 @@ namespace och
 
 	struct vec4
 	{
-		float f[4];
+		float f[4] alignas(16);
 
 		vec4() = default;
 
