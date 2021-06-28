@@ -8,16 +8,73 @@ namespace och
 	struct mat2
 	{
 		float f[4] alignas(8);
+
+		mat2() = default;
+
+		constexpr mat2(float all) noexcept : f{ all, all, all, all } {}
+
+		constexpr mat2(float xx, float xy, float yx, float yy) noexcept : f{ xx, xy, yx, yy } {}
+
+		constexpr float& operator()(size_t i) noexcept { return f[i]; }
+
+		constexpr float operator()(size_t i) const noexcept { return f[i]; }
+
+		constexpr float& operator()(size_t x, size_t y) noexcept { return f[x + 2 * y]; }
+
+		constexpr float operator()(size_t x, size_t y) const noexcept { return f[x + 2 * y]; }
+
+		constexpr static mat2 identity() noexcept
+		{
+			return
+			{
+				1.0F, 0.0F,
+				0.0F, 1.0F,
+			};
+		}
 	};
 
 	struct vec2
 	{
 		float f[2] alignas(8);
+
+		vec2() = default;
+
+		constexpr vec2(float all) : f{ all, all } {}
+
+		constexpr vec2(float x, float y) noexcept : f{ x, y } {}
+
+		float& operator()(size_t i) noexcept { return f[i]; }
+
+		float operator()(size_t i) const noexcept { return f[i]; }
 	};
 
 	struct mat3
 	{
-		float f[9] alignas(16);
+		float f[9];
+
+		mat3() = default;
+
+		constexpr mat3(float all) noexcept : f{ all, all, all, all, all, all, all, all, all } {}
+
+		constexpr mat3(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz) noexcept : f{ xx, xy, xz, yx, yy, yz, zx, zy, zz } {}
+
+		constexpr float& operator()(size_t i) noexcept { return f[i]; }
+
+		constexpr float operator()(size_t i) const noexcept { return f[i]; }
+
+		constexpr float& operator()(size_t x, size_t y) noexcept { return f[x + 4 * y]; }
+
+		constexpr float operator()(size_t x, size_t y) const noexcept { return f[x + 4 * y]; }
+
+		constexpr static mat3 identity() noexcept
+		{
+			return
+			{
+				1.0F, 0.0F, 0.0F,
+				0.0F, 1.0F, 0.0F,
+				0.0F, 0.0F, 1.0F,
+			};
+		}
 	};
 
 	struct vec3
@@ -30,9 +87,9 @@ namespace och
 
 		constexpr vec3(float x, float y, float z) noexcept : f{ x, y, z } {}
 
-		float& operator[](size_t i) noexcept { return f[i]; }
+		float& operator()(size_t i) noexcept { return f[i]; }
 
-		float operator[](size_t i) const noexcept { return f[i]; }
+		float operator()(size_t i) const noexcept { return f[i]; }
 	};
 
 	struct mat4
@@ -50,9 +107,9 @@ namespace och
 
 		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 
-		constexpr float& operator()(size_t x, size_t y) noexcept { return f[x + 4 * y]; }
+		constexpr float& operator()(size_t x, size_t y) noexcept { return f[4 * x + y]; }
 
-		constexpr float operator()(size_t x, size_t y) const noexcept { return f[x + 4 * y]; }
+		constexpr float operator()(size_t x, size_t y) const noexcept { return f[4 * x + y]; }
 
 		constexpr static mat4 identity() noexcept
 		{
@@ -80,10 +137,10 @@ namespace och
 		{
 			return
 			{
-				1.0F, 0.0F, 0.0F,   tx,
-				0.0F, 1.0F, 0.0F,   ty,
-				0.0F, 0.0F, 1.0F,   tz,
-				0.0F, 0.0F, 0.0F, 1.0F
+				1.0F, 0.0F, 0.0F, 0.0F,
+				0.0F, 1.0F, 0.0F, 0.0F,
+				0.0F, 0.0F, 1.0F, 0.0F,
+				  tx,   ty,   tz, 1.0F
 			};
 		}
 
@@ -101,9 +158,9 @@ namespace och
 			return
 			{
 				1.0F, 0.0F, 0.0F, 0.0F,
-				0.0F,   cv,  -sv, 0.0F,
-				0.0F,   sv,   cv, 0.0F,
-				0.0F, 0.0F, 0.0F, 1.0F
+				0.0F,   cv,   sv, 0.0F,
+				0.0F,  -sv,   cv, 0.0F,
+				0.0F, 0.0F, 0.0F, 1.0F,
 			};
 		}
 
@@ -115,9 +172,9 @@ namespace och
 
 			return
 			{
-				  cv, 0.0F,   sv, 0.0F,
+				  cv, 0.0F,  -sv, 0.0F,
 				0.0F, 1.0F, 0.0F, 0.0F,
-				 -sv, 0.0F,   cv, 0.0F,
+				  sv, 0.0F,   cv, 0.0F,
 				0.0F, 0.0F, 0.0F, 1.0F
 			};
 		}
@@ -130,8 +187,8 @@ namespace och
 
 			return
 			{
-				  cv,  -sv, 0.0F, 0.0F,
-				  sv,   cv, 0.0F, 0.0F,
+				  cv,   sv, 0.0F, 0.0F,
+				 -sv,   cv, 0.0F, 0.0F,
 				0.0F, 0.0F, 1.0F, 0.0F,
 				0.0F, 0.0F, 0.0F, 1.0F
 			};
@@ -171,6 +228,36 @@ namespace och
 		}
 	};
 
+	constexpr mat2 transpose(const mat2& m)
+	{
+		return
+		{
+			m(0, 0), m(1, 0),
+			m(0, 1), m(1, 1),
+		};
+	}
+
+	constexpr mat3 transpose(const mat3& m)
+	{
+		return
+		{
+			m(0, 0), m(1, 0), m(2, 0),
+			m(0, 1), m(1, 1), m(2, 1),
+			m(0, 2), m(1, 2), m(2, 2),
+		};
+	}
+
+	constexpr mat4 transpose(const mat4& m)
+	{
+		return
+		{
+			m(0, 0), m(1, 0), m(2, 0), m(3, 0),
+			m(0, 1), m(1, 1), m(2, 1), m(3, 1),
+			m(0, 2), m(1, 2), m(2, 2), m(3, 2),
+			m(0, 3), m(1, 3), m(2, 3), m(3, 3),
+		};
+	}
+
 	struct vec4
 	{
 		float f[4] alignas(16);
@@ -185,30 +272,30 @@ namespace och
 
 		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 	};
-
+	
 	mat4 operator*(const mat4& l, const mat4& r)
 	{
 		mat4 product;
 
-		product.f[0] = l.f[0] * r.f[0] + l.f[1] * r.f[4] + l.f[2] * r.f[8] + l.f[3] * r.f[12];
-		product.f[1] = l.f[0] * r.f[1] + l.f[1] * r.f[5] + l.f[2] * r.f[9] + l.f[3] * r.f[13];
-		product.f[2] = l.f[0] * r.f[2] + l.f[1] * r.f[6] + l.f[2] * r.f[10] + l.f[3] * r.f[14];
-		product.f[3] = l.f[0] * r.f[3] + l.f[1] * r.f[7] + l.f[2] * r.f[11] + l.f[3] * r.f[15];
+		product(0, 0) = l(0, 0) * r(0, 0) + l(1, 0) * r(0, 1) + l(2, 0) * r(0, 2) + l(3, 0) * r(0, 3);
+		product(1, 0) = l(0, 0) * r(1, 0) + l(1, 0) * r(1, 1) + l(2, 0) * r(1, 2) + l(3, 0) * r(1, 3);
+		product(2, 0) = l(0, 0) * r(2, 0) + l(1, 0) * r(2, 1) + l(2, 0) * r(2, 2) + l(3, 0) * r(2, 3);
+		product(3, 0) = l(0, 0) * r(3, 0) + l(1, 0) * r(3, 1) + l(2, 0) * r(3, 2) + l(3, 0) * r(3, 3);
 
-		product.f[4] = l.f[4] * r.f[0] + l.f[5] * r.f[4] + l.f[6] * r.f[8] + l.f[7] * r.f[12];
-		product.f[5] = l.f[4] * r.f[1] + l.f[5] * r.f[5] + l.f[6] * r.f[9] + l.f[7] * r.f[13];
-		product.f[6] = l.f[4] * r.f[2] + l.f[5] * r.f[6] + l.f[6] * r.f[10] + l.f[7] * r.f[14];
-		product.f[7] = l.f[4] * r.f[3] + l.f[5] * r.f[7] + l.f[6] * r.f[11] + l.f[7] * r.f[15];
-
-		product.f[8] = l.f[8] * r.f[0] + l.f[9] * r.f[4] + l.f[10] * r.f[8] + l.f[11] * r.f[12];
-		product.f[9] = l.f[8] * r.f[1] + l.f[9] * r.f[5] + l.f[10] * r.f[9] + l.f[11] * r.f[13];
-		product.f[10] = l.f[8] * r.f[2] + l.f[9] * r.f[6] + l.f[10] * r.f[10] + l.f[11] * r.f[14];
-		product.f[11] = l.f[8] * r.f[3] + l.f[9] * r.f[7] + l.f[10] * r.f[11] + l.f[11] * r.f[15];
-
-		product.f[12] = l.f[12] * r.f[0] + l.f[13] * r.f[4] + l.f[14] * r.f[8] + l.f[15] * r.f[12];
-		product.f[13] = l.f[12] * r.f[1] + l.f[13] * r.f[5] + l.f[14] * r.f[9] + l.f[15] * r.f[13];
-		product.f[14] = l.f[12] * r.f[2] + l.f[13] * r.f[6] + l.f[14] * r.f[10] + l.f[15] * r.f[14];
-		product.f[15] = l.f[12] * r.f[3] + l.f[13] * r.f[7] + l.f[14] * r.f[11] + l.f[15] * r.f[15];
+		product(0, 1) = l(0, 1) * r(0, 0) + l(1, 1) * r(0, 1) + l(2, 1) * r(0, 2) + l(3, 1) * r(0, 3);
+		product(1, 1) = l(0, 1) * r(1, 0) + l(1, 1) * r(1, 1) + l(2, 1) * r(1, 2) + l(3, 1) * r(1, 3);
+		product(2, 1) = l(0, 1) * r(2, 0) + l(1, 1) * r(2, 1) + l(2, 1) * r(2, 2) + l(3, 1) * r(2, 3);
+		product(3, 1) = l(0, 1) * r(3, 0) + l(1, 1) * r(3, 1) + l(2, 1) * r(3, 2) + l(3, 1) * r(3, 3);
+		
+		product(0, 2) = l(0, 2) * r(0, 0) + l(1, 2) * r(0, 1) + l(2, 2) * r(0, 2) + l(3, 2) * r(0, 3);
+		product(1, 2) = l(0, 2) * r(1, 0) + l(1, 2) * r(1, 1) + l(2, 2) * r(1, 2) + l(3, 2) * r(1, 3);
+		product(2, 2) = l(0, 2) * r(2, 0) + l(1, 2) * r(2, 1) + l(2, 2) * r(2, 2) + l(3, 2) * r(2, 3);
+		product(3, 2) = l(0, 2) * r(3, 0) + l(1, 2) * r(3, 1) + l(2, 2) * r(3, 2) + l(3, 2) * r(3, 3);
+		
+		product(0, 3) = l(0, 3) * r(0, 0) + l(1, 3) * r(0, 1) + l(2, 3) * r(0, 2) + l(3, 3) * r(0, 3);
+		product(1, 3) = l(0, 3) * r(1, 0) + l(1, 3) * r(1, 1) + l(2, 3) * r(1, 2) + l(3, 3) * r(1, 3);
+		product(2, 3) = l(0, 3) * r(2, 0) + l(1, 3) * r(2, 1) + l(2, 3) * r(2, 2) + l(3, 3) * r(2, 3);
+		product(3, 3) = l(0, 3) * r(3, 0) + l(1, 3) * r(3, 1) + l(2, 3) * r(3, 2) + l(3, 3) * r(3, 3);
 
 		return product;
 	}
@@ -400,33 +487,37 @@ namespace och
 
 
 
-	mat4 perpective(float vert_fov, float aspect_ratio, float n, float f) noexcept
+	mat4 perspective(float vert_fov, float aspect_ratio, float n, float f) noexcept
 	{
-		float tan_fov = tanf(vert_fov);
+		float rad = vert_fov;
+		float tanHalfFovy = tan(rad / 2.0F);
 
-		return
-		{
-			1.0F / (aspect_ratio * tan_fov),             0.0F,                0.0F,                      0.0F,
-									   0.0F,  -1.0F / tan_fov,                0.0F,                      0.0F,
-									   0.0F,             0.0F,  (-n - f) / (n - f),  (2.0F * f * n) / (n - f),
-									   0.0F,             0.0F,                1.0F,                      0.0F
-		};
+		mat4 rst(0.0F);
+
+		rst(0, 0) = 1.0F / (aspect_ratio * tanHalfFovy);
+		rst(1, 1) = -1.0F / tanHalfFovy;
+		rst(2, 2) = f / (n - f);
+		rst(2, 3) = -1.0F;
+		rst(3, 2) = -(1.0F * f * n) / (f - n);
+
+		return rst;
 	}
 
 	mat4 look_at(vec3 eye_pos, vec3 center_pos, vec3 up)
 	{
-		vec3 f = normalize(center_pos - eye_pos);
+		// View direction
+		vec3 z = normalize(center_pos - eye_pos);
 
-		vec3 u = normalize(up);
+		vec3 x = normalize(cross(z, up));
 
-		vec3 s = normalize(cross(f, u));
+		vec3 y = normalize(cross(x, z));
 
 		mat4 m
 		{
-			 s[0],  s[1],  s[2], 0.0F,
-			 u[0],  u[1],  u[2], 0.0F,
-			-f[0], -f[1], -f[2], 0.0F,
-			 0.0F,  0.0F,  0.0F, 1.0F
+			x(0), y(0), -z(0), 0.0F,
+			x(1), y(1), -z(1), 0.0F,
+			x(2), y(2), -z(2), 0.0F,
+			0.0F, 0.0F,  0.0F, 1.0F
 		};
 
 		return m * mat4::translate(-eye_pos);

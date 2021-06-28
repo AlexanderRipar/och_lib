@@ -1,6 +1,7 @@
 ﻿#include "och_fmt.h"
 
 #include <cstdint>
+#include <cassert>
 #include <intrin.h>
 
 #include "och_fio.h"
@@ -440,11 +441,11 @@ namespace och
 
 		if (by_arg)
 		{
-			_ASSERT(*context == '}');
+			assert(*context == '}');
 
 			++context;
 
-			_ASSERT(val < argv.len());
+			assert(val < argv.len());
 
 			val = argv[val].value.u16;
 		}
@@ -1253,7 +1254,7 @@ namespace och
 			break;
 
 		case U'μ':
-			specifier = u8"μs";
+			specifier = reinterpret_cast<const char*>(u8"μs");
 			time_value = value.microseconds();
 			++utf_surr_count;
 			break;
@@ -1709,9 +1710,9 @@ namespace och
 
 				++arg_counter;
 
-				_ASSERT(arg_idx < argv.len());
+				assert(arg_idx < argv.len());
 
-				_ASSERT(*curr == ':' || *curr == '}');
+				assert(*curr == ':' || *curr == '}');
 
 				if (*curr == ':')
 					++curr;
