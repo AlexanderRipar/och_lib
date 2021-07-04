@@ -136,19 +136,19 @@ namespace och
 	{
 	private:
 
-		iohandle file;
-		iohandle mapper;
-		iohandle data;
+		const iohandle m_file;
+		const iohandle m_mapper;
+		const iohandle m_data;
+
+		const uint32_t m_bytes;
 
 	public:
 
-		const uint32_t bytes;
-
 		mapped_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
-			file{ open_file(filename, access_rights, existing_mode, new_mode) },
-			mapper{ create_file_mapper(file, (uint64_t)mapping_size + mapping_offset, access_rights) },
-			data{ file_as_array(mapper, access_rights, mapping_offset, (uint64_t)mapping_offset + mapping_size) },
-			bytes{ data ? mapping_size == 0 ? (uint32_t)get_filesize(file) : mapping_size : 0 }
+			m_file{ open_file(filename, access_rights, existing_mode, new_mode) },
+			m_mapper{ create_file_mapper(m_file, (uint64_t)mapping_size + mapping_offset, access_rights) },
+			m_data{ file_as_array(m_mapper, access_rights, mapping_offset, (uint64_t)mapping_offset + mapping_size) },
+			m_bytes{ m_data ? mapping_size == 0 ? (uint32_t)get_filesize(m_file) : mapping_size : 0 }
 		{}
 
 		mapped_file(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
@@ -159,25 +159,24 @@ namespace och
 
 		~mapped_file() noexcept
 		{
-			och::close_file_array(data);
-			och::close_file(mapper);
-			och::close_file(file);
+			och::close_file_array(m_data);
+			och::close_file(m_mapper);
+			och::close_file(m_file);
 		}
 
-		[[nodiscard]] range<T> get_data() const noexcept { return range<T>(reinterpret_cast<T*>(data.ptr), bytes / sizeof(T)); }
+		[[nodiscard]] uint32_t bytes() const noexcept { return m_bytes; }
 
-		[[nodiscard]] T& operator[](uint32_t idx) { return reinterpret_cast<T*>(data.ptr)[idx]; }
+		[[nodiscard]] T* data() const noexcept { return static_cast<T*>(m_data.ptr); }
 
-		template<typename U>
-		[[nodiscard]] U& get_at(uint32_t idx) { return *reinterpret_cast<U*>(reinterpret_cast<uint8_t*>(data.ptr) + idx); }
+		[[nodiscard]] T& operator[](uint32_t idx) noexcept { return static_cast<T*>(m_data.ptr)[idx]; }
 
-		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(file, buf); }
+		[[nodiscard]] const T& operator[](uint32_t idx) const noexcept { return static_cast<T*>(m_data.ptr)[idx]; }
 
-		[[nodiscard]] bool is_valid() const noexcept { return data.ptr; }
+		[[nodiscard]] range<T> range() const noexcept { return range<T>(static_cast<T*>(m_data.ptr), m_bytes / sizeof(T)); }
 
-		operator bool() const noexcept { return data.ptr; }
+		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(m_file, buf); }
 
-		[[nodiscard]] bool operator!() const noexcept { return !is_valid(); }
+		operator bool() const noexcept { return m_data.ptr; }
 	};
 
 	struct file_search
