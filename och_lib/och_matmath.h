@@ -273,6 +273,26 @@ namespace och
 		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 	};
 	
+	mat4 operator-(const mat4& l, const mat4& r)
+	{
+		och::mat4 ret;
+
+		for (size_t i = 0; i != 16; ++i)
+			ret.f[i] = l.f[i] - r.f[i];
+
+		return ret;
+	};
+
+	mat4 operator+(const mat4& l, const mat4& r)
+	{
+		och::mat4 ret;
+
+		for (size_t i = 0; i != 16; ++i)
+			ret.f[i] = l.f[i] + r.f[i];
+
+		return ret;
+	};
+
 	mat4 operator*(const mat4& l, const mat4& r)
 	{
 		mat4 product;
