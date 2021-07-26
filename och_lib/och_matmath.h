@@ -43,9 +43,9 @@ namespace och
 
 		constexpr vec2(float x, float y) noexcept : f{ x, y } {}
 
-		float& operator()(size_t i) noexcept { return f[i]; }
+		constexpr float& operator()(size_t i) noexcept { return f[i]; }
 
-		float operator()(size_t i) const noexcept { return f[i]; }
+		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 	};
 
 	struct mat3
@@ -87,9 +87,9 @@ namespace och
 
 		constexpr vec3(float x, float y, float z) noexcept : f{ x, y, z } {}
 
-		float& operator()(size_t i) noexcept { return f[i]; }
+		constexpr float& operator()(size_t i) noexcept { return f[i]; }
 
-		float operator()(size_t i) const noexcept { return f[i]; }
+		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 	};
 
 	struct mat4
@@ -149,7 +149,7 @@ namespace och
 			return translate(t.f[0], t.f[1], t.f[2]);
 		}
 
-		static mat4 rotate_x(float angle) noexcept
+		inline static mat4 rotate_x(float angle) noexcept
 		{
 			float cv = cosf(angle);
 
@@ -164,7 +164,7 @@ namespace och
 			};
 		}
 
-		static mat4 rotate_y(float angle) noexcept
+		inline static mat4 rotate_y(float angle) noexcept
 		{
 			float cv = cosf(angle);
 
@@ -179,7 +179,7 @@ namespace och
 			};
 		}
 
-		static mat4 rotate_z(float angle) noexcept
+		inline static mat4 rotate_z(float angle) noexcept
 		{
 			float cv = cosf(angle);
 
@@ -273,7 +273,7 @@ namespace och
 		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 	};
 	
-	mat4 operator-(const mat4& l, const mat4& r)
+	constexpr mat4 operator-(const mat4& l, const mat4& r)
 	{
 		och::mat4 ret;
 
@@ -283,7 +283,7 @@ namespace och
 		return ret;
 	};
 
-	mat4 operator+(const mat4& l, const mat4& r)
+	constexpr mat4 operator+(const mat4& l, const mat4& r)
 	{
 		och::mat4 ret;
 
@@ -293,7 +293,7 @@ namespace och
 		return ret;
 	};
 
-	mat4 operator*(const mat4& l, const mat4& r)
+	constexpr mat4 operator*(const mat4& l, const mat4& r)
 	{
 		mat4 product;
 
@@ -320,7 +320,7 @@ namespace och
 		return product;
 	}
 
-	vec4 operator*(const mat4& l, const vec4& r)
+	constexpr vec4 operator*(const mat4& l, const vec4& r)
 	{
 		vec4 product;
 
@@ -337,7 +337,7 @@ namespace och
 
 
 
-	vec4 operator+(const vec4& l, const vec4& r) noexcept
+	constexpr vec4 operator+(const vec4& l, const vec4& r) noexcept
 	{
 		return
 		{
@@ -348,7 +348,7 @@ namespace och
 		};
 	}
 
-	vec4 operator-(const vec4& l, const vec4& r) noexcept
+	constexpr vec4 operator-(const vec4& l, const vec4& r) noexcept
 	{
 		return
 		{
@@ -359,7 +359,7 @@ namespace och
 		};
 	}
 
-	vec4 operator-(const vec4& v)
+	constexpr vec4 operator-(const vec4& v)
 	{
 		return
 		{
@@ -370,7 +370,7 @@ namespace och
 		};
 	}
 
-	vec4& operator+=(vec4& l, vec4& r) noexcept
+	constexpr vec4& operator+=(vec4& l, vec4& r) noexcept
 	{
 		l.f[0] += r.f[0];
 		l.f[1] += r.f[1];
@@ -380,7 +380,7 @@ namespace och
 		return l;
 	}
 
-	vec4& operator-=(vec4& l, vec4& r) noexcept
+	constexpr vec4& operator-=(vec4& l, vec4& r) noexcept
 	{
 		l.f[0] -= r.f[0];
 		l.f[1] -= r.f[1];
@@ -390,7 +390,7 @@ namespace och
 		return l;
 	}
 
-	float dot(const vec4& l, const vec4& r) noexcept
+	constexpr float dot(const vec4& l, const vec4& r) noexcept
 	{
 		return
 			l.f[0] * r.f[0] +
@@ -399,12 +399,12 @@ namespace och
 			l.f[3] * r.f[3];
 	}
 
-	float magnitude(const vec4& v) noexcept
+	inline float magnitude(const vec4& v) noexcept
 	{
 		return sqrtf(v.f[0] * v.f[0] + v.f[1] * v.f[1] + v.f[2] * v.f[2] + v.f[3] * v.f[3]);
 	}
 
-	vec4 normalize(const vec4& v) noexcept
+	inline vec4 normalize(const vec4& v) noexcept
 	{
 		float inv_magnitude = 1.0F / magnitude(v);
 
@@ -419,7 +419,7 @@ namespace och
 
 
 
-	vec3 operator+(const vec3& l, const vec3& r) noexcept
+	constexpr vec3 operator+(const vec3& l, const vec3& r) noexcept
 	{
 		return
 		{
@@ -429,7 +429,7 @@ namespace och
 		};
 	}
 
-	vec3 operator-(const vec3& l, const vec3& r) noexcept
+	constexpr vec3 operator-(const vec3& l, const vec3& r) noexcept
 	{
 		return
 		{
@@ -439,7 +439,7 @@ namespace och
 		};
 	}
 
-	vec3 operator-(const vec3& v)
+	constexpr vec3 operator-(const vec3& v)
 	{
 		return
 		{
@@ -449,7 +449,7 @@ namespace och
 		};
 	}
 
-	vec3& operator+=(vec3& l, vec3& r) noexcept
+	constexpr vec3& operator+=(vec3& l, vec3& r) noexcept
 	{
 		l.f[0] += r.f[0];
 		l.f[1] += r.f[1];
@@ -458,7 +458,7 @@ namespace och
 		return l;
 	}
 
-	vec3& operator-=(vec3& l, vec3& r) noexcept
+	constexpr vec3& operator-=(vec3& l, vec3& r) noexcept
 	{
 		l.f[0] -= r.f[0];
 		l.f[1] -= r.f[1];
@@ -467,7 +467,7 @@ namespace och
 		return l;
 	}
 
-	float dot(const vec3& l, const vec3& r) noexcept
+	constexpr float dot(const vec3& l, const vec3& r) noexcept
 	{
 		return
 			l.f[0] * r.f[0] +
@@ -475,12 +475,12 @@ namespace och
 			l.f[2] * r.f[2];
 	}
 
-	float magnitude(const vec3& v) noexcept
+	inline float magnitude(const vec3& v) noexcept
 	{
 		return sqrtf(v.f[0] * v.f[0] + v.f[1] * v.f[1] + v.f[2] * v.f[2]);
 	}
 
-	vec3 normalize(const vec3& v) noexcept
+	inline vec3 normalize(const vec3& v) noexcept
 	{
 		float inv_magnitude = 1.0F / magnitude(v);
 
@@ -492,7 +492,7 @@ namespace och
 		};
 	}
 
-	vec3 cross(const vec3& l, const vec3& r)
+	constexpr vec3 cross(const vec3& l, const vec3& r)
 	{
 		return
 		{
@@ -507,7 +507,7 @@ namespace och
 
 
 
-	mat4 perspective(float vert_fov, float aspect_ratio, float n, float f) noexcept
+	inline mat4 perspective(float vert_fov, float aspect_ratio, float n, float f) noexcept
 	{
 		float rad = vert_fov;
 		float tanHalfFovy = tan(rad / 2.0F);
@@ -523,7 +523,7 @@ namespace och
 		return rst;
 	}
 
-	mat4 look_at(vec3 eye_pos, vec3 center_pos, vec3 up)
+	inline mat4 look_at(vec3 eye_pos, vec3 center_pos, vec3 up)
 	{
 		// View direction
 		vec3 z = normalize(center_pos - eye_pos);
