@@ -770,7 +770,9 @@ namespace och
 
 	uint32_t utf8_string::least_bigger_cap(uint32_t required) noexcept
 	{
-		if (required-- <= min_heap_cap)
+		required -= 1;
+
+		if (required <= min_heap_cap)
 			return min_heap_cap - 1;
 
 		required |= required >> 1;
