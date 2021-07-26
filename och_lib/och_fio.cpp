@@ -252,21 +252,150 @@ namespace och
 	/*/////////////////////////////////////////////////file_search///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	file_search::file_search(const char* path) noexcept : search_handle{ FindFirstFileA(path, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4)) } {}
+	file_search::file_info::file_info(const file_search& data) noexcept : m_data{ data } {}
+
+	och::stringview file_search::file_info::name() const noexcept
+	{
+		return och::utf8_view(m_data.m_info_data.name);
+	}
+
+	och::time file_search::file_info::creation_time() const noexcept
+	{
+		return m_data.m_info_data.creation_time;
+	}
+
+	och::time file_search::file_info::last_access_time() const noexcept
+	{
+		return m_data.m_info_data.last_access_time;
+	}
+
+	och::time file_search::file_info::last_modification_time() const noexcept
+	{
+		return m_data.m_info_data.last_write_time;
+	}
+
+	uint64_t file_search::file_info::size() const noexcept
+	{
+		return m_data.m_info_data.size;
+	}
+
+	bool file_search::file_info::is_directory() const noexcept
+	{
+		return m_data.m_info_data.attributes & fio::flag_directory;
+	}
+
+	och::stringview file_search::file_info::ending() const noexcept
+	{
+		if (m_data.m_info_data.attributes & fio::flag_directory)
+			return och::stringview("");
+		
+		const char* beg = m_data.m_info_data.name;
+
+		while (*beg != '.')
+			if (!*beg++)
+				return och::stringview("");
+		
+		return och::stringview(beg + 1);
+	}
+
+	och::utf8_string file_search::file_info::absolute_name() const noexcept
+	{
+		och::string str(m_data.m_search_path);
+
+		str += och::stringview(m_data.m_info_data.name);
+
+		return std::move(str);
+	}
+
+
+
+	void file_search::file_iterator::operator++() noexcept
+	{
+		m_search->next();
+	}
+
+	bool file_search::file_iterator::operator!=(const file_iterator& rhs) const noexcept
+	{
+		rhs; return m_search->has_next();
+	}
+
+	file_search::file_info file_search::file_iterator::operator*() const noexcept
+	{
+		return file_info(*m_search);
+	}
+
+	file_search::file_iterator::file_iterator(file_search* search) noexcept : m_search{ search } {}
+
+
+
+	file_search::file_search(const char* path) noexcept : file_search(och::stringview(path)) {}
 
 	file_search::file_search(const och::utf8_string& path) noexcept : file_search(path.raw_cbegin()) {}
 
-	file_search::file_search(const och::stringview& path) noexcept : file_search(path.raw_cbegin()) {}
+	file_search::file_search(const och::stringview& path) noexcept
+	{
+		char* curr = m_search_path;
 
-	file_search::~file_search() noexcept { FindClose(search_handle.ptr); }
+		if (path.get_codeunits() + 3 <= sizeof(m_search_path))
+		{
+			for (uint32_t i = 0; i != path.get_codeunits(); ++i)
+			{
+				char c = path.raw_cbegin()[i];
 
-	bool file_search::next() noexcept { return FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&curr_data) + 4)); }
+				if (c == '+')
+					break;
 
-	och::stringview file_search::name() const noexcept { return { curr_data.name }; }
+				if (c == '/')
+					c = '\\';
 
-	bool file_search::is_dir() const noexcept { return curr_data.attributes & fio::flag_directory; }
+				*curr++ = c;
+			}
 
-	filehandle file_search::open(uint32_t access_rights, uint32_t share_mode) const noexcept { return filehandle(curr_data.name, access_rights, fio::open_normal, fio::open_fail, share_mode); }
+			if(*(curr - 1) != '\\')
+				*curr++ = '\\';
+
+			*curr++ = '*';
+		}
+
+		*curr = '\0';
+
+		search_handle.ptr = FindFirstFileA(m_search_path, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4));
+
+		while (get_info().name() == ".." || get_info().name() == ".")
+			next();
+
+		*(curr - 1) = '\0';
+	}
+
+	file_search::~file_search() noexcept
+	{
+		FindClose(search_handle.ptr);
+	}
+
+	bool file_search::next() noexcept
+	{
+		return m_info_data._padding = FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4));
+	}
+
+	bool file_search::has_next() const noexcept
+	{
+		return m_info_data._padding;
+	}
+
+	file_search::file_info file_search::get_info() const noexcept
+	{
+		return file_info(*this);
+	}
+
+	file_search::file_iterator file_search::begin() noexcept
+	{
+		return file_iterator(this);
+	}
+
+	file_search::file_iterator file_search::end() noexcept
+	{
+		return file_iterator(nullptr);
+	}
 
 
 
@@ -274,17 +403,17 @@ namespace och
 	/*/////////////////////////////////////////////Standard I/O interop//////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	iohandle get_stdout()
+	iohandle get_stdout() noexcept
 	{
 		return iohandle(GetStdHandle(STD_OUTPUT_HANDLE));
 	}
 
-	iohandle get_stdin()
+	iohandle get_stdin() noexcept
 	{
 		return iohandle(GetStdHandle(STD_INPUT_HANDLE));
 	}
 
-	iohandle get_stderr()
+	iohandle get_stderr() noexcept
 	{
 		return iohandle(GetStdHandle(STD_ERROR_HANDLE));
 	}

@@ -144,11 +144,11 @@ namespace och
 
 	public:
 
-		mapped_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
-			m_file{ open_file(filename, access_rights, existing_mode, new_mode) },
+		mapped_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0, uint32_t share_mode = och::fio::share_none) noexcept :
+			m_file{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) },
 			m_mapper{ create_file_mapper(m_file, (uint64_t)mapping_size + mapping_offset, access_rights) },
 			m_data{ file_as_array(m_mapper, access_rights, mapping_offset, (uint64_t)mapping_offset + mapping_size) },
-			m_bytes{ m_data ? mapping_size == 0 ? (uint32_t)get_filesize(m_file) : mapping_size : 0 }
+			m_bytes{ m_data.ptr ? mapping_size == 0 ? (uint32_t)get_filesize(m_file) : mapping_size : 0 }
 		{}
 
 		mapped_file(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
@@ -176,16 +176,16 @@ namespace och
 
 		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept { return get_filepath(m_file, buf); }
 
+		[[nodiscard]] uint32_t size() const noexcept { return m_bytes / sizeof(T); }
+
 		operator bool() const noexcept { return m_data.ptr; }
 	};
 
 	struct file_search
 	{
-		iohandle search_handle;
-
-		struct
+		struct file_info_data
 		{
-			uint32_t _padding;
+			uint32_t _padding alignas(8);
 			uint32_t attributes;
 			och::time creation_time;
 			och::time last_access_time;
@@ -194,31 +194,86 @@ namespace och
 			uint64_t _reserved;
 			char name[260];//MAX_PATH
 			char alt_name[14];
-		}
-		curr_data;
+		};
 
-		static constexpr int size = sizeof(curr_data);
+		struct file_info
+		{
+		private:
+
+			const file_search& m_data;
+
+		public:
+
+			file_info(const file_search& data) noexcept;
+
+			och::stringview name() const noexcept;
+
+			och::time creation_time() const noexcept;
+
+			och::time last_access_time() const noexcept;
+
+			och::time last_modification_time() const noexcept;
+
+			uint64_t size() const noexcept;
+
+			bool is_directory() const noexcept;
+
+			och::stringview ending() const noexcept;
+
+			och::utf8_string absolute_name() const noexcept;
+		};
+
+		struct file_iterator
+		{
+		private:
+
+			file_search* m_search;
+
+		public:
+
+			file_iterator(file_search* search) noexcept;
+
+			void operator++() noexcept;
+
+			bool operator!=(const file_iterator& rhs) const noexcept;
+
+			file_info operator*() const noexcept;
+		};
+
+	private:
+
+		iohandle search_handle;
+
+		file_info_data m_info_data;
+
+		char m_search_path[260];
+
+	public:
 
 		file_search(const char* path) noexcept;
 
 		file_search(const och::utf8_string& path) noexcept;
 
 		file_search(const och::stringview& path) noexcept;
+		
+		file_search(const file_search& rhs) = delete;
 
 		~file_search() noexcept;
 
 		bool next() noexcept;
 
-		och::stringview name() const noexcept;
+		bool has_next() const noexcept;
 
-		bool is_dir() const noexcept;
+		file_info get_info() const noexcept;
 
-		filehandle open(uint32_t access_rights, uint32_t share_mode = fio::share_none) const noexcept;
+		file_iterator begin() noexcept;
+
+		file_iterator end() noexcept;
 	};
 
-	[[nodiscard]] iohandle get_stdout();
-	[[nodiscard]] iohandle get_stdin();
-	[[nodiscard]] iohandle get_stderr();
+	[[nodiscard]] iohandle get_stdout() noexcept;
+	[[nodiscard]] iohandle get_stdin() noexcept;
+	[[nodiscard]] iohandle get_stderr() noexcept;
 
 	const iohandle standard_out = get_stdout();
 	const iohandle standard_in = get_stdin();
