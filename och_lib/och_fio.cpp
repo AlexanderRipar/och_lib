@@ -311,7 +311,7 @@ namespace och
 
 	void file_search::file_iterator::operator++() noexcept
 	{
-		m_search->next();
+		m_search->advance();
 	}
 
 	bool file_search::file_iterator::operator!=(const file_iterator& rhs) const noexcept
@@ -328,15 +328,17 @@ namespace och
 
 
 
-	file_search::file_search(const char* path) noexcept : file_search(och::stringview(path)) {}
+	file_search::file_search(const char* path, uint32_t search_mode, const char* ending_filters) noexcept : file_search(och::stringview(path), search_mode, ending_filters) {}
 
-	file_search::file_search(const och::utf8_string& path) noexcept : file_search(path.raw_cbegin()) {}
+	file_search::file_search(const och::utf8_string& path, uint32_t search_mode, const char* ending_filters) noexcept : file_search(och::stringview(path), search_mode, ending_filters) {}
 
-	file_search::file_search(const och::stringview& path) noexcept
+	file_search::file_search(const och::stringview& path, uint32_t search_mode, const char* ending_filters) noexcept
 	{
+		// Process Path
+
 		char* curr = m_search_path;
 
-		if (path.get_codeunits() + 3 <= sizeof(m_search_path))
+		if (path.get_codeunits() + 2 - ((*(path.end()) == '\\') || (*(path.end()) == '/')) < sizeof(m_search_path))
 		{
 			for (uint32_t i = 0; i != path.get_codeunits(); ++i)
 			{
@@ -359,10 +361,58 @@ namespace och
 
 		*curr = '\0';
 
+
+		// Process filters
+
+		uint32_t filter_idx = 0;
+
+		if (ending_filters)
+		{
+			const char* f = ending_filters;
+
+			while (*f && filter_idx != sizeof(m_ending_filters) / sizeof(m_ending_filters[0]))
+			{
+				if (*f == '.')
+					++f;
+
+				uint32_t char_idx = 0;
+
+				while (*f && *f != '\\' && *f != '/' && char_idx < sizeof(m_ending_filters[0]))
+					m_ending_filters[filter_idx][char_idx++] = *f++;
+
+				if (char_idx != sizeof(m_ending_filters[0]) && char_idx != 0 && !(char_idx == 1 && m_ending_filters[filter_idx][0] == '?'))
+					m_ending_filters[filter_idx++][char_idx] = '\0';
+				else
+					m_ending_filters[filter_idx][0] = '\0';
+
+				if (*f == '\\' || *f == '/')
+					++f;
+			}
+		}
+
+		m_ending_filters[filter_idx][0] = '\0';
+
+
+		// Write search mode and 
+
+		m_info_data.flags_and_padding = 1 | (search_mode << 1);
+
+
+		// Check if the search handle can actually be created
+
 		search_handle.ptr = FindFirstFileA(m_search_path, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4));
 
-		while (get_info().name() == ".." || get_info().name() == ".")
-			next();
+		if (search_handle.ptr == INVALID_HANDLE_VALUE)
+		{
+			search_handle.ptr = nullptr;
+
+			m_info_data.flags_and_padding &= ~1;
+		}
+
+		// Skip to first valid file.
+
+		while (has_next() && get_info().name() == ".." || get_info().name() == ".")
+			advance();
 
 		*(curr - 1) = '\0';
 	}
@@ -372,14 +422,23 @@ namespace och
 		FindClose(search_handle.ptr);
 	}
 
-	bool file_search::next() noexcept
+	void file_search::advance() noexcept
 	{
-		return m_info_data._padding = FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4));
+		m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
+
+		const uint32_t mode = m_info_data.flags_and_padding >> 1;
+
+		if (mode == fio::search_for_directories)
+			while (has_next() && (!(m_info_data.attributes & fio::flag_directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
+				m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
+		else if(mode == fio::search_for_files)
+			while(has_next() && ((m_info_data.attributes & fio::flag_directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
+				m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
 	}
 
 	bool file_search::has_next() const noexcept
 	{
-		return m_info_data._padding;
+		return m_info_data.flags_and_padding & 1;
 	}
 
 	file_search::file_info file_search::get_info() const noexcept
@@ -395,6 +454,49 @@ namespace och
 	file_search::file_iterator file_search::end() noexcept
 	{
 		return file_iterator(nullptr);
+	}
+
+	file_search::operator bool() const noexcept
+	{
+		return search_handle.ptr;
+	}
+
+	bool file_search::matches_ending_filter(const char* ending) const noexcept
+	{
+		if (!m_ending_filters[0][0])
+			return true;
+
+		for (uint32_t i = 0; i != sizeof(m_ending_filters) / sizeof(m_ending_filters[0]); ++i)
+		{
+			if (!m_ending_filters[i][0])
+				break;
+
+			if (m_ending_filters[i][0] == '?')
+				for (uint32_t j = 0; ending[j] && j != sizeof(m_ending_filters[0] - 1); ++j)
+				{
+					char f = m_ending_filters[i][j + 1];
+					char e = ending[j];
+
+					if (f >= 'a' && f <= 'z')
+						f += 'A' - 'a';
+
+					if (e >= 'a' && e <= 'z')
+						e += 'A' - 'a';
+
+					if(f != e)
+						goto NO_MATCH;
+				}
+			else
+				for (uint32_t j = 0; ending[j] && j != sizeof(m_ending_filters[0]); ++j)
+					if (ending[j] != m_ending_filters[i][j])
+						goto NO_MATCH;
+
+			return true;
+
+		NO_MATCH:;
+		}
+
+		return false;
 	}
 
 

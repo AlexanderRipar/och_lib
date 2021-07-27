@@ -39,6 +39,10 @@ namespace och
 			flag_hidden = 2,
 			flag_readonly = 1,
 			flag_temporary = 256,
+
+			search_for_all = 3,
+			search_for_files = 1,
+			search_for_directories = 2,
 		};
 	}
 
@@ -185,7 +189,7 @@ namespace och
 	{
 		struct file_info_data
 		{
-			uint32_t _padding alignas(8);
+			uint32_t flags_and_padding alignas(8);
 			uint32_t attributes;
 			och::time creation_time;
 			och::time last_access_time;
@@ -246,21 +250,23 @@ namespace och
 
 		file_info_data m_info_data;
 
+		char m_ending_filters[8][8];
+
 		char m_search_path[260];
 
 	public:
 
-		file_search(const char* path) noexcept;
+		file_search(const char* path, uint32_t search_mode = fio::search_for_all, const char* ending_filters = nullptr) noexcept;
 
-		file_search(const och::utf8_string& path) noexcept;
+		file_search(const och::utf8_string& path, uint32_t search_mode = fio::search_for_all, const char* ending_filters = nullptr) noexcept;
 
-		file_search(const och::stringview& path) noexcept;
+		file_search(const och::stringview& path, uint32_t search_mode = fio::search_for_all, const char* ending_filters = nullptr) noexcept;
 		
 		file_search(const file_search& rhs) = delete;
 
 		~file_search() noexcept;
 
-		bool next() noexcept;
+		void advance() noexcept;
 
 		bool has_next() const noexcept;
 
@@ -269,7 +275,15 @@ namespace och
 		file_iterator begin() noexcept;
 
 		file_iterator end() noexcept;
+
+		operator bool() const noexcept;
+
+	private:
+
+		bool matches_ending_filter(const char* ending) const noexcept;
 	};
+
+	
 
 	[[nodiscard]] iohandle get_stdout() noexcept;
 	[[nodiscard]] iohandle get_stdin() noexcept;
