@@ -11,7 +11,7 @@ namespace och
 
 		mat2() = default;
 
-		constexpr mat2(float all) noexcept : f{ all, all, all, all } {}
+		constexpr explicit mat2(float all) noexcept : f{ all, all, all, all } {}
 
 		constexpr mat2(float xx, float xy, float yx, float yy) noexcept : f{ xx, xy, yx, yy } {}
 
@@ -35,11 +35,16 @@ namespace och
 
 	struct vec2
 	{
-		float f[2] alignas(8);
+		union
+		{
+			float f[2] alignas(8);
+
+			struct { float x, y; };
+		};
 
 		vec2() = default;
 
-		constexpr vec2(float all) : f{ all, all } {}
+		constexpr explicit vec2(float all) : f{ all, all } {}
 
 		constexpr vec2(float x, float y) noexcept : f{ x, y } {}
 
@@ -54,7 +59,7 @@ namespace och
 
 		mat3() = default;
 
-		constexpr mat3(float all) noexcept : f{ all, all, all, all, all, all, all, all, all } {}
+		constexpr explicit mat3(float all) noexcept : f{ all, all, all, all, all, all, all, all, all } {}
 
 		constexpr mat3(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz) noexcept : f{ xx, xy, xz, yx, yy, yz, zx, zy, zz } {}
 
@@ -79,11 +84,16 @@ namespace och
 
 	struct vec3
 	{
-		float f[3] alignas(16);
+		union
+		{
+			float f[3] alignas(16);
+
+			struct { float x, y, z; };
+		};
 
 		vec3() = default;
 
-		constexpr vec3(float all) : f{ all, all, all } {}
+		constexpr explicit vec3(float all) : f{ all, all, all } {}
 
 		constexpr vec3(float x, float y, float z) noexcept : f{ x, y, z } {}
 
@@ -98,7 +108,7 @@ namespace och
 
 		mat4() = default;
 
-		constexpr mat4(float all) noexcept : f{ all, all, all, all, all, all, all, all, all, all, all, all, all, all, all, all } {}
+		constexpr explicit mat4(float all) noexcept : f{ all, all, all, all, all, all, all, all, all, all, all, all, all, all, all, all } {}
 
 		constexpr mat4(float xx, float xy, float xz, float xw, float yx, float yy, float yz, float yw, float zx, float zy, float zz, float zw, float wx, float wy, float wz, float ww) noexcept
 			: f{ xx, xy, xz, xw, yx, yy, yz, yw, zx, zy, zz, zw, wx, wy, wz, ww } {}
@@ -228,7 +238,7 @@ namespace och
 		}
 	};
 
-	constexpr mat2 transpose(const mat2& m)
+	constexpr mat2 transpose(const mat2& m) noexcept
 	{
 		return
 		{
@@ -237,7 +247,7 @@ namespace och
 		};
 	}
 
-	constexpr mat3 transpose(const mat3& m)
+	constexpr mat3 transpose(const mat3& m) noexcept
 	{
 		return
 		{
@@ -247,7 +257,7 @@ namespace och
 		};
 	}
 
-	constexpr mat4 transpose(const mat4& m)
+	constexpr mat4 transpose(const mat4& m) noexcept
 	{
 		return
 		{
@@ -260,11 +270,16 @@ namespace och
 
 	struct vec4
 	{
-		float f[4] alignas(16);
+		union
+		{
+			float f[4] alignas(16);
+			
+			struct alignas(16) { float x, y, z, w; };
+		};
 
 		vec4() = default;
 
-		constexpr vec4(float all) : f{ all, all, all, all } {}
+		constexpr explicit vec4(float all) : f{ all, all, all, all } {}
 
 		constexpr vec4(float x, float y, float z, float w) noexcept : f{ x, y, z, w } {}
 
@@ -273,7 +288,9 @@ namespace och
 		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 	};
 	
-	constexpr mat4 operator-(const mat4& l, const mat4& r)
+
+
+	constexpr mat4 operator-(const mat4& l, const mat4& r) noexcept
 	{
 		och::mat4 ret;
 
@@ -283,7 +300,7 @@ namespace och
 		return ret;
 	};
 
-	constexpr mat4 operator+(const mat4& l, const mat4& r)
+	constexpr mat4 operator+(const mat4& l, const mat4& r) noexcept
 	{
 		och::mat4 ret;
 
@@ -293,7 +310,7 @@ namespace och
 		return ret;
 	};
 
-	constexpr mat4 operator*(const mat4& l, const mat4& r)
+	constexpr mat4 operator*(const mat4& l, const mat4& r) noexcept
 	{
 		mat4 product;
 
@@ -320,19 +337,17 @@ namespace och
 		return product;
 	}
 
-	constexpr vec4 operator*(const mat4& l, const vec4& r)
+	constexpr vec4 operator*(const mat4& l, const vec4& r) noexcept
 	{
-		vec4 product;
+		const float x = l.f[0] * r.f[0] + l.f[1] * r.f[1] + l.f[2] * r.f[2] + l.f[3] * r.f[3];
 
-		product.f[0] = l.f[0] * r.f[0] + l.f[1] * r.f[1] + l.f[2] * r.f[2] + l.f[3] * r.f[3];
+		const float y = l.f[4] * r.f[0] + l.f[5] * r.f[1] + l.f[6] * r.f[2] + l.f[7] * r.f[3];
 
-		product.f[1] = l.f[4] * r.f[0] + l.f[5] * r.f[1] + l.f[6] * r.f[2] + l.f[7] * r.f[3];
+		const float z = l.f[8] * r.f[0] + l.f[9] * r.f[1] + l.f[10] * r.f[2] + l.f[11] * r.f[3];
 
-		product.f[2] = l.f[8] * r.f[0] + l.f[9] * r.f[1] + l.f[10] * r.f[2] + l.f[11] * r.f[3];
+		const float w = l.f[12] * r.f[0] + l.f[13] * r.f[1] + l.f[14] * r.f[2] + l.f[15] * r.f[3];
 
-		product.f[3] = l.f[12] * r.f[0] + l.f[13] * r.f[1] + l.f[14] * r.f[2] + l.f[15] * r.f[3];
-
-		return product;
+		return vec4(x, y, z, w);
 	}
 
 
@@ -359,7 +374,7 @@ namespace och
 		};
 	}
 
-	constexpr vec4 operator-(const vec4& v)
+	constexpr vec4 operator-(const vec4& v) noexcept
 	{
 		return
 		{
@@ -370,7 +385,7 @@ namespace och
 		};
 	}
 
-	constexpr vec4& operator+=(vec4& l, vec4& r) noexcept
+	constexpr vec4& operator+=(vec4& l, const vec4& r) noexcept
 	{
 		l.f[0] += r.f[0];
 		l.f[1] += r.f[1];
@@ -380,12 +395,44 @@ namespace och
 		return l;
 	}
 
-	constexpr vec4& operator-=(vec4& l, vec4& r) noexcept
+	constexpr vec4& operator-=(vec4& l, const vec4& r) noexcept
 	{
 		l.f[0] -= r.f[0];
 		l.f[1] -= r.f[1];
 		l.f[2] -= r.f[2];
 		l.f[3] -= r.f[3];
+
+		return l;
+	}
+
+	constexpr vec4 operator*(const vec4& l, float r) noexcept
+	{
+		return
+		{
+			l.x * r,
+			l.y * r,
+			l.z * r,
+			l.w * r
+		};
+	}
+
+	constexpr vec4 operator*(float l, const vec4& r) noexcept
+	{
+		return
+		{
+			l * r.x,
+			l * r.y,
+			l * r.z,
+			l * r.w
+		};
+	}
+
+	constexpr vec4& operator*=(vec4& l, float r) noexcept
+	{
+		l.x *= r;
+		l.y *= r;
+		l.z *= r;
+		l.w *= r;
 
 		return l;
 	}
@@ -419,6 +466,19 @@ namespace och
 
 
 
+
+
+	constexpr vec3 operator*(const mat3& l, const vec3& r) noexcept
+	{
+		const float x = l(0, 0) * r.x + l(1, 0) * r.y + l(2, 0) + r.z;
+		const float y = l(0, 1) * r.x + l(1, 1) * r.y + l(2, 1) + r.z;
+		const float z = l(0, 2) * r.x + l(1, 2) * r.y + l(2, 2) + r.z;
+
+		return vec3(x, y, z);
+	}
+
+
+
 	constexpr vec3 operator+(const vec3& l, const vec3& r) noexcept
 	{
 		return
@@ -439,7 +499,7 @@ namespace och
 		};
 	}
 
-	constexpr vec3 operator-(const vec3& v)
+	constexpr vec3 operator-(const vec3& v) noexcept
 	{
 		return
 		{
@@ -449,7 +509,7 @@ namespace och
 		};
 	}
 
-	constexpr vec3& operator+=(vec3& l, vec3& r) noexcept
+	constexpr vec3& operator+=(vec3& l, const vec3& r) noexcept
 	{
 		l.f[0] += r.f[0];
 		l.f[1] += r.f[1];
@@ -458,11 +518,40 @@ namespace och
 		return l;
 	}
 
-	constexpr vec3& operator-=(vec3& l, vec3& r) noexcept
+	constexpr vec3& operator-=(vec3& l, const vec3& r) noexcept
 	{
 		l.f[0] -= r.f[0];
 		l.f[1] -= r.f[1];
 		l.f[2] -= r.f[2];
+
+		return l;
+	}
+
+	constexpr vec3 operator*(const vec3& l, float r) noexcept
+	{
+		return
+		{
+			l.x * r,
+			l.y * r,
+			l.z * r,
+		};
+	}
+
+	constexpr vec3 operator*(float l, const vec3& r) noexcept
+	{
+		return
+		{
+			l * r.x,
+			l * r.y,
+			l * r.z,
+		};
+	}
+
+	constexpr vec3& operator*=(vec3& l, float r) noexcept
+	{
+		l.x *= r;
+		l.y *= r;
+		l.z *= r;
 
 		return l;
 	}
@@ -492,7 +581,7 @@ namespace och
 		};
 	}
 
-	constexpr vec3 cross(const vec3& l, const vec3& r)
+	constexpr vec3 cross(const vec3& l, const vec3& r) noexcept
 	{
 		return
 		{
@@ -502,6 +591,124 @@ namespace och
 		};
 	}
 
+
+
+
+
+	constexpr vec2 operator*(const mat2& l, const vec2& r) noexcept
+	{
+		const float x = l(0, 0) * r.x + l(1, 0) * r.y;
+		const float y = l(0, 1) * r.x + l(1, 1) * r.y;
+
+		return vec2(x, y);
+	}
+
+
+
+	constexpr vec2 operator+(const vec2& l, const vec2& r) noexcept
+	{
+		return
+		{
+			l.f[0] + r.f[0],
+			l.f[1] + r.f[1]
+		};
+	}
+
+	constexpr vec2 operator-(const vec2& l, const vec2& r) noexcept
+	{
+		return
+		{
+			l.f[0] - r.f[0],
+			l.f[1] - r.f[1]
+		};
+	}
+
+	constexpr vec2 operator-(const vec2& v) noexcept
+	{
+		return
+		{
+			-v.f[0],
+			-v.f[1]
+		};
+	}
+
+	constexpr vec2& operator+=(vec2& l, const vec2& r) noexcept
+	{
+		l.f[0] += r.f[0];
+		l.f[1] += r.f[1];
+
+		return l;
+	}
+
+	constexpr vec2& operator-=(vec2& l, const vec2& r) noexcept
+	{
+		l.f[0] -= r.f[0];
+		l.f[1] -= r.f[1];
+
+		return l;
+	}
+
+	constexpr vec2 operator*(const vec2& l, float r) noexcept
+	{
+		return
+		{
+			l.x * r,
+			l.y * r,
+		};
+	}
+
+	constexpr vec2 operator*(float l, const vec2& r) noexcept
+	{
+		return
+		{
+			l * r.x,
+			l * r.y,
+		};
+	}
+
+	constexpr vec2& operator*=(vec2& l, float r) noexcept
+	{
+		l.x *= r;
+		l.y *= r;
+
+		return l;
+	}
+
+	constexpr float dot(const vec2& l, const vec2& r) noexcept
+	{
+		return
+			l.f[0] * r.f[0] +
+			l.f[1] * r.f[1];
+	}
+
+	constexpr float squared_magnitude(const vec2& v) noexcept
+	{
+		return v.x * v.x + v.y * v.y;
+	}
+
+	inline float magnitude(const vec2& v) noexcept
+	{
+		return sqrtf(squared_magnitude(v));
+	}
+
+	inline vec2 normalize(const vec2& v) noexcept
+	{
+		float inv_magnitude = 1.0F / magnitude(v);
+
+		return
+		{
+			v.f[0] * inv_magnitude,
+			v.f[1] * inv_magnitude,
+		};
+	}
+
+	constexpr float cross(const vec2& l, const vec2& r) noexcept
+	{
+		return
+		{
+			l.x * r.y - l.y * r.x
+		};
+	}
 
 
 
@@ -523,7 +730,7 @@ namespace och
 		return rst;
 	}
 
-	inline mat4 look_at(vec3 eye_pos, vec3 center_pos, vec3 up)
+	inline mat4 look_at(vec3 eye_pos, vec3 center_pos, vec3 up) noexcept
 	{
 		// View direction
 		vec3 z = normalize(center_pos - eye_pos);
