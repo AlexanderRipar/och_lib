@@ -296,4 +296,5 @@ namespace och
 	const iohandle standard_in = get_stdin();
 	const iohandle standard_err = get_stderr();
 }
-#endif //!OCH_FIO_INCLUDE_GUARD
+
+#endif // !OCH_FIO_INCLUDE_GUARD

@@ -1,4 +1,7 @@
-#pragma once
+#define OCH_CONSTEXPR_UTIL_PRESENT
+
+#ifndef OCH_CONSTEXPR_UTIL_INCLUDE_GUARD
+#define OCH_CONSTEXPR_UTIL_INCLUDE_GUARD
 
 #include <cstdint>
 
@@ -93,3 +96,5 @@ namespace och
 		template<typename T0             > struct is_same_t<T0, T0> { static constexpr bool value = true; };
 	}
 }
+
+#endif // !OCH_CONSTEXPR_UTIL_INCLUDE_GUARD

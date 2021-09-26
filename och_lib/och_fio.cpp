@@ -2,6 +2,8 @@
 
 #include "och_utf8.h"
 
+#include <utility>
+
 #ifdef _WIN32
 
 #include <Windows.h>

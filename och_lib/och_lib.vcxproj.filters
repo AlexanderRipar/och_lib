@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="och_tok.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="och_fio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -44,16 +41,7 @@
     <ClInclude Include="och_fmt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="och_tok.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="och_constexpr_util.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="och_debug.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="och_lib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="och_timer.h">
@@ -71,16 +59,13 @@
     <ClInclude Include="och_utf16.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="och_utf8buf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="och_basic_types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="och_virtual_keys.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="och_matmath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="och_type_union.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

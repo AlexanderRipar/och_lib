@@ -1,6 +1,7 @@
 ﻿#include "och_fmt.h"
 
 #include <cstdint>
+#include <cstring>
 #include <cassert>
 #include <intrin.h>
 

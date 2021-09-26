@@ -1,10 +1,9 @@
-#pragma once
+#define OCH_RANGE_PRESENT
+
+#ifndef OCH_RANGE_INCLUDE_GUARD
+#define OCH_RANGE_INCLUDE_GUARD
 
 #include <cstdint>
-#include <cstring>
-
-#include "och_constexpr_util.h"
-#include <type_traits>
 
 namespace och
 {
@@ -80,3 +79,5 @@ namespace och
 	template<typename T> [[nodiscard]] const T* begin(const och::range<T>& r) noexcept { return r.beg; }
 	template<typename T> [[nodiscard]] const T* end(const och::range<T>& r) noexcept { return r.end; }
 }
+
+#endif // !OCH_RANGE_INCLUDE_GUARD

@@ -1,6 +1,7 @@
 #define OCH_FMT_PRESENT
 
 #ifndef OCH_FMT_INCLUDE_GUARD
+// OCH_FMT_INCLUDE_GUARD is #defined further down in the second #ifndef block
 
 #include <cstdint>
 

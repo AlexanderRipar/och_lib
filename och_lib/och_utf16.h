@@ -1,4 +1,7 @@
-#pragma once
+#define OCH_UTF16_PRESENT
+
+#ifndef OCH_UTF16_INCLUDE_GUARD
+#define OCH_UTF16_INCLUDE_GUARD
 
 #include <cstdint>
 
@@ -197,3 +200,5 @@ namespace och
 		void set_codepoints(uint32_t cpoints);
 	};
 }
+
+#endif // !OCH_UTF16_INCLUDE_GUARD
