@@ -338,7 +338,7 @@ namespace och
 
 		char* curr = m_search_path;
 
-		if (path.get_codeunits() + 2 - ((*(path.end()) == '\\') || (*(path.end()) == '/')) < sizeof(m_search_path))
+		if (path.get_codeunits() + 2 - ((*(path.end()) == och::utf8_char('\\')) || (*(path.end()) == och::utf8_char('/'))) < sizeof(m_search_path))
 		{
 			for (uint32_t i = 0; i != path.get_codeunits(); ++i)
 			{
