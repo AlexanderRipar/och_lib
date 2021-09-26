@@ -6,8 +6,8 @@
 
 #include "och_fio.h"
 #include "och_utf8.h"
-#include "och_utf8buf.h"
 #include "och_matmath.h"
+#include "och_virtual_keys.h"
 
 namespace och
 {
@@ -1675,6 +1675,10 @@ namespace och
 		h_fmt_vec<2>(arg_value, context);
 	}
 
+	void fmt_virtual_keycode(type_union arg_value, const parsed_context& context) noexcept
+	{
+		context.output.put(och::stringview(virtual_key_names[arg_value.u8]));
+	}
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*////////////////////////////////////////////////////arg_wrapper////////////////////////////////////////////////////////*/
@@ -1730,6 +1734,7 @@ namespace och
 
 	arg_wrapper create_fmt_arg_wrapper(const och::vec2& value) noexcept { return { static_cast<const void*>(&value), fmt_mat2 }; }
 
+	arg_wrapper create_fmt_arg_wrapper(och::vk value) noexcept { return { static_cast<uint8_t>(value), fmt_virtual_keycode }; }
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////parsed_context//////////////////////////////////////////////////////*/
@@ -1855,9 +1860,7 @@ namespace och
 
 				++arg_counter;
 
-				uint32_t argv_len = static_cast<uint32_t>(argv.len());
-
-				assert(arg_idx < argv_len);
+				assert(arg_idx < static_cast<uint32_t>(argv.len()));
 
 				assert(*curr == ':' || *curr == '}');
 

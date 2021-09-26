@@ -95,6 +95,10 @@ namespace och
 
 	arg_wrapper create_fmt_arg_wrapper(const och::vec2& value);
 #endif // OCH_MATMATH_PRESENT
+
+#ifdef OCH_VIRTUAL_KEYS_PRESENT
+	arg_wrapper create_fmt_arg_wrapper(och::vk value) noexcept;
+#endif // OCH_VIRTUAL_KEYS_PRESENT
 }
 
 
