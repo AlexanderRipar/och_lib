@@ -1,4 +1,7 @@
-#pragma once
+#define OCH_TIME_PRESENT
+
+#ifndef OCH_TIME_INCLUDE_GUARD
+#define OCH_TIME_INCLUDE_GUARD
 
 #include <cstdint>
 
@@ -188,3 +191,5 @@ namespace och
 
 	timespan timezone_bias() noexcept;
 }
+
+#endif // !OCH_TIME_INCLUDE_GUARD

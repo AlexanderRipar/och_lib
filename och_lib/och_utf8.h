@@ -1,4 +1,7 @@
-#pragma once
+#define OCH_UTF8_PRESENT
+
+#ifndef OCH_UTF8_INCLUDE_GUARD
+#define OCH_UTF8_INCLUDE_GUARD
 
 #include <cstdint>
 
@@ -191,6 +194,11 @@ namespace och
 		constexpr bool operator<=(const utf8_char& rhs) const noexcept
 		{
 			return m_intval <= rhs.m_intval;
+		}
+
+		constexpr operator bool() const noexcept
+		{
+			return m_intval;
 		}
 	};
 
@@ -466,3 +474,5 @@ namespace och
 		return longest_cpoints;
 	}
 }
+
+#endif // !OCH_UTF8_INCLUDE_GUARD

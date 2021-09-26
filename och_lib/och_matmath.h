@@ -1,5 +1,7 @@
-#pragma once
-#pragma once
+#define OCH_MATMATH_PRESENT
+
+#ifndef OCH_MATMATH_INCLUDE_GUARD
+#define OCH_MATMATH_INCLUDE_GUARD
 
 #include <cmath>
 
@@ -156,7 +158,7 @@ namespace och
 
 		constexpr static mat4 translate(const vec3& t)
 		{
-			return translate(t.f[0], t.f[1], t.f[2]);
+			return translate(t.x, t.y, t.z);
 		}
 
 		inline static mat4 rotate_x(float angle) noexcept
@@ -750,3 +752,5 @@ namespace och
 		return m * mat4::translate(-eye_pos);
 	}
 }
+
+#endif // !OCH_MATMATH_INCLUDE_GUARD

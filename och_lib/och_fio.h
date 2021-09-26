@@ -1,4 +1,7 @@
-#pragma once
+#define OCH_FIO_PRESENT
+
+#ifndef OCH_FIO_INCLUDE_GUARD
+#define OCH_FIO_INCLUDE_GUARD
 
 #include <cstdint>
 
@@ -293,3 +296,4 @@ namespace och
 	const iohandle standard_in = get_stdin();
 	const iohandle standard_err = get_stderr();
 }
+#endif //!OCH_FIO_INCLUDE_GUARD

@@ -1,4 +1,7 @@
-#pragma once
+#define OCH_TYPE_UNION_PRESENT
+
+#ifndef OCH_TYPE_UNION_INCLUDE_GUARD
+#define OCH_TYPE_UNION_INCLUDE_GUARD
 
 #include <cstdint>
 #include "och_utf8.h"
@@ -75,3 +78,5 @@ namespace och
 
 	static_assert(sizeof(type_union) == sizeof(uint64_t), "One of the types in och::type_union is bigger than 8 bytes");
 }
+
+#endif // !OCH_TYPE_UNION_INCLUDE_GUARD

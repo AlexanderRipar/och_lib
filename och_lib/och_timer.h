@@ -1,6 +1,10 @@
-#pragma once
+#define OCH_TIMER_PRESENT
+
+#ifndef OCH_TIMER_INCLUDE_GUARD
+#define OCH_TIMER_INCLUDE_GUARD
 
 #include "och_time.h"
+
 namespace och
 {
 	struct highres_timer
@@ -47,3 +51,5 @@ namespace och
 		}
 	};
 }
+
+#endif //!OCH_TIMER_INCLUDE_GUARD

@@ -7,6 +7,7 @@
 #include "och_fio.h"
 #include "och_utf8.h"
 #include "och_utf8buf.h"
+#include "och_matmath.h"
 
 namespace och
 {
@@ -218,7 +219,7 @@ namespace och
 	constexpr const char* weekdays = "Sunday\0\0\0\0" "Monday\0\0\0\0" "Tuesday\0\0\0" "Wednesday\0" "Thursday\0\0" "Friday\0\0\0\0" "Saturday\0";
 
 	constexpr const char* months = "January\0\0\0"    "February\0\0"   "March\0\0\0\0\0" "April\0\0\0\0\0" "May\0\0\0\0\0\0\0" "June\0\0\0\0\0\0"
-		"July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
+		                           "July\0\0\0\0\0\0" "August\0\0\0\0" "September\0"     "October\0\0\0"   "November\0\0"      "December\0";
 
 
 
@@ -453,69 +454,173 @@ namespace och
 		return val;
 	}
 
+	template<size_t SZ>
+	void h_fmt_mat(type_union arg_value, const parsed_context& context) noexcept
+	{
+		constexpr uint32_t ELEMS = SZ * SZ;
+
+		uint32_t prec = context.precision;
+
+		if (prec == 0x7FFF || prec == 0xFFFF)
+			prec = 4;
+		else if (prec > 8)
+			prec = 8;
+
+		uint8_t cps[ELEMS];
+
+		char flt_strs[ELEMS][32];
+
+		for (uint32_t i = 0; i != ELEMS; ++i)
+			cps[i] = static_cast<uint8_t>(och::sprint(och::range(flt_strs[i]), "{0:.{1}_}", static_cast<const float*>(arg_value.ptr)[i], prec));
+
+		if (context.flags & 1)
+			for (uint32_t i = 0; i != ELEMS; ++i)
+				if (flt_strs[i][0] == ' ')
+					flt_strs[i][0] = '+';
+
+		uint8_t max_cps = static_cast<uint8_t>(context.width);
+
+		for (uint8_t i = 0; i != ELEMS; ++i)
+			if (cps[i] > max_cps)
+				max_cps = cps[i];
+
+		for (uint32_t y = 0; y != SZ; ++y)
+		{
+			context.output.put('|');
+
+			for (uint32_t x = 0; x != SZ; ++x)
+			{
+				const uint32_t i = x * SZ + y;
+
+				for (uint8_t c = cps[i]; c != max_cps; ++c)
+					context.output.put(' ');
+
+				context.output.put(och::stringview(flt_strs[i], cps[i], cps[i]));
+
+				if (x != SZ - 1)
+				{
+					context.output.put(',');
+					context.output.put(' ');
+				}
+			}
+
+			context.output.put('|');
+
+			if (y != SZ - 1)
+				context.output.put('\n');
+		}
+	}
+
+	template<size_t SZ>
+	void h_fmt_vec(type_union arg_value, const parsed_context& context) noexcept
+	{
+		uint32_t prec = context.precision;
+
+		if (prec == 0x7FFF || prec == 0xFFFF)
+			prec = 4;
+		else if (prec > 8)
+			prec = 8;
+
+		uint8_t cps[SZ];
+
+		char flt_strs[SZ][32];
+
+		for (uint32_t i = 0; i != SZ; ++i)
+			cps[i] = static_cast<uint8_t>(och::sprint(och::range(flt_strs[i]), "{0:.{1}_}", static_cast<const float*>(arg_value.ptr)[i], prec));
+
+		if (context.flags & 1)
+			for (uint32_t i = 0; i != SZ; ++i)
+				if (flt_strs[i][0] == ' ')
+					flt_strs[i][0] = '+';
+
+		uint8_t max_cps = static_cast<uint8_t>(context.width);
+
+		for (uint8_t i = 0; i != SZ; ++i)
+			if (cps[i] > max_cps)
+				max_cps = cps[i];
+
+		context.output.put('(');
+
+		for (uint32_t i = 0; i != SZ; ++i)
+		{
+			for (uint8_t c = cps[i]; c != max_cps; ++c)
+				context.output.put(' ');
+
+			context.output.put(och::stringview(flt_strs[i], cps[i], cps[i]));
+
+			if (i != SZ - 1)
+			{
+				context.output.put(',');
+				context.output.put(' ');
+			}
+		}
+
+		context.output.put(')');
+	}
+
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////formatting functions////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	void fmt_uint64(type_union arg_value, const parsed_context& context)
+	void fmt_uint64(type_union arg_value, const parsed_context& context) noexcept
 	{
 		uint64_t value = arg_value.u64;
 
 		h_fmt_integer_base(context.output, value, context, 64);
 	}
 
-	void fmt_int64(type_union arg_value, const parsed_context& context)
+	void fmt_int64(type_union arg_value, const parsed_context& context) noexcept
 	{
 		int64_t value = arg_value.i64;
 
 		h_fmt_integer_base(context.output, value, context, 64, h_get_sign(value, context));
 	}
 
-	void fmt_uint32(type_union arg_value, const parsed_context& context)
+	void fmt_uint32(type_union arg_value, const parsed_context& context) noexcept
 	{
 		uint32_t value = arg_value.u32;
 
 		h_fmt_integer_base(context.output, value, context, 32);
 	}
 
-	void fmt_int32(type_union arg_value, const parsed_context& context)
+	void fmt_int32(type_union arg_value, const parsed_context& context) noexcept
 	{
 		int32_t value = arg_value.i32;
 
 		h_fmt_integer_base(context.output, value, context, 32, h_get_sign(value, context));
 	}
 
-	void fmt_uint16(type_union arg_value, const parsed_context& context)
+	void fmt_uint16(type_union arg_value, const parsed_context& context) noexcept
 	{
 		uint16_t value = arg_value.u16;
 
 		h_fmt_integer_base(context.output, value, context, 16);
 	}
 
-	void fmt_int16(type_union arg_value, const parsed_context& context)
+	void fmt_int16(type_union arg_value, const parsed_context& context) noexcept
 	{
 		int16_t value = arg_value.i16;
 
 		h_fmt_integer_base(context.output, value, context, 16, h_get_sign(value, context));
 	}
 
-	void fmt_uint8(type_union arg_value, const parsed_context& context)
+	void fmt_uint8(type_union arg_value, const parsed_context& context) noexcept
 	{
 		uint8_t value = arg_value.u8;
 
 		h_fmt_integer_base(context.output, value, context, 8);
 	}
 
-	void fmt_int8(type_union arg_value, const parsed_context& context)
+	void fmt_int8(type_union arg_value, const parsed_context& context) noexcept
 	{
 		int8_t value = arg_value.i8;
 
 		h_fmt_integer_base(context.output, value, context, 8, h_get_sign(value, context));
 	}
 
-	void fmt_utf8_view(type_union arg_value, const parsed_context& context)
+	void fmt_utf8_view(type_union arg_value, const parsed_context& context) noexcept
 	{
 		och::utf8_view value = *(const och::utf8_view*)arg_value.ptr;
 
@@ -525,28 +630,28 @@ namespace och
 		context.output.put_padded(value, context);
 	}
 
-	void fmt_utf8_string(type_union arg_value, const parsed_context& context)
+	void fmt_utf8_string(type_union arg_value, const parsed_context& context) noexcept
 	{
 		och::utf8_view value(*(const och::utf8_string*)arg_value.ptr);
 
 		fmt_utf8_view((const void*)&value, context);
 	}
 
-	void fmt_cstring(type_union arg_value, const parsed_context& context)
+	void fmt_cstring(type_union arg_value, const parsed_context& context) noexcept
 	{
 		och::utf8_view value(reinterpret_cast<const char*>(arg_value.ptr));
 
 		fmt_utf8_view((const void*)&value, context);
 	}
 
-	void fmt_codepoint(type_union arg_value, const parsed_context& context)
+	void fmt_codepoint(type_union arg_value, const parsed_context& context) noexcept
 	{
 		och::utf8_char value = arg_value.utf_c;
 
 		context.output.put_padded(value, context);
 	}
 
-	void fmt_float(type_union arg_value, const parsed_context& context)
+	void fmt_float(type_union arg_value, const parsed_context& context) noexcept
 	{
 		constexpr uint64_t radix_pos = 60;
 
@@ -801,14 +906,14 @@ namespace och
 	}
 
 	//TODO implement
-	void fmt_double(type_union arg_value, const parsed_context& context)
+	void fmt_double(type_union arg_value, const parsed_context& context) noexcept
 	{
 		arg_value;
 
 		context.output.put_padded(och::stringview("[[fmt_double is not yet implemented]]"), context);
 	}
 
-	void fmt_date(type_union arg_value, const parsed_context& context)
+	void fmt_date(type_union arg_value, const parsed_context& context) noexcept
 	{
 		//          [y]yyyy-mm-dd, hh:mm:ss.mmm
 		// d   ->   [y]yyyy-mm-dd
@@ -843,15 +948,15 @@ namespace och
 
 		const char* format;
 
-		if (context.format_specifier == '\0')
+		if (context.format_specifier == och::utf8_char('\0'))
 			format = "y-M-D, I:J:K.L}";
-		else if (context.format_specifier == 'd')
+		else if (context.format_specifier == och::utf8_char('d'))
 			format = "y-M-D}";
-		else if (context.format_specifier == 't')
+		else if (context.format_specifier == och::utf8_char('t'))
 			format = "I:J:K.L}";
-		else if (context.format_specifier == 'u')
+		else if (context.format_specifier == och::utf8_char('u'))
 			format = "Y-M-DTI:J:K.Lus:U}";
-		else if (context.format_specifier == 'x')
+		else if (context.format_specifier == och::utf8_char('x'))
 			format = context.raw_context;
 		else
 		{
@@ -1042,7 +1147,7 @@ namespace och
 	}
 
 	//TODO improve (Not happy)
-	void fmt_timespan(type_union arg_value, const parsed_context& context)
+	void fmt_timespan(type_union arg_value, const parsed_context& context) noexcept
 	{
 		//     ->   appropriate format (with format specifier)
 		// d   ->   days
@@ -1432,7 +1537,7 @@ namespace och
 	}
 
 	//TODO implement
-	void fmt_highres_timespan(type_union arg_value, const parsed_context& context)
+	void fmt_highres_timespan(type_union arg_value, const parsed_context& context) noexcept
 	{
 		arg_value;
 
@@ -1540,57 +1645,97 @@ namespace och
 		//write_with_padding(out, och::stringview(curr, (uint32_t)(curr - buf), (uint32_t)(curr - buf - utf_surr_count)), context);
 	}
 
+	void fmt_mat4(type_union arg_value, const parsed_context& context) noexcept
+	{
+		h_fmt_mat<4>(arg_value, context);
+	}
+
+	void fmt_mat3(type_union arg_value, const parsed_context& context) noexcept
+	{
+		h_fmt_mat<3>(arg_value, context);
+	}
+
+	void fmt_mat2(type_union arg_value, const parsed_context& context) noexcept
+	{
+		h_fmt_mat<2>(arg_value, context);
+	}
+
+	void fmt_vec4(type_union arg_value, const parsed_context& context) noexcept
+	{
+		h_fmt_vec<4>(arg_value, context);
+	}
+
+	void fmt_vec3(type_union arg_value, const parsed_context& context) noexcept
+	{
+		h_fmt_vec<3>(arg_value, context);
+	}
+
+	void fmt_vec2(type_union arg_value, const parsed_context& context) noexcept
+	{
+		h_fmt_vec<2>(arg_value, context);
+	}
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*////////////////////////////////////////////////////arg_wrapper////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	arg_wrapper::arg_wrapper(uint64_t value) : value{ value }, formatter{ fmt_uint64 } {}
+	arg_wrapper create_fmt_arg_wrapper(uint64_t value) noexcept { return { value, fmt_uint64 }; }
 
-	arg_wrapper::arg_wrapper(int64_t value) : value{ value }, formatter{ fmt_int64 } {}
+	arg_wrapper create_fmt_arg_wrapper(int64_t value) noexcept { return { value, fmt_int64 }; }
 
-	arg_wrapper::arg_wrapper(uint32_t value) : value{ value }, formatter{ fmt_uint32 } {}
+	arg_wrapper create_fmt_arg_wrapper(uint32_t value) noexcept { return { value, fmt_uint32 }; }
 
-	arg_wrapper::arg_wrapper(int32_t value) : value{ value }, formatter{ fmt_int32 } {}
+	arg_wrapper create_fmt_arg_wrapper(int32_t value) noexcept { return { value, fmt_int32 }; }
 
-	arg_wrapper::arg_wrapper(uint16_t value) : value{ value }, formatter{ fmt_uint16 } {}
+	arg_wrapper create_fmt_arg_wrapper(uint16_t value) noexcept { return { value, fmt_uint16 }; }
 
-	arg_wrapper::arg_wrapper(int16_t value) : value{ value }, formatter{ fmt_int16 } {}
+	arg_wrapper create_fmt_arg_wrapper(int16_t value) noexcept { return { value, fmt_int16 }; }
 
-	arg_wrapper::arg_wrapper(uint8_t value) : value{ value }, formatter{ fmt_uint8 } {}
+	arg_wrapper create_fmt_arg_wrapper(uint8_t value) noexcept { return { value, fmt_uint8 }; }
 
-	arg_wrapper::arg_wrapper(int8_t value) : value{ value }, formatter{ fmt_int8 } {}
+	arg_wrapper create_fmt_arg_wrapper(int8_t value) noexcept { return { value, fmt_int8 }; }
 
-	arg_wrapper::arg_wrapper(float value) : value{ value }, formatter{ fmt_float } {}
+	arg_wrapper create_fmt_arg_wrapper(float value) noexcept { return { value, fmt_float }; }
 
-	arg_wrapper::arg_wrapper(double value) : value{ value }, formatter{ fmt_double } {}
+	arg_wrapper create_fmt_arg_wrapper(double value) noexcept { return { value, fmt_double }; }
 
-	arg_wrapper::arg_wrapper(const char* value) : value{ (const void*)value }, formatter{ fmt_cstring } {}
+	arg_wrapper create_fmt_arg_wrapper(const char* value) noexcept { return { (const void*)value, fmt_cstring }; }
 
-	arg_wrapper::arg_wrapper(const och::utf8_string& value) : value{ (const void*)&value }, formatter{ fmt_utf8_string } {}
+	arg_wrapper create_fmt_arg_wrapper(const och::utf8_string& value) noexcept { return { (const void*)&value, fmt_utf8_string }; }
 
-	arg_wrapper::arg_wrapper(const och::utf8_view& value) : value{ (const void*)&value }, formatter{ fmt_utf8_view } {}
+	arg_wrapper create_fmt_arg_wrapper(const och::utf8_view& value) noexcept { return { (const void*)&value, fmt_utf8_view }; }
 
-	arg_wrapper::arg_wrapper(const och::date& value) : value{ (const void*)&value }, formatter{ fmt_date } {}
+	arg_wrapper create_fmt_arg_wrapper(const och::date& value) noexcept { return { (const void*)&value, fmt_date }; }
 
-	arg_wrapper::arg_wrapper(char32_t value) : value{ och::utf8_char(value) }, formatter{ fmt_codepoint } {}
+	arg_wrapper create_fmt_arg_wrapper(char32_t value) noexcept { return { och::utf8_char(value), fmt_codepoint }; }
 
-	arg_wrapper::arg_wrapper(char value) : value{ och::utf8_char(value) }, formatter{ fmt_codepoint } {}
+	arg_wrapper create_fmt_arg_wrapper(char value) noexcept { return { och::utf8_char(value), fmt_codepoint }; }
 
-	arg_wrapper::arg_wrapper(const och::utf8_char& value) : value{ value }, formatter{ fmt_codepoint } {}
+	arg_wrapper create_fmt_arg_wrapper(const och::utf8_char& value) noexcept { return { value, fmt_codepoint }; }
 
-	arg_wrapper::arg_wrapper(och::timespan value) : value{ value.val }, formatter{ fmt_timespan } {}
+	arg_wrapper create_fmt_arg_wrapper(och::timespan value) noexcept { return { value.val, fmt_timespan }; }
 
-	arg_wrapper::arg_wrapper(och::highres_timespan value) : value{ value.val }, formatter{ fmt_highres_timespan } {}
+	arg_wrapper create_fmt_arg_wrapper(och::highres_timespan value) noexcept { return { value.val, fmt_highres_timespan }; }
 
+	arg_wrapper create_fmt_arg_wrapper(const och::mat4& value) noexcept { return { static_cast<const void*>(&value), fmt_mat4 }; }
+
+	arg_wrapper create_fmt_arg_wrapper(const och::mat3& value) noexcept { return { static_cast<const void*>(&value), fmt_mat3 }; }
+
+	arg_wrapper create_fmt_arg_wrapper(const och::mat2& value) noexcept { return { static_cast<const void*>(&value), fmt_mat2 }; }
+
+	arg_wrapper create_fmt_arg_wrapper(const och::vec4& value) noexcept { return { static_cast<const void*>(&value), fmt_vec4 }; }
+
+	arg_wrapper create_fmt_arg_wrapper(const och::vec3& value) noexcept { return { static_cast<const void*>(&value), fmt_vec3 }; }
+
+	arg_wrapper create_fmt_arg_wrapper(const och::vec2& value) noexcept { return { static_cast<const void*>(&value), fmt_mat2 }; }
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////parsed_context//////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	parsed_context::parsed_context(const char*& context, const och::range<const och::arg_wrapper> argv, output_buffer& output) : argv{ argv }, output{ output }
+	parsed_context::parsed_context(const char*& context, const och::range<const och::arg_wrapper> argv, output_buffer& output) : argv(argv), output(output)
 	{
 		width = h_parse_fmt_index_relative(context, argv);
 
@@ -1686,7 +1831,7 @@ namespace och
 
 		uint32_t arg_counter = 0;
 
-		const char* last_fmt_end = format.raw_cbegin(), * curr = format.raw_cbegin(), * const initial_buffer_start = format.raw_cbegin();
+		const char* last_fmt_end = format.raw_cbegin(), * curr = format.raw_cbegin(), * const initial_buffer_start = buffer.beg;
 
 		while (curr < format.raw_cend())
 			if (*curr++ == '{')
@@ -1710,7 +1855,9 @@ namespace och
 
 				++arg_counter;
 
-				assert(arg_idx < argv.len());
+				uint32_t argv_len = static_cast<uint32_t>(argv.len());
+
+				assert(arg_idx < argv_len);
 
 				assert(*curr == ':' || *curr == '}');
 
@@ -1728,7 +1875,10 @@ namespace och
 
 		output.flush();
 
-		return static_cast<uint32_t>(output.buffer.beg - initial_buffer_start + output.overrun_count);
+		if (output.overrun_count)
+			return static_cast<uint32_t>(output.buffer.beg - initial_buffer_start + output.overrun_count);
+		else
+			return static_cast<uint32_t>(output.buffer.beg - initial_buffer_start + output.overrun_count - 1);
 	}
 
 

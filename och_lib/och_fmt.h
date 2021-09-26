@@ -1,4 +1,6 @@
-#pragma once
+#define OCH_FMT_PRESENT
+
+#ifndef OCH_FMT_INCLUDE_GUARD
 
 #include <cstdint>
 
@@ -26,60 +28,88 @@ namespace och
 		parsed_context(const char*& context, const range<const arg_wrapper> argv, output_buffer& output);
 	};
 
-	using fmt_fn = void (*) (type_union arg_value, const parsed_context& context);
+	using fmt_fn = void (*) (type_union arg_value, const parsed_context& context) noexcept;
 
 	struct arg_wrapper
 	{
 		type_union value;
 
 		fmt_fn formatter;
-
-		arg_wrapper( uint8_t value);
-		
-		arg_wrapper(uint16_t value);
-		
-		arg_wrapper(uint32_t value);
-		
-		arg_wrapper(uint64_t value);
-		
-		arg_wrapper(  int8_t value);
-					 
-		arg_wrapper( int16_t value);
-					 
-		arg_wrapper( int32_t value);
-					 
-		arg_wrapper( int64_t value);
-					 
-		arg_wrapper(   float value);
-					 
-		arg_wrapper(  double value);
-
-		arg_wrapper(const char* value);
-
-		arg_wrapper(const utf8_string& value);
-
-		arg_wrapper(const utf8_view& value);
-
-		arg_wrapper(const date& value);
-
-		arg_wrapper(char32_t value);
-
-		arg_wrapper(char value);
-
-		arg_wrapper(const utf8_char& value);
-
-		arg_wrapper(timespan value);
-
-		arg_wrapper(highres_timespan value);
 	};
 
+	arg_wrapper create_fmt_arg_wrapper(uint8_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(uint16_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(uint32_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(uint64_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(int8_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(int16_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(int32_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(int64_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(float value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(double value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(const char* value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(const utf8_string& value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(const utf8_view& value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(char32_t value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(char value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(const utf8_char& value) noexcept;
+}
+
+#endif // !OCH_FMT_INCLUDE_GUARD
+
+namespace och
+{
+#ifdef OCH_TIME_PRESENT
+	arg_wrapper create_fmt_arg_wrapper(const date& value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(timespan value) noexcept;
+
+	arg_wrapper create_fmt_arg_wrapper(highres_timespan value) noexcept;
+#endif // OCH_TIME_PRESENT
+
+#ifdef OCH_MATMATH_PRESENT
+	arg_wrapper create_fmt_arg_wrapper(const och::mat4& value);
+
+	arg_wrapper create_fmt_arg_wrapper(const och::mat3& value);
+
+	arg_wrapper create_fmt_arg_wrapper(const och::mat2& value);
+
+	arg_wrapper create_fmt_arg_wrapper(const och::vec4& value);
+
+	arg_wrapper create_fmt_arg_wrapper(const och::vec3& value);
+
+	arg_wrapper create_fmt_arg_wrapper(const och::vec2& value);
+#endif // OCH_MATMATH_PRESENT
+}
+
+
+#ifndef OCH_FMT_INCLUDE_GUARD
+#define OCH_FMT_INCLUDE_GUARD
+
+namespace och
+{
 	uint32_t vprint(iohandle out, const stringview& format, const range<const arg_wrapper>& argv, uint32_t buffer_bytes = 0xFFFF'FFFF);
 
 	//{[argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [format specifier]]}
 	template<typename... Args>
 	void print(iohandle out, const stringview& format, Args... args)
 	{
-		const arg_wrapper argv[]{ arg_wrapper(args)... };
+		const arg_wrapper argv[]{ create_fmt_arg_wrapper(args)... };
 
 		vprint(out, format, och::range<const arg_wrapper>(argv));
 	}
@@ -166,7 +196,7 @@ namespace och
 	template<typename... Args>
 	uint32_t sprint(range<char> buf, const stringview& format, Args... args)
 	{
-		const arg_wrapper argv[]{ arg_wrapper(args)... };
+		const arg_wrapper argv[]{ create_fmt_arg_wrapper(args)... };
 
 		return vprint(och::iohandle(static_cast<void*>(buf.beg)), format, och::range<const arg_wrapper>(argv), static_cast<uint32_t>(buf.len()));
 	}
@@ -196,7 +226,7 @@ namespace och
 	template<typename... Args>
 	uint32_t sprint(och::utf8_string& buf, const stringview& format, Args... args)
 	{
-		const arg_wrapper argv[]{ arg_wrapper(args)... };
+		const arg_wrapper argv[]{ create_fmt_arg_wrapper(args)... };
 
 		return vprint(och::iohandle(static_cast<void*>(&buf)), format, och::range<const arg_wrapper>(argv), 0xFFFF'FFFE);
 	}
@@ -221,3 +251,5 @@ namespace och
 
 	uint32_t sprint(och::utf8_string& buf, const char* format);
 }
+
+#endif // !OCH_FMT_INCLUDE_GUARD
