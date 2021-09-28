@@ -9,6 +9,7 @@ namespace och
 {
 	enum class vk : uint8_t
 	{
+		NONE					= 0x00, // Undefined virtual keycode used as a placeholder for 'nothing'/'not present'
 		mouse_left              = 0x01, // 
 		mouse_right             = 0x02, // 
 		cancel                  = 0x03, // 
