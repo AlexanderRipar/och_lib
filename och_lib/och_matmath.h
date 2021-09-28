@@ -15,7 +15,7 @@ namespace och
 
 		constexpr explicit mat2(float all) noexcept : f{ all, all, all, all } {}
 
-		constexpr mat2(float xx, float xy, float yx, float yy) noexcept : f{ xx, xy, yx, yy } {}
+		constexpr mat2(float xx, float xy, float yx, float yy) noexcept : f{ xx, yx, xy, yy } {}
 
 		constexpr float& operator()(size_t i) noexcept { return f[i]; }
 
@@ -63,7 +63,7 @@ namespace och
 
 		constexpr explicit mat3(float all) noexcept : f{ all, all, all, all, all, all, all, all, all } {}
 
-		constexpr mat3(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz) noexcept : f{ xx, xy, xz, yx, yy, yz, zx, zy, zz } {}
+		constexpr mat3(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz) noexcept : f{ xx, yx, zx, xy, yy, zy, xz, yz, zz } {}
 
 		constexpr float& operator()(size_t i) noexcept { return f[i]; }
 
@@ -113,7 +113,7 @@ namespace och
 		constexpr explicit mat4(float all) noexcept : f{ all, all, all, all, all, all, all, all, all, all, all, all, all, all, all, all } {}
 
 		constexpr mat4(float xx, float xy, float xz, float xw, float yx, float yy, float yz, float yw, float zx, float zy, float zz, float zw, float wx, float wy, float wz, float ww) noexcept
-			: f{ xx, xy, xz, xw, yx, yy, yz, yw, zx, zy, zz, zw, wx, wy, wz, ww } {}
+			: f{ xx, yx, zx, wx, xy, yy, zy, wy, xz, yz, zz, wz, xw, yw, zw, ww } {}
 
 		constexpr float& operator()(size_t i) noexcept { return f[i]; }
 
@@ -240,42 +240,12 @@ namespace och
 		}
 	};
 
-	constexpr mat2 transpose(const mat2& m) noexcept
-	{
-		return
-		{
-			m(0, 0), m(1, 0),
-			m(0, 1), m(1, 1),
-		};
-	}
-
-	constexpr mat3 transpose(const mat3& m) noexcept
-	{
-		return
-		{
-			m(0, 0), m(1, 0), m(2, 0),
-			m(0, 1), m(1, 1), m(2, 1),
-			m(0, 2), m(1, 2), m(2, 2),
-		};
-	}
-
-	constexpr mat4 transpose(const mat4& m) noexcept
-	{
-		return
-		{
-			m(0, 0), m(1, 0), m(2, 0), m(3, 0),
-			m(0, 1), m(1, 1), m(2, 1), m(3, 1),
-			m(0, 2), m(1, 2), m(2, 2), m(3, 2),
-			m(0, 3), m(1, 3), m(2, 3), m(3, 3),
-		};
-	}
-
 	struct vec4
 	{
 		union
 		{
 			float f[4] alignas(16);
-			
+
 			struct alignas(16) { float x, y, z, w; };
 		};
 
@@ -289,7 +259,39 @@ namespace och
 
 		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 	};
-	
+
+
+
+	constexpr mat2 transpose(const mat2& m) noexcept
+	{
+		return
+		{
+			m(0, 0), m(0, 1),
+			m(1, 0), m(1, 1),
+		};
+	}
+
+	constexpr mat3 transpose(const mat3& m) noexcept
+	{
+		return
+		{
+			m(0, 0), m(0, 1), m(0, 2),
+			m(1, 0), m(1, 1), m(1, 2),
+			m(2, 0), m(2, 1), m(2, 2),
+		};
+	}
+
+	constexpr mat4 transpose(const mat4& m) noexcept
+	{
+		return
+		{
+			m(0, 0), m(0, 1), m(0, 2), m(0, 3),
+			m(1, 0), m(1, 1), m(1, 2), m(1, 3),
+			m(2, 0), m(2, 1), m(2, 2), m(2, 3),
+			m(3, 0), m(3, 1), m(3, 2), m(3, 3),
+		};
+	}
+
 
 
 	constexpr mat4 operator-(const mat4& l, const mat4& r) noexcept
