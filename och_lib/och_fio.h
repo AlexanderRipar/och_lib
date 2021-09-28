@@ -13,40 +13,70 @@ namespace och
 {
 	namespace fio
 	{
-		enum _fio : uint32_t
+		enum class open : uint32_t
 		{
-			open_normal = 0,
-			open_truncate = 1,
-			open_fail = 2,
-			open_append = 4,
-
-			access_read = 2,
-			access_write = 1,
-			access_readwrite = 3,
-
-			share_none = 0,
-			share_read = 1,
-			share_write = 2,
-			share_delete = 4,
-			share_read_write = 3,
-			share_read_delete = 5,
-			share_write_delete = 6,
-			share_read_write_delete = 7,
-
-			setptr_beg = 0,
-			setptr_cur = 1,
-			setptr_end = 2,
-
-			flag_normal = 128,
-			flag_directory = 16,
-			flag_hidden = 2,
-			flag_readonly = 1,
-			flag_temporary = 256,
-
-			search_for_all = 3,
-			search_for_files = 1,
-			search_for_directories = 2,
+			normal = 0,
+			truncate = 1,
+			fail = 2,
+			append = 4,
 		};
+
+		enum class access : uint32_t
+		{
+			read = 2,
+			write = 1,
+			readwrite = 1 | 2,
+		};
+
+		enum class share : uint32_t
+		{
+			none = 0,
+			read = 1,
+			write = 2,
+			erase = 4,
+			read_write = 1 | 2,
+			read_delete = 1 | 4,
+			write_delete = 2 | 4,
+			read_write_delete = 1 | 2 | 4,
+		};
+
+		enum class setptr : uint32_t
+		{
+			beg = 0,
+			cur = 1,
+			end = 2,
+		};
+
+		enum class search
+		{
+			files = 1,
+			directories = 2,
+			all = 1 | 2,
+		};
+
+		enum class flag
+		{
+			readonly = 1,
+			hidden = 2,
+			directory = 16,
+			normal = 128,
+			temporary = 256,
+		};
+
+		constexpr flag operator|(flag l, flag r) noexcept
+		{
+			return static_cast<flag>(static_cast<uint32_t>(l) | static_cast<uint32_t>(r));
+		}
+
+		constexpr flag operator&(flag l, flag r) noexcept
+		{
+			return static_cast<flag>(static_cast<uint32_t>(l) & static_cast<uint32_t>(r));
+		}
+
+		constexpr flag operator^(flag l, flag r) noexcept
+		{
+			return static_cast<flag>(static_cast<uint32_t>(l) ^ static_cast<uint32_t>(r));
+		}
 	}
 
 	struct iohandle
@@ -58,11 +88,13 @@ namespace och
 		void* ptr;
 	};
 
-	[[nodiscard]] iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none, uint32_t flags = fio::flag_normal) noexcept;
 
-	[[nodiscard]] iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t access_rights, const char* mapping_name = nullptr) noexcept;
 
-	[[nodiscard]] iohandle file_as_array(const iohandle file_mapper, uint32_t access_rights, uint64_t beg, uint64_t end) noexcept;
+	[[nodiscard]] iohandle open_file(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode = fio::share::none, fio::flag flags = fio::flag::normal) noexcept;
+
+	[[nodiscard]] iohandle create_file_mapper(const iohandle file, uint64_t size, fio::access access_rights, const char* mapping_name = nullptr) noexcept;
+
+	[[nodiscard]] iohandle file_as_array(const iohandle file_mapper, fio::access access_rights, uint64_t beg, uint64_t end) noexcept;
 
 	[[nodiscard]] int64_t get_filesize(const iohandle file) noexcept;
 
@@ -76,7 +108,7 @@ namespace och
 
 	bool delete_file(const char* filename) noexcept;
 
-	bool file_seek(const iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept;
+	bool file_seek(const iohandle file, int64_t set_to, fio::setptr setptr_mode) noexcept;
 
 	bool set_filesize(const iohandle file, uint64_t bytes) noexcept;
 
@@ -88,11 +120,11 @@ namespace och
 	{
 		const iohandle handle;
 
-		filehandle(const och::stringview& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+		filehandle(const och::stringview& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode = fio::share::none) noexcept;
 
-		filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+		filehandle(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode = fio::share::none) noexcept;
 
-		filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode = fio::share_none) noexcept;
+		filehandle(const och::utf8_string& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode = fio::share::none) noexcept;
 
 		~filehandle() noexcept;
 
@@ -118,7 +150,7 @@ namespace och
 
 		[[nodiscard]] och::range<char> path(och::range<char> buf) const noexcept;
 
-		bool seek(int64_t set_to, uint32_t setptr_mode = fio::setptr_beg) const noexcept;
+		bool seek(int64_t set_to, fio::setptr setptr_mode = fio::setptr::beg) const noexcept;
 
 		[[nodiscard]] och::time last_write_time() const noexcept;
 
@@ -133,7 +165,7 @@ namespace och
 
 	struct tempfilehandle : public filehandle
 	{
-		tempfilehandle(uint32_t share_mode = 0) noexcept;
+		tempfilehandle(fio::share share_mode = fio::share::none) noexcept;
 
 		~tempfilehandle() noexcept;
 	};
@@ -151,18 +183,18 @@ namespace och
 
 	public:
 
-		mapped_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0, uint32_t share_mode = och::fio::share_none) noexcept :
+		mapped_file(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0, fio::share share_mode = fio::share::none) noexcept :
 			m_file{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) },
 			m_mapper{ create_file_mapper(m_file, (uint64_t)mapping_size + mapping_offset, access_rights) },
 			m_data{ file_as_array(m_mapper, access_rights, mapping_offset, (uint64_t)mapping_offset + mapping_size) },
 			m_bytes{ m_data.ptr ? mapping_size == 0 ? (uint32_t)get_filesize(m_file) : mapping_size : 0 }
 		{}
 
-		mapped_file(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
-			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
+		mapped_file(const och::utf8_string& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0, fio::share share_mode = fio::share::none) noexcept :
+			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset, share_mode) {}
 
-		mapped_file(const och::stringview& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0) noexcept :
-			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset) {}
+		mapped_file(const och::stringview& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, uint32_t mapping_size = 0, uint32_t mapping_offset = 0, fio::share share_mode = fio::share::none) noexcept :
+			mapped_file(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset, share_mode) {}
 
 		~mapped_file() noexcept
 		{
@@ -193,7 +225,7 @@ namespace och
 		struct file_info_data
 		{
 			uint32_t flags_and_padding alignas(8);
-			uint32_t attributes;
+			fio::flag attributes;
 			och::time creation_time;
 			och::time last_access_time;
 			och::time last_write_time;
@@ -259,11 +291,11 @@ namespace och
 
 	public:
 
-		file_search(const char* path, uint32_t search_mode = fio::search_for_all, const char* ending_filters = nullptr) noexcept;
+		file_search(const char* path, fio::search search_mode = fio::search::all, const char* ending_filters = nullptr) noexcept;
 
-		file_search(const och::utf8_string& path, uint32_t search_mode = fio::search_for_all, const char* ending_filters = nullptr) noexcept;
+		file_search(const och::utf8_string& path, fio::search search_mode = fio::search::all, const char* ending_filters = nullptr) noexcept;
 
-		file_search(const och::stringview& path, uint32_t search_mode = fio::search_for_all, const char* ending_filters = nullptr) noexcept;
+		file_search(const och::stringview& path, fio::search search_mode = fio::search::all, const char* ending_filters = nullptr) noexcept;
 		
 		file_search(const file_search& rhs) = delete;
 

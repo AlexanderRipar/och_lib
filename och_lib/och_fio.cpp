@@ -16,69 +16,72 @@ namespace och
 	/*////////////////////////////////////////////////Free functions/////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	uint32_t interp_openmode(uint32_t existing_mode, uint32_t new_mode) noexcept
+	uint32_t interp_openmode(fio::open existing_mode, fio::open new_mode) noexcept
 	{
 		switch (existing_mode)
 		{
-		case fio::open_normal:
-		case fio::open_append:
+		case fio::open::normal:
+		case fio::open::append:
 			switch (new_mode)
 			{
-			case fio::open_normal:		return  4;
-			case fio::open_append:		return  4;
-			case fio::open_truncate:	return  4;
-			case fio::open_fail:		return  3;
+			case fio::open::normal:		return  4;
+			case fio::open::append:		return  4;
+			case fio::open::truncate:	return  4;
+			case fio::open::fail:		return  3;
 			}
 			break;
 
-		case fio::open_truncate:
+		case fio::open::truncate:
 			switch (new_mode)
 			{
-			case fio::open_normal:		return  2;
-			case fio::open_append:		return  2;
-			case fio::open_truncate:	return  2;
-			case fio::open_fail:		return  5;
+			case fio::open::normal:		return  2;
+			case fio::open::append:		return  2;
+			case fio::open::truncate:	return  2;
+			case fio::open::fail:		return  5;
 			}
 
-		case fio::open_fail:
+		case fio::open::fail:
 			switch (new_mode)
 			{
-			case fio::open_normal:		return  1;
-			case fio::open_append:		return  1;
-			case fio::open_truncate:	return  1;
-			case fio::open_fail:		return ~0u;
+			case fio::open::normal:		return  1;
+			case fio::open::append:		return  1;
+			case fio::open::truncate:	return  1;
+			case fio::open::fail:		return ~0u;
 			}
 		}
 
 		return ~0u;
 	}
 
-	uint32_t access_interp_open(uint32_t access_rights) noexcept
+	uint32_t access_interp_open(fio::access access_rights) noexcept
 	{
-		return access_rights << 30;
+		return static_cast<uint32_t>(access_rights) << 30;
 	}
 
-	uint32_t access_interp_page(uint32_t access_rights) noexcept
+	uint32_t access_interp_page(fio::access access_rights) noexcept
 	{
-		return ((access_rights ^ 3) + ((access_rights == 3) << 1)) << 1;
+		return ((static_cast<uint32_t>(access_rights) ^ 3) + ((static_cast<uint32_t>(access_rights) == 3) << 1)) << 1;
 	}
 
-	uint32_t access_interp_fmap(uint32_t access_rights) noexcept
+	uint32_t access_interp_fmap(fio::access access_rights) noexcept
 	{
-		return (access_rights - ((access_rights == 3) << 1)) << 1;
+		return (static_cast<uint32_t>(access_rights) - ((static_cast<uint32_t>(access_rights) == 3) << 1)) << 1;
 	}
 
-	iohandle open_file(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode, uint32_t flags) noexcept
+	iohandle open_file(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode, fio::flag flags) noexcept
 	{
-		iohandle file(CreateFileA(filename, access_interp_open(access_rights), share_mode, nullptr, interp_openmode(existing_mode, new_mode), flags, nullptr));
+		iohandle file(CreateFileA(filename, access_interp_open(access_rights), static_cast<uint32_t>(share_mode), nullptr, interp_openmode(existing_mode, new_mode), static_cast<uint32_t>(flags), nullptr));
 
-		if (existing_mode == fio::open_append)
-			file_seek(file, 0, fio::setptr_end);
+		if (file.ptr == INVALID_HANDLE_VALUE)
+			return iohandle(nullptr);
 
-		return file.ptr == INVALID_HANDLE_VALUE ? iohandle(nullptr) : file;
+		if (existing_mode == fio::open::append)
+			file_seek(file, 0, fio::setptr::end);
+
+		return file;
 	}
 
-	iohandle create_file_mapper(const iohandle file, uint64_t size, uint32_t page_mode, const char* mapping_name) noexcept
+	iohandle create_file_mapper(const iohandle file, uint64_t size, fio::access page_mode, const char* mapping_name) noexcept
 	{
 		if (!file.ptr)
 			return iohandle(nullptr);
@@ -90,7 +93,7 @@ namespace och
 		return iohandle(CreateFileMappingA(file.ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name));
 	}
 
-	iohandle file_as_array(const iohandle file_mapping, uint32_t filemap_mode, uint64_t beg, uint64_t end) noexcept
+	iohandle file_as_array(const iohandle file_mapping, fio::access filemap_mode, uint64_t beg, uint64_t end) noexcept
 	{
 		LARGE_INTEGER _beg;
 
@@ -132,13 +135,13 @@ namespace och
 		return bytes_written;
 	}
 
-	bool file_seek(const iohandle file, int64_t set_to, uint32_t setptr_mode) noexcept
+	bool file_seek(const iohandle file, int64_t set_to, fio::setptr setptr_mode) noexcept
 	{
 		LARGE_INTEGER _set_to;
 
 		_set_to.QuadPart = set_to;
 
-		return SetFilePointerEx(file.ptr, _set_to, nullptr, static_cast<DWORD>(setptr_mode));
+		return SetFilePointerEx(file.ptr, _set_to, nullptr, static_cast<uint32_t>(setptr_mode));
 	}
 
 	int64_t get_filesize(const iohandle file) noexcept
@@ -189,14 +192,14 @@ namespace och
 		return { static_cast<uint64_t>(info.LastWriteTime.QuadPart) };
 	}
 
-	iohandle create_tempfile(uint32_t share_mode) noexcept
+	iohandle create_tempfile(fio::share share_mode) noexcept
 	{
 		char filename[MAX_PATH + 1];
 
 		if (!GetTempFileNameA(".", "och", 0, filename))
 			return iohandle(nullptr);
 
-		return open_file(filename, fio::access_readwrite, fio::open_normal, fio::open_fail, share_mode, fio::flag_temporary);
+		return open_file(filename, fio::access::readwrite, fio::open::normal, fio::open::fail, share_mode, fio::flag::temporary);
 	}
 
 
@@ -205,29 +208,57 @@ namespace och
 	/*//////////////////////////////////////////////////filehandle///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	filehandle::filehandle(const och::stringview& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
+	filehandle::filehandle(const och::stringview& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
+		: filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
 
-	filehandle::filehandle(const char* filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
+	filehandle::filehandle(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
+		: handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
 
-	filehandle::filehandle(const och::utf8_string& filename, uint32_t access_rights, uint32_t existing_mode, uint32_t new_mode, uint32_t share_mode) noexcept : filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
+	filehandle::filehandle(const och::utf8_string& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
+		: filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
 
-	filehandle::~filehandle() noexcept { close_file(handle); }
+	filehandle::~filehandle() noexcept
+	{
+		close_file(handle);
+	}
 
-	[[nodiscard]] uint64_t filehandle::get_size() const noexcept { return get_filesize(handle); }
+	[[nodiscard]] uint64_t filehandle::get_size() const noexcept
+	{
+		return get_filesize(handle);
+	}
 
-	bool filehandle::set_size(uint64_t bytes) const noexcept { return set_filesize(handle, bytes); }
+	bool filehandle::set_size(uint64_t bytes) const noexcept
+	{
+		return set_filesize(handle, bytes);
+	}
 
-	[[nodiscard]] och::range<char> filehandle::path(och::range<char> buf) const noexcept { return get_filepath(handle, buf); }
+	[[nodiscard]] och::range<char> filehandle::path(och::range<char> buf) const noexcept
+	{
+		return get_filepath(handle, buf);
+	}
 
-	bool filehandle::seek(int64_t set_to, uint32_t setptr_mode) const noexcept { return file_seek(handle, set_to, setptr_mode); }
+	bool filehandle::seek(int64_t set_to, fio::setptr setptr_mode) const noexcept
+	{
+		return file_seek(handle, set_to, setptr_mode);
+	}
 
-	[[nodiscard]] och::time filehandle::last_write_time() const noexcept { return get_last_write_time(handle); }
+	[[nodiscard]] och::time filehandle::last_write_time() const noexcept
+	{
+		return get_last_write_time(handle);
+	}
 
-	void filehandle::close() const noexcept { close_file(handle); }
+	void filehandle::close() const noexcept
+	{
+		close_file(handle);
+	}
 
-	filehandle::operator bool() const noexcept { return handle.ptr; }
+	filehandle::operator bool() const noexcept
+	{
+		return handle.ptr;
+	}
 
-	filehandle::filehandle(iohandle handle) : handle{ handle } {}
+	filehandle::filehandle(iohandle handle) 
+		: handle{ handle } {}
 
 
 
@@ -235,7 +266,8 @@ namespace och
 	/*////////////////////////////////////////////////tempfilehandle/////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	tempfilehandle::tempfilehandle(uint32_t share_mode) noexcept : filehandle{ create_tempfile(share_mode) } {}
+	tempfilehandle::tempfilehandle(fio::share share_mode) noexcept
+		: filehandle{ create_tempfile(share_mode) } {}
 
 	tempfilehandle::~tempfilehandle() noexcept
 	{
@@ -283,12 +315,12 @@ namespace och
 
 	bool file_search::file_info::is_directory() const noexcept
 	{
-		return m_data.m_info_data.attributes & fio::flag_directory;
+		return static_cast<uint32_t>(m_data.m_info_data.attributes & fio::flag::directory);
 	}
 
 	och::stringview file_search::file_info::ending() const noexcept
 	{
-		if (m_data.m_info_data.attributes & fio::flag_directory)
+		if (static_cast<uint32_t>(m_data.m_info_data.attributes & fio::flag::directory))
 			return och::stringview("");
 		
 		const char* beg = m_data.m_info_data.name;
@@ -330,11 +362,11 @@ namespace och
 
 
 
-	file_search::file_search(const char* path, uint32_t search_mode, const char* ending_filters) noexcept : file_search(och::stringview(path), search_mode, ending_filters) {}
+	file_search::file_search(const char* path, fio::search search_mode, const char* ending_filters) noexcept : file_search(och::stringview(path), search_mode, ending_filters) {}
 
-	file_search::file_search(const och::utf8_string& path, uint32_t search_mode, const char* ending_filters) noexcept : file_search(och::stringview(path), search_mode, ending_filters) {}
+	file_search::file_search(const och::utf8_string& path, fio::search search_mode, const char* ending_filters) noexcept : file_search(och::stringview(path), search_mode, ending_filters) {}
 
-	file_search::file_search(const och::stringview& path, uint32_t search_mode, const char* ending_filters) noexcept
+	file_search::file_search(const och::stringview& path, fio::search search_mode, const char* ending_filters) noexcept
 	{
 		// Process Path
 
@@ -397,7 +429,7 @@ namespace och
 
 		// Write search mode and 
 
-		m_info_data.flags_and_padding = 1 | (search_mode << 1);
+		m_info_data.flags_and_padding = 1 | (static_cast<uint32_t>(search_mode) << 1);
 
 
 		// Check if the search handle can actually be created
@@ -428,13 +460,13 @@ namespace och
 	{
 		m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
 
-		const uint32_t mode = m_info_data.flags_and_padding >> 1;
+		const fio::search mode = static_cast<fio::search>(m_info_data.flags_and_padding >> 1);
 
-		if (mode == fio::search_for_directories)
-			while (has_next() && (!(m_info_data.attributes & fio::flag_directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
+		if (mode == fio::search::directories)
+			while (has_next() && (!static_cast<uint32_t>(m_info_data.attributes & fio::flag::directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
 				m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
-		else if(mode == fio::search_for_files)
-			while(has_next() && ((m_info_data.attributes & fio::flag_directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
+		else if(mode == fio::search::files)
+			while(has_next() && (static_cast<uint32_t>(m_info_data.attributes & fio::flag::directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
 				m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
 	}
 
