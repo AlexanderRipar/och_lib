@@ -12,7 +12,30 @@
 
 #include "och_fmt.h"
 
+#include <Windows.h>
+
+#include "och_err.h"
+
+och::error error_test_callee()
+{
+	check((HRESULT)1);
+
+	return {};
+}
+
+och::error error_test_caller()
+{
+	check(error_test_callee());
+
+	return {};
+}
+
 int main()
 {
+	if (error_test_caller() != och::error::success)
+	{
+
+	}
+
 	return 0;
 }

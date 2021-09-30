@@ -33,6 +33,9 @@
     <ClCompile Include="och_utf16.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="och_err.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="och_fio.h">
@@ -66,6 +69,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="och_type_union.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="och_err.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
