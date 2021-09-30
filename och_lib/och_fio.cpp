@@ -7,11 +7,10 @@
 #ifdef _WIN32
 
 #include <Windows.h>
+#include "och_err.h"
 
 namespace och
 {
-	iohandle::iohandle(void* h) noexcept : ptr{ h } {}
-
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*////////////////////////////////////////////////Free functions/////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -68,92 +67,120 @@ namespace och
 		return (static_cast<uint32_t>(access_rights) - ((static_cast<uint32_t>(access_rights) == 3) << 1)) << 1;
 	}
 
-	iohandle open_file(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode, fio::flag flags) noexcept
+
+
+	[[nodiscard]] status open_file(iohandle& out_handle, const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode, fio::flag flags) noexcept
 	{
 		iohandle file(CreateFileA(filename, access_interp_open(access_rights), static_cast<uint32_t>(share_mode), nullptr, interp_openmode(existing_mode, new_mode), static_cast<uint32_t>(flags), nullptr));
 
 		if (file.ptr == INVALID_HANDLE_VALUE)
-			return iohandle(nullptr);
+		{
+			out_handle = iohandle(nullptr);
+
+			error(HRESULT_FROM_WIN32(GetLastError()));
+		}
 
 		if (existing_mode == fio::open::append)
-			file_seek(file, 0, fio::setptr::end);
+			check(file_seek(file, 0, fio::setptr::end));
 
-		return file;
+		return {};
 	}
 
-	iohandle create_file_mapper(const iohandle file, uint64_t size, fio::access page_mode, const char* mapping_name) noexcept
+	[[nodiscard]] status create_file_mapper(iohandle& out_handle, const iohandle file, uint64_t size, fio::access page_mode, const char* mapping_name) noexcept
 	{
-		if (!file.ptr)
-			return iohandle(nullptr);
-
 		LARGE_INTEGER _size;
 
 		_size.QuadPart = size;
 
-		return iohandle(CreateFileMappingA(file.ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name));
+		out_handle = iohandle(CreateFileMappingA(file.ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name));
+
+		if (!out_handle.ptr)
+			error(HRESULT_FROM_WIN32(GetLastError()));
+
+		return {};
 	}
 
-	iohandle file_as_array(const iohandle file_mapping, fio::access filemap_mode, uint64_t beg, uint64_t end) noexcept
+	[[nodiscard]] status file_as_array(file_array_handle& out_handle, const iohandle file_mapping, fio::access filemap_mode, uint64_t beg, uint64_t end) noexcept
 	{
 		LARGE_INTEGER _beg;
 
 		_beg.QuadPart = beg;
 
-		return iohandle(MapViewOfFile(file_mapping.ptr, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg)));
+		out_handle = file_array_handle(MapViewOfFile(file_mapping.ptr, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg)));
+
+		if(!out_handle.ptr)
+			error(HRESULT_FROM_WIN32(GetLastError()));
+
+		return {};
 	}
 
-	bool close_file(const iohandle file) noexcept
+	void close_file(const iohandle file) noexcept
 	{
-		return CloseHandle(file.ptr);
+		CloseHandle(file.ptr);
 	}
 
-	bool close_file_array(const iohandle file_array) noexcept
+	void close_file_array(const file_array_handle file_array) noexcept
 	{
-		return UnmapViewOfFile(file_array.ptr);
+		UnmapViewOfFile(file_array.ptr);
 	}
 
-	bool delete_file(const char* filename) noexcept
+	[[nodiscard]] status delete_file(const char* filename) noexcept
 	{
-		return DeleteFileA(filename);
+		if (!DeleteFileA(filename))
+			error(HRESULT_FROM_WIN32(GetLastError()));
+
+		return {};
 	}
 
-	och::range<char> read_from_file(const iohandle file, och::range<char> buf) noexcept
+	[[nodiscard]] status read_from_file(och::range<char>& out_read, const iohandle file, och::range<char> buf) noexcept
 	{
 		uint32_t bytes_read = 0;
 
-		ReadFile(file.ptr, buf.beg, static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_read), nullptr);
+		if(!ReadFile(file.ptr, buf.beg, static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_read), nullptr))
+			error(HRESULT_FROM_WIN32(GetLastError()))
 
-		return och::range<char>(buf.beg, bytes_read);
+		out_read = och::range<char>(buf.beg, bytes_read);
+
+		return {};
 	}
 
-	uint32_t write_to_file(const iohandle file, const och::range<const char> buf) noexcept
+	[[nodiscard]] status write_to_file(uint32_t& out_written, const iohandle file, const och::range<const char> buf) noexcept
 	{
 		uint32_t bytes_written = 0;
 
-		WriteFile(file.ptr, reinterpret_cast<const void*>(buf.beg), static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_written), nullptr);
+		if (!WriteFile(file.ptr, reinterpret_cast<const void*>(buf.beg), static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_written), nullptr))
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
-		return bytes_written;
+		out_written = bytes_written;
+
+		return {};
 	}
 
-	bool file_seek(const iohandle file, int64_t set_to, fio::setptr setptr_mode) noexcept
+	[[nodiscard]] status file_seek(const iohandle file, int64_t set_to, fio::setptr setptr_mode) noexcept
 	{
 		LARGE_INTEGER _set_to;
 
 		_set_to.QuadPart = set_to;
 
-		return SetFilePointerEx(file.ptr, _set_to, nullptr, static_cast<uint32_t>(setptr_mode));
+		if (!SetFilePointerEx(file.ptr, _set_to, nullptr, static_cast<uint32_t>(setptr_mode)))
+			error(HRESULT_FROM_WIN32(GetLastError()));
+
+		return {};
 	}
 
-	int64_t get_filesize(const iohandle file) noexcept
+	[[nodiscard]] status get_filesize(uint64_t& out_size, const iohandle file) noexcept
 	{
 		LARGE_INTEGER filesize;
 
-		GetFileSizeEx(file.ptr, &filesize);
+		if (!GetFileSizeEx(file.ptr, &filesize))
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
-		return filesize.QuadPart;
+		out_size = filesize.QuadPart;
+
+		return {};
 	}
 
-	bool set_filesize(const iohandle file, uint64_t bytes) noexcept
+	[[nodiscard]] status set_filesize(const iohandle file, uint64_t bytes) noexcept
 	{
 		LARGE_INTEGER old_fileptr;
 
@@ -162,44 +189,60 @@ namespace och
 		_set_to.QuadPart = 0;
 
 		if (!SetFilePointerEx(file.ptr, _set_to, &old_fileptr, FILE_CURRENT))//Save current file-pointer-position into old_fileptr
-			return false;
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		_set_to.QuadPart = bytes;
 
 		if (!SetFilePointerEx(file.ptr, _set_to, nullptr, FILE_BEGIN))//Set file-pointer to new EOF
-			return false;
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		SetEndOfFile(file.ptr);
 
 		if (!SetFilePointerEx(file.ptr, old_fileptr, nullptr, FILE_BEGIN))//Restore initial file-pointer-position
-			return false;
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
-		return true;
+		return {};
 	}
 
-	och::range<char> get_filepath(const iohandle file, och::range<char> buf) noexcept
+	[[nodiscard]] status get_filepath(och::range<char>& out_path, const iohandle file, och::range<char> buf) noexcept
 	{
-		return och::range<char>(buf.beg, GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD)buf.len(), 0));
+		DWORD path_chars = GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD)buf.len(), 0);
+
+		if (path_chars > buf.len())
+			error(HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
+		
+		if (!path_chars)
+			error(HRESULT_FROM_WIN32(GetLastError()));
+
+		out_path = och::range<char>(buf.beg, path_chars);
+
+		return {};
 	}
 
-	och::time get_last_write_time(const iohandle file) noexcept
+	[[nodiscard]] status get_last_write_time(och::time& out_time, const iohandle file) noexcept
 	{
 		FILE_BASIC_INFO info;
 
 		if (!GetFileInformationByHandleEx(file.ptr, FileBasicInfo, &info, sizeof(info)))
-			return { 0 };
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
-		return { static_cast<uint64_t>(info.LastWriteTime.QuadPart) };
+		out_time = { static_cast<uint64_t>(info.LastWriteTime.QuadPart) };
+
+		return {};
 	}
 
-	iohandle create_tempfile(fio::share share_mode) noexcept
+	[[nodiscard]] status create_tempfile(iohandle& out_handle, fio::share share_mode) noexcept
 	{
+		out_handle = iohandle(nullptr);
+
 		char filename[MAX_PATH + 1];
 
 		if (!GetTempFileNameA(".", "och", 0, filename))
-			return iohandle(nullptr);
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
-		return open_file(filename, fio::access::readwrite, fio::open::normal, fio::open::fail, share_mode, fio::flag::temporary);
+		check(open_file(out_handle, filename, fio::access::readwrite, fio::open::normal, fio::open::fail, share_mode, fio::flag::temporary));
+
+		return {};
 	}
 
 
@@ -208,76 +251,74 @@ namespace och
 	/*//////////////////////////////////////////////////filehandle///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	filehandle::filehandle(const och::stringview& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
-		: filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
+	[[nodiscard]] status filehandle::create(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
+	{
+		check(open_file(handle, filename, access_rights, existing_mode, new_mode, share_mode));
 
-	filehandle::filehandle(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
-		: handle{ open_file(filename, access_rights, existing_mode, new_mode, share_mode) } {}
+		return {};
+	}
 
-	filehandle::filehandle(const och::utf8_string& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
-		: filehandle(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode) {};
+	[[nodiscard]] status filehandle::create(const och::stringview& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
+	{
+		check(create(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode));
 
-	filehandle::~filehandle() noexcept
+		return {};
+	}
+
+	[[nodiscard]] status filehandle::create(const och::string& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
+	{
+		check(create(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode));
+
+		return {};
+	}
+
+	[[nodiscard]] status filehandle::create_temp(fio::share share_mode) noexcept
+	{
+		check(create_tempfile(handle, share_mode));
+
+		return {};
+	}
+
+	void filehandle::close() noexcept
 	{
 		close_file(handle);
+
+		handle = iohandle(nullptr);
 	}
 
-	[[nodiscard]] uint64_t filehandle::get_size() const noexcept
+	[[nodiscard]] status filehandle::get_size(uint64_t& out_size) const noexcept
 	{
-		return get_filesize(handle);
+		check(get_filesize(out_size, handle));
+
+		return {};
 	}
 
-	bool filehandle::set_size(uint64_t bytes) const noexcept
+	[[nodiscard]] status filehandle::set_size(uint64_t bytes) const noexcept
 	{
-		return set_filesize(handle, bytes);
+		check(set_filesize(handle, bytes));
+
+		return {};
 	}
 
-	[[nodiscard]] och::range<char> filehandle::path(och::range<char> buf) const noexcept
+	[[nodiscard]] status filehandle::path(och::range<char>& out_path, och::range<char> buf) const noexcept
 	{
-		return get_filepath(handle, buf);
+		check(get_filepath(out_path, handle, buf));
+
+		return {};
 	}
 
-	bool filehandle::seek(int64_t set_to, fio::setptr setptr_mode) const noexcept
+	[[nodiscard]] status filehandle::seek(int64_t set_to, fio::setptr setptr_mode) const noexcept
 	{
-		return file_seek(handle, set_to, setptr_mode);
+		check(file_seek(handle, set_to, setptr_mode));
+
+		return {};
 	}
 
-	[[nodiscard]] och::time filehandle::last_write_time() const noexcept
+	[[nodiscard]] status filehandle::last_write_time(och::time& out_time) const noexcept
 	{
-		return get_last_write_time(handle);
-	}
+		check(get_last_write_time(out_time, handle));
 
-	void filehandle::close() const noexcept
-	{
-		close_file(handle);
-	}
-
-	filehandle::operator bool() const noexcept
-	{
-		return handle.ptr;
-	}
-
-	filehandle::filehandle(iohandle handle) 
-		: handle{ handle } {}
-
-
-
-	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-	/*////////////////////////////////////////////////tempfilehandle/////////////////////////////////////////////////////////*/
-	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-	tempfilehandle::tempfilehandle(fio::share share_mode) noexcept
-		: filehandle{ create_tempfile(share_mode) } {}
-
-	tempfilehandle::~tempfilehandle() noexcept
-	{
-		char buf[MAX_PATH + 1];
-
-		GetFinalPathNameByHandleA(handle.ptr, buf, sizeof(buf), 0);
-
-		close_file(handle);
-
-		delete_file(buf);
+		return {};
 	}
 
 
@@ -288,9 +329,9 @@ namespace och
 
 	file_search::file_info::file_info(const file_search& data) noexcept : m_data{ data } {}
 
-	och::stringview file_search::file_info::name() const noexcept
+	och::string file_search::file_info::name() const noexcept
 	{
-		return och::utf8_view(m_data.m_info_data.name);
+		return och::string(m_data.m_info_data.name);
 	}
 
 	och::time file_search::file_info::creation_time() const noexcept
@@ -318,21 +359,21 @@ namespace och
 		return static_cast<uint32_t>(m_data.m_info_data.attributes & fio::flag::directory);
 	}
 
-	och::stringview file_search::file_info::ending() const noexcept
+	och::string file_search::file_info::ending() const noexcept
 	{
 		if (static_cast<uint32_t>(m_data.m_info_data.attributes & fio::flag::directory))
-			return och::stringview("");
+			return och::string("");
 		
 		const char* beg = m_data.m_info_data.name;
 
 		while (*beg != '.')
 			if (!*beg++)
-				return och::stringview("");
+				return och::string("");
 		
-		return och::stringview(beg + 1);
+		return och::string(beg + 1);
 	}
 
-	och::utf8_string file_search::file_info::absolute_name() const noexcept
+	och::string file_search::file_info::absolute_name() const noexcept
 	{
 		och::string str(m_data.m_search_path);
 
@@ -362,17 +403,27 @@ namespace och
 
 
 
-	file_search::file_search(const char* path, fio::search search_mode, const char* ending_filters) noexcept : file_search(och::stringview(path), search_mode, ending_filters) {}
+	och::status file_search::create(const char* path, fio::search search_mode, const char* ending_filters) noexcept
+	{
+		check(create(och::stringview(path), search_mode, ending_filters));
 
-	file_search::file_search(const och::utf8_string& path, fio::search search_mode, const char* ending_filters) noexcept : file_search(och::stringview(path), search_mode, ending_filters) {}
+		return {};
+	}
 
-	file_search::file_search(const och::stringview& path, fio::search search_mode, const char* ending_filters) noexcept
+	och::status file_search::create(const och::utf8_string& path, fio::search search_mode, const char* ending_filters) noexcept
+	{
+		check(create(och::stringview(path), search_mode, ending_filters));
+
+		return {};
+	}
+
+	och::status file_search::create(const och::stringview& path, fio::search search_mode, const char* ending_filters) noexcept
 	{
 		// Process Path
 
 		char* curr = m_search_path;
 
-		if (path.get_codeunits() + 2 - ((*(path.end()) == och::utf8_char('\\')) || (*(path.end()) == och::utf8_char('/'))) < sizeof(m_search_path))
+		if (path.get_codeunits() + 2 - ((*(path.end()) == och::utf8_char('\\')) || (*(path.end()) == och::utf8_char('/'))) < static_cast<uint32_t>(sizeof(m_search_path)))
 		{
 			for (uint32_t i = 0; i != path.get_codeunits(); ++i)
 			{
@@ -441,6 +492,8 @@ namespace och
 			search_handle.ptr = nullptr;
 
 			m_info_data.flags_and_padding &= ~1;
+
+			error(HRESULT_FROM_WIN32(GetLastError()));
 		}
 
 		// Skip to first valid file.
@@ -449,25 +502,35 @@ namespace och
 			advance();
 
 		*(curr - 1) = '\0';
+
+		return {};
 	}
 
-	file_search::~file_search() noexcept
+	void file_search::destroy() noexcept
 	{
 		FindClose(search_handle.ptr);
+
+		search_handle.ptr = nullptr;
 	}
 
-	void file_search::advance() noexcept
+	och::status file_search::advance() noexcept
 	{
-		m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
-
+		check(single_advance());
+		
 		const fio::search mode = static_cast<fio::search>(m_info_data.flags_and_padding >> 1);
 
 		if (mode == fio::search::directories)
+		{
 			while (has_next() && (!static_cast<uint32_t>(m_info_data.attributes & fio::flag::directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
-				m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
-		else if(mode == fio::search::files)
-			while(has_next() && (static_cast<uint32_t>(m_info_data.attributes & fio::flag::directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
-				m_info_data.flags_and_padding &= (FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)) ? ~0u : ~1u);
+				check(single_advance());
+		}
+		else if (mode == fio::search::files)
+		{
+			while (has_next() && (static_cast<uint32_t>(m_info_data.attributes & fio::flag::directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
+				check(HRESULT_FROM_WIN32(single_advance()));
+		}
+
+		return {};
 	}
 
 	bool file_search::has_next() const noexcept
@@ -490,9 +553,21 @@ namespace och
 		return file_iterator(nullptr);
 	}
 
-	file_search::operator bool() const noexcept
+	uint32_t file_search::single_advance() noexcept
 	{
-		return search_handle.ptr;
+		BOOL find_result = FindNextFileA(search_handle.ptr, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4));
+
+		if (!find_result)
+		{
+			m_info_data.flags_and_padding &= ~1u;
+
+			DWORD last_error = GetLastError();
+
+			if (last_error != ERROR_NO_MORE_FILES)
+				return last_error;
+		}
+
+		return 0;
 	}
 
 	bool file_search::matches_ending_filter(const char* ending) const noexcept
