@@ -12,13 +12,13 @@ struct error_data_t
 
 	uint32_t m_curr_callstack_idx;
 
-	och::error m_error_code = och::error::success;
+	och::status m_error_code = och::status::ok;
 
-	och::error_source_api m_source_api = och::error_source_api::NONE;
+	och::source_error_type m_source_api = och::source_error_type::NONE;
 
 	uint32_t m_native_error_code;
 
-	void start(och::error e, och::error_source_api source, uint32_t native_error_code, const och::error_context& ctx) noexcept
+	void start(och::status e, och::source_error_type source, uint32_t native_error_code, const och::error_context& ctx) noexcept
 	{
 		m_callstack[0] = ctx;
 
@@ -46,7 +46,7 @@ thread_local error_data_t error_data;
 
 namespace och::err
 {
-	error_source_api get_native_error_type() noexcept
+	source_error_type get_native_error_type() noexcept
 	{
 		return error_data.m_source_api;
 	}
@@ -58,15 +58,22 @@ namespace och::err
 
 
 
-	__declspec(noinline) void register_error(error e, error_source_api source, uint32_t native_error_code, const error_context& ctx) noexcept
+	__declspec(noinline) void reset_error() noexcept
 	{
-		if (source != error_source_api::NONE)
+		error_data.m_curr_callstack_idx = 0;
+
+		error_data.m_error_code = status::ok;
+	}
+
+	__declspec(noinline) void register_error(status e, source_error_type source, uint32_t native_error_code, const error_context& ctx) noexcept
+	{
+		if (source != source_error_type::NONE)
 			error_data.start(e, source, native_error_code, ctx);
 		else
 			error_data.add(ctx);
 	}
 
-	__declspec(noinline) error to_error(HRESULT e) noexcept
+	__declspec(noinline) status to_error(HRESULT e) noexcept
 	{
 		switch (e)
 		{
@@ -74,7 +81,7 @@ namespace och::err
 			break;
 		}
 
-		return error::other;
+		return status::other;
 	}
 
 	#ifdef OCH_USING_VULKAN
