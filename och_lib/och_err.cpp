@@ -77,6 +77,7 @@ namespace och::err
 	{
 		switch (e)
 		{
+
 		default:
 			break;
 		}

@@ -20,6 +20,12 @@
 #define OCH_ERROR_CONTEXT_EXTENDED
 #endif // !defined(NDEBUG) && !defined(OCH_ERROR_CONTEXT_NONE) && !defined(OCH_ERROR_CONTEXT_NORMAL)
 
+#define CONSTEXPR_LINE_NUM_CAT_HELPER2(x, y) x##y
+
+#define CONSTEXPR_LINE_NUM_CAT_HELPER(x, y) CONSTEXPR_LINE_NUM_CAT_HELPER2(x, y)
+
+#define CONSTEXPR_LINE_NUM CONSTEXPR_LINE_NUM_CAT_HELPER(__LINE__, u)
+
 namespace och
 {
 	enum class source_error_type : uint32_t
@@ -51,9 +57,9 @@ namespace och
 		uint32_t line_number;
 	};
 
-#define check(macro_defined_argument) { if (auto macro_defined_result = macro_defined_argument; och::err::is_error(macro_defined_result)) { och::status macro_defined_error = och::err::to_error(macro_defined_result); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_result), static_cast<uint32_t>(macro_defined_result), och::error_context(__FILE__, __FUNCTION__, #macro_defined_argument, __LINE__)); return macro_defined_error; } }
+#define check(macro_defined_argument) { if (auto macro_defined_result = macro_defined_argument; och::err::is_error(macro_defined_result)) { och::status macro_defined_error = och::err::to_error(macro_defined_result); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_result), static_cast<uint32_t>(macro_defined_result), och::error_context(__FILE__, __FUNCTION__, #macro_defined_argument, CONSTEXPR_LINE_NUM)); return macro_defined_error; } }
 
-#define error(macro_defined_argument) { och::status macro_defined_error = och::err::to_error(macro_defined_argument); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_argument), static_cast<uint32_t>(macro_defined_argument), och::error_context(__FILE__, __FUNCTION__, "?", __LINE__)); return macro_defined_error; }
+#define error(macro_defined_argument) { och::status macro_defined_error = och::err::to_error(macro_defined_argument); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_argument), static_cast<uint32_t>(macro_defined_argument), och::error_context(__FILE__, __FUNCTION__, "?", CONSTEXPR_LINE_NUM)); return macro_defined_error; }
 
 #define ignore(macro_defined_argument) { if (och::err::is_error(macro_defined_argument)) och::err::reset_error(); }
 
@@ -83,9 +89,9 @@ namespace och
 		uint32_t line_number;
 	};
 
-#define check(macro_defined_argument) {if (auto macro_defined_result = macro_defined_argument; och::err::is_error(macro_defined_result)) { och::status macro_defined_error = och::err::to_error(macro_defined_result); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_result), static_cast<uint32_t>(macro_defined_result), och::error_context(__FILE__, __LINE__)); return macro_defined_error; } }
+#define check(macro_defined_argument) {if (auto macro_defined_result = macro_defined_argument; och::err::is_error(macro_defined_result)) { och::status macro_defined_error = och::err::to_error(macro_defined_result); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_result), static_cast<uint32_t>(macro_defined_result), och::error_context(__FILE__, CONSTEXPR_LINE_NUM)); return macro_defined_error; } }
 
-#define error(macro_defined_argument) { och::status macro_defined_error = och::err::to_error(macro_defined_argument); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_argument), static_cast<uint32_t>(macro_defined_argument), och::error_context(__FILE__, __LINE)); return macro_defined_error; }
+#define error(macro_defined_argument) { och::status macro_defined_error = och::err::to_error(macro_defined_argument); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_argument), static_cast<uint32_t>(macro_defined_argument), och::error_context(__FILE__, CONSTEXPR_LINE_NUM)); return macro_defined_error; }
 
 #define ignore(macro_defined_argument) { if (och::err::is_error(macro_defined_argument)) och::err::reset_error(); }
 
