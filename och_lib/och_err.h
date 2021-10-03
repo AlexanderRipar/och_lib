@@ -1,24 +1,11 @@
 #define OCH_ERR_PRESENT
 
-#if defined(_WINDOWS_)
-#define OCH_ERR_HRESULT
-#endif // defined(_WINDOWS_)
-
-#if (defined(VULKAN_CORE_H_) || defined(VULKAN_H_)) && defined(OCH_USING_VULKAN)
-#define OCH_ERR_VKRESULT
-#endif // (defined(VULKAN_CORE_H_) || defined(VULKAN_H_)) && defined(OCH_USING_VULKAN)
-
 #ifndef OCH_ERR_INCLUDE_GUARD
 #define OCH_ERR_INCLUDE_GUARD
 
 #include <cstdint>
 
 #include "och_utf8.h"
-#include "och_range.h"
-
-#if !defined(NDEBUG) && !defined(OCH_ERROR_CONTEXT_NONE) && !defined(OCH_ERROR_CONTEXT_NORMAL)
-#define OCH_ERROR_CONTEXT_EXTENDED
-#endif // !defined(NDEBUG) && !defined(OCH_ERROR_CONTEXT_NONE) && !defined(OCH_ERROR_CONTEXT_NORMAL)
 
 #define CONSTEXPR_LINE_NUM_CAT_HELPER2(x, y) x##y
 
@@ -28,40 +15,17 @@
 
 namespace och
 {
-	enum class source_error_type : uint32_t
-	{
-		NONE = 0,
-		hresult = 1,
-		vkresult = 2,
-	};
-
-	enum class status : uint32_t
-	{
-		ok = 0,
-		other = 1,
-		permission_denied,
-		not_found,
-		invalid_argument,
-		out_of_bounds
-	};
-
-#ifdef OCH_ERROR_CONTEXT_EXTENDED
+#if defined(OCH_ERROR_CONTEXT_EXTENDED)
 
 #pragma detect_mismatch("och_error_context", "extended")
 
 	struct error_context
 	{
 		const char* file;
-		const char* calling_function;
-		const char* calling_line_content;
-		uint32_t line_number;
+		const uint32_t line;
 	};
 
-#define check(macro_defined_argument) { if (auto macro_defined_result = macro_defined_argument; och::err::is_error(macro_defined_result)) { och::status macro_defined_error = och::err::to_error(macro_defined_result); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_result), static_cast<uint32_t>(macro_defined_result), och::error_context(__FILE__, __FUNCTION__, #macro_defined_argument, CONSTEXPR_LINE_NUM)); return macro_defined_error; } }
-
-#define error(macro_defined_argument) { och::status macro_defined_error = och::err::to_error(macro_defined_argument); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_argument), static_cast<uint32_t>(macro_defined_argument), och::error_context(__FILE__, __FUNCTION__, "?", CONSTEXPR_LINE_NUM)); return macro_defined_error; }
-
-#define ignore(macro_defined_argument) { if (och::err::is_error(macro_defined_argument)) och::err::reset_error(); }
+	#define make_error_context(line_content) och::error_context(__FILE__, CONSTEXPR_LINE_NUM)
 
 #elif defined(OCH_ERROR_CONTEXT_NONE)
 
@@ -69,102 +33,141 @@ namespace och
 
 	struct error_context {};
 
-#define check(macro_defined_argument) { if (och::err::is_error(macro_defined_argument)) return och::status::other; }
-
-#define error(macro_defined_argument) { return och::status::other; }
-
-#define ignore(macro_defined_argument) { auto tmp_ = macro_defined_argument; tmp_; }
+	#define make_error_context(line_content) och::error_context()
 
 #else
 
 #pragma detect_mismatch("och_error_context", "normal")
 
-#if !defined(OCH_ERROR_CONTEXT_NORMAL)
-#pragma warning("None of the OCH_ERROR_CONTEXT_* macros are defined. Defaulting to OCH_ERROR_CONTEXT_NORMAL")
-#endif // !defined(OCH_ERROR_CONTEXT_NORMAL)
-
 	struct error_context
 	{
 		const char* file;
-		uint32_t line_number;
+		const char* function;
+		const char* line_content;
+		uint32_t line;
 	};
 
-#define check(macro_defined_argument) {if (auto macro_defined_result = macro_defined_argument; och::err::is_error(macro_defined_result)) { och::status macro_defined_error = och::err::to_error(macro_defined_result); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_result), static_cast<uint32_t>(macro_defined_result), och::error_context(__FILE__, CONSTEXPR_LINE_NUM)); return macro_defined_error; } }
+	#define make_error_context(arg) och::error_context(__FILE__, __FUNCTION__, #arg, CONSTEXPR_LINE_NUM)
 
-#define error(macro_defined_argument) { och::status macro_defined_error = och::err::to_error(macro_defined_argument); och::err::register_error(macro_defined_error, och::err::get_error_type(macro_defined_argument), static_cast<uint32_t>(macro_defined_argument), och::error_context(__FILE__, CONSTEXPR_LINE_NUM)); return macro_defined_error; }
+#endif // defined(OCH_ERROR_CONTEXT_[EXTENDED, NONE, NORMAL])
 
-#define ignore(macro_defined_argument) { if (och::err::is_error(macro_defined_argument)) och::err::reset_error(); }
+#define check(arg) if(och::status s = och::to_status(arg, make_error_context(arg)); s) return s;
 
-#endif // OCH_ERROR_CONTEXT_*
+#define check_msg(arg, msg) if(och::status s = och::to_status(arg, make_error_context(arg), msg) return s;
 
+#define make_status(arg) och::to_status(arg, make_error_context(arg))
+
+#define make_status_msg(arg, msg) och::to_status(arg, make_error_context(arg), msg)
+
+#define ignore_status(s) if(s) och::err::reset_status();
+
+	enum class error_type
+	{
+		NONE = 0,
+		och = 1,
+		hresult = 2,
+		vkresult = 3,
+	};
 
 	namespace err
 	{
-		source_error_type get_native_error_type() noexcept;
+		__declspec(noinline) void push_error(const error_context& ctx, uint64_t native_error_code, error_type native_error_source) noexcept;
 
-		uint32_t get_native_error_code() noexcept;
+		__declspec(noinline) void push_error(const error_context& ctx, uint64_t native_error_code, error_type native_error_source, const char* custom_message) noexcept;
 
+		void reset_status() noexcept;
 
+		uint64_t get_native_error_code() noexcept;
 
-		__declspec(noinline) void reset_error() noexcept;
+		error_type get_error_type() noexcept;
 
-		__declspec(noinline) void register_error(status e, source_error_type source, uint32_t native_error_code, const error_context& ctx) noexcept;
+		uint32_t get_stack_depth() noexcept;
 
-		__forceinline bool is_error(status e) noexcept
+		const error_context& get_error_context(uint32_t idx) noexcept;
+
+		const char* get_error_message() noexcept;
+
+		void set_error_message(const char* msg) noexcept;
+
+		och::utf8_string get_error_description() noexcept;
+	}
+
+	struct status
+	{
+	private:
+
+		bool m_is_bad;
+		
+	public:
+
+		operator bool() const noexcept
 		{
-			return e != status::ok;
+			return m_is_bad;
 		}
 
-		__forceinline source_error_type get_error_type(status e) noexcept
-		{
-			e; return source_error_type::NONE;
-		}
+		__forceinline status() noexcept : m_is_bad{ false } {}
 
-		__forceinline status to_error(status e) noexcept
-		{
-			return e;
-		}
+		__forceinline explicit status(bool is_bad) noexcept : m_is_bad{ is_bad } {}
+	};
+
+	__forceinline status to_status(status rst, const error_context& ctx) noexcept
+	{
+		if (rst)
+			err::push_error(ctx, 1ull, error_type::och);
+
+		return rst;
+	}
+
+	__forceinline status to_status(status rst, const error_context& ctx, const char* custom_message) noexcept
+	{
+		if (rst)
+			err::push_error(ctx, 1ull, error_type::och, custom_message);
+
+		return rst;
 	}
 }
 
 #endif // !OCH_ERR_INCLUDE_GUARD
 
+#if !defined(OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD) && defined(_WINDOWS_)
+#define OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD
 namespace och
 {
-	namespace err
+	__forceinline status to_status(HRESULT rst, const error_context& ctx) noexcept
 	{
-		#ifdef OCH_ERR_HRESULT
+		if (rst != S_OK)
+			err::push_error(ctx, static_cast<uint64_t>(static_cast<uint32_t>(rst)), error_type::hresult);
 
-			__forceinline bool is_error(HRESULT e) noexcept
-			{
-				return e != S_OK;
-			}
+		return status(true);
+	}
 
-			__forceinline source_error_type get_error_type(HRESULT e) noexcept
-			{
-				e; return source_error_type::hresult;
-			}
+	__forceinline status to_status(HRESULT rst, const error_context& ctx, const char* custom_message) noexcept
+	{
+		if (rst != S_OK)
+			err::push_error(ctx, static_cast<uint64_t>(static_cast<uint32_t>(rst)), error_type::hresult, custom_message);
 
-			__declspec(noinline) status to_error(HRESULT e) noexcept;
-
-		#endif // OCH_ERR_HRESULT
-
-
-
-		#ifdef OCH_ERR_VKRESULT
-
-			__forceinline bool is_error(VkResult e) noexcept
-			{
-				return e != VK_SUCCESS;
-			}
-
-			__forceinline source_error_type get_error_type(VkResult e) noexcept
-			{
-				e; return source_error_type::vkresult;
-			}
-
-			__declspec(noinline) status to_error(VkResult e) noexcept;
-
-		#endif // OCH_ERR_VKRESULT
+		return status(true);
 	}
 }
+#endif // !defined(OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD) && defined(_WINDOWS_)
+
+#if !defined(OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD) && defined(OCH_USING_VULKAN) && (defined(VULKAN_CORE_H_) || defined(VULKAN_H_))
+namespace och
+{
+	__forceinline status to_status(VkResult rst, const error_context& ctx) noexcept
+	{
+		if (rst != S_OK)
+			err::push_error(ctx, static_cast<uint64_t>(static_cast<uint32_t>(rst)), error_type::vkresult);
+
+		return status(true);
+	}
+
+	__forceinline status to_status(VkResult rst, const error_context& ctx, const char* custom_message) noexcept
+	{
+		if (rst != S_OK)
+			err::push_error(ctx, static_cast<uint64_t>(static_cast<uint32_t>(rst)), error_type::vkresult, custom_message);
+
+		return status(true);
+	}
+}
+#endif // !defined(OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD) && defined(OCH_USING_VULKAN) && (defined(VULKAN_CORE_H_) || defined(VULKAN_H_))
