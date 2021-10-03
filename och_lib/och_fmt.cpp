@@ -52,7 +52,7 @@ namespace och
 				{
 					uint32_t bytes_written;
 
-					ignore(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
+					ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
 
 					buffer.beg = buffer.end - file_buffer_capacity;
 
@@ -86,7 +86,7 @@ namespace och
 				if (backing_file.ptr && buffer.len() != file_buffer_capacity)
 				{
 					uint32_t bytes_written;
-					ignore(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
+					ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
 				}
 				else
 					put(utf8_char('\0'));
@@ -101,7 +101,7 @@ namespace och
 					if (backing_file.ptr)
 					{
 						uint32_t bytes_written;
-						ignore(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
+						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
 
 						buffer.beg = buffer.end - file_buffer_capacity;
 					}
@@ -125,9 +125,9 @@ namespace och
 					if (backing_file.ptr)
 					{
 						uint32_t bytes_written;
-						ignore(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
+						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
 
-						ignore(och::write_to_file(bytes_written, backing_file, och::range<const char>(v.raw_cbegin(), v.raw_cend())));
+						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(v.raw_cbegin(), v.raw_cend())));
 					}
 					else
 					{
@@ -159,7 +159,7 @@ namespace och
 					if (backing_file.ptr)
 					{
 						uint32_t bytes_written;
-						ignore(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
+						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
 
 						buffer.beg = buffer.end - file_buffer_capacity;
 
@@ -173,7 +173,7 @@ namespace och
 
 							filler_cunits -= i;
 
-							ignore(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.beg, buffer.beg + i)));
+							ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.beg, buffer.beg + i)));
 						}
 					}
 					else
@@ -1902,7 +1902,7 @@ namespace och
 	void print(och::iohandle out, const och::stringview& format)
 	{
 		uint32_t bytes_written;
-		ignore(och::write_to_file(bytes_written, out, och::range(format.raw_cbegin(), format.raw_cend())));
+		ignore_status(och::write_to_file(bytes_written, out, och::range(format.raw_cbegin(), format.raw_cend())));
 	}
 
 	void print(och::iohandle out, const char* format)

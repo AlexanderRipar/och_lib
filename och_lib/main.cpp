@@ -1,4 +1,6 @@
-﻿#include "och_matmath.h"
+﻿#include <Windows.h>
+
+#include "och_matmath.h"
 #include "och_constexpr_util.h"
 #include "och_fio.h"
 #include "och_matmath.h"
@@ -9,29 +11,27 @@
 #include "och_utf8.h"
 #include "och_utf16.h"
 #include "och_virtual_keys.h"
-
 #include "och_fmt.h"
-
 #include "och_err.h"
 
-och::status error_test_callee()
+och::status test1()
 {
-	return {};
-}
-
-och::status error_test_caller()
-{
-	check(error_test_callee());
-
-	return {};
+	return make_status(HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
 }
 
 int main()
 {
-	if (error_test_caller() != och::status::ok)
+	if (test1())
 	{
+		och::print("Error 0x{:X} from {}\n\n{}\n\n", och::err::get_native_error_code(), static_cast<uint32_t>(och::err::get_error_type()), och::err::get_error_description());
 
+		for (uint32_t i = 0, lim = och::err::get_stack_depth(); i != lim; ++i)
+		{
+			const och::error_context& ctx = och::err::get_error_context(i);
+
+			och::print("File: {}\nFunction: {}\nLine: {} ({})\n\n", ctx.file, ctx.function, ctx.line, ctx.line_content);
+		}
 	}
-
-	return 0;
+	else
+		och::print("All good");
 }
