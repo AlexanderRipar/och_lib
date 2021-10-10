@@ -11,26 +11,39 @@
 #include "och_utf8.h"
 #include "och_utf16.h"
 #include "och_virtual_keys.h"
-#include "och_fmt.h"
 #include "och_err.h"
+#include "och_fmt.h"
 
-och::status test1()
+
+och::status s2()
 {
-	return make_status(HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
+	return make_status(0x0101);
+}
+
+och::status s1()
+{
+	check(s2());
+
+	return {};
+}
+
+och::status s0()
+{
+	check(s1());
+
+	return {};
 }
 
 int main()
 {
-	if (test1())
+	if (s0())
 	{
 		och::print("Error 0x{:X} from {}\n\n{}\n\n", och::err::get_native_error_code(), static_cast<uint32_t>(och::err::get_error_type()), och::err::get_error_description());
 
-		for (uint32_t i = 0, lim = och::err::get_stack_depth(); i != lim; ++i)
-		{
-			const och::error_context& ctx = och::err::get_error_context(i);
+		och::range<const och::error_context> callstack = och::err::get_callstack();
 
-			och::print("File: {}\nFunction: {}\nLine: {} ({})\n\n", ctx.file, ctx.function, ctx.line, ctx.line_content);
-		}
+		for(auto& ctx : callstack)
+			och::print("File: {}\nFunction: {}\nLine: {} ({})\n\n", ctx.filename(), ctx.function(), ctx.line_number(), ctx.line_content());
 	}
 	else
 		och::print("All good");

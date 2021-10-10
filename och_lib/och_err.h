@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "och_utf8.h"
+#include "och_range.h"
 
 #define CONSTEXPR_LINE_NUM_CAT_HELPER2(x, y) x##y
 
@@ -181,9 +182,7 @@ namespace och
 
 		error_type get_error_type() noexcept;
 
-		uint32_t get_stack_depth() noexcept;
-
-		const error_context& get_error_context(uint32_t idx) noexcept;
+		och::range<const error_context> get_callstack() noexcept;
 
 		och::utf8_view get_error_message() noexcept;
 

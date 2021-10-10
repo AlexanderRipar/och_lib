@@ -73,14 +73,9 @@ och::error_type och::err::get_error_type() noexcept
 	return error_data.m_native_error_source;
 }
 
-uint32_t och::err::get_stack_depth() noexcept
+och::range<const och::error_context> och::err::get_callstack() noexcept
 {
-	return error_data.m_context_stack_depth;
-}
-
-const och::error_context& och::err::get_error_context(uint32_t idx) noexcept
-{
-	return error_data.m_context_stack[idx];
+	return och::range<const och::error_context>(error_data.m_context_stack, error_data.m_context_stack_depth);
 }
 
 och::utf8_view och::err::get_error_message() noexcept
