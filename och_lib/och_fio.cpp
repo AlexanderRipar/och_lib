@@ -71,9 +71,9 @@ namespace och
 
 	[[nodiscard]] status open_file(iohandle& out_handle, const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode, fio::flag flags) noexcept
 	{
-		iohandle file(CreateFileA(filename, access_interp_open(access_rights), static_cast<uint32_t>(share_mode), nullptr, interp_openmode(existing_mode, new_mode), static_cast<uint32_t>(flags), nullptr));
+		out_handle = iohandle(CreateFileA(filename, access_interp_open(access_rights), static_cast<uint32_t>(share_mode), nullptr, interp_openmode(existing_mode, new_mode), static_cast<uint32_t>(flags), nullptr));
 
-		if (file.ptr == INVALID_HANDLE_VALUE)
+		if (out_handle.ptr == INVALID_HANDLE_VALUE)
 		{
 			out_handle = iohandle(nullptr);
 
@@ -81,7 +81,7 @@ namespace och
 		}
 
 		if (existing_mode == fio::open::append)
-			check(file_seek(file, 0, fio::setptr::end));
+			check(file_seek(out_handle, 0, fio::setptr::end));
 
 		return {};
 	}
@@ -321,6 +321,10 @@ namespace och
 		return {};
 	}
 
+	filehandle::~filehandle() noexcept
+	{
+		close();
+	}
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -506,7 +510,7 @@ namespace och
 		return {};
 	}
 
-	void file_search::destroy() noexcept
+	void file_search::close() noexcept
 	{
 		FindClose(search_handle.ptr);
 
@@ -551,6 +555,11 @@ namespace och
 	file_search::file_iterator file_search::end() noexcept
 	{
 		return file_iterator(nullptr);
+	}
+
+	file_search::~file_search() noexcept
+	{
+		close();
 	}
 
 	uint32_t file_search::single_advance() noexcept

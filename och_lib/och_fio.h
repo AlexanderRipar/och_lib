@@ -173,6 +173,8 @@ namespace och
 		[[nodiscard]] status seek(int64_t set_to, fio::setptr setptr_mode = fio::setptr::beg) const noexcept;
 
 		[[nodiscard]] status last_write_time(och::time& out_time) const noexcept;
+
+		~filehandle() noexcept;
 	};
 
 
@@ -182,9 +184,9 @@ namespace och
 	{
 	private:
 
-		iohandle m_file = nullptr;
-		iohandle m_mapper = nullptr;
-		file_array_handle m_data = nullptr;
+		iohandle m_file = iohandle(nullptr);
+		iohandle m_mapper = iohandle(nullptr);
+		file_array_handle m_data = file_array_handle(nullptr);
 
 		uint64_t m_bytes = 0;
 
@@ -228,12 +230,16 @@ namespace och
 
 			close_file(m_file);
 
-			m_data = m_mapper = m_file = iohandle(nullptr);
+			m_data = file_array_handle(nullptr);
+
+			m_mapper = iohandle(nullptr);
+
+			m_file = iohandle(nullptr);
 		}
 
 		[[nodiscard]] uint32_t bytes() const noexcept
 		{
-			return m_bytes;
+			return static_cast<uint32_t>(m_bytes);
 		}
 
 		[[nodiscard]] T* data() const noexcept
@@ -266,6 +272,11 @@ namespace och
 		[[nodiscard]] uint32_t size() const noexcept
 		{
 			return m_bytes / sizeof(T);
+		}
+
+		~mapped_file() noexcept
+		{
+			close();
 		}
 	};
 
@@ -348,7 +359,7 @@ namespace och
 
 		status create(const och::stringview& path, fio::search search_mode = fio::search::all, const char* ending_filters = nullptr) noexcept;
 		
-		void destroy() noexcept;
+		void close() noexcept;
 
 		file_search(const file_search& rhs) = delete;
 
@@ -361,6 +372,8 @@ namespace och
 		file_iterator begin() noexcept;
 
 		file_iterator end() noexcept;
+
+		~file_search() noexcept;
 
 	private:
 
