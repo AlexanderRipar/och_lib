@@ -15,39 +15,137 @@
 
 namespace och
 {
+#if (defined(OCH_ERROR_CONTEXT_EXTENDED) && defined(OCH_ERROR_CONTEXT_NONE)) || (defined(OCH_ERROR_CONTEXT_EXTENDED) && defined(OCH_ERROR_CONTEXT_NORMAL)) || (defined(OCH_ERROR_CONTEXT_NORMAL) && defined(OCH_ERROR_CONTEXT_NONE))
+
+	#pragma message("More than one of OCH_ERROR_CONTEXT_EXTENDED, OCH_ERROR_CONTEXT_NONE and OCH_ERROR_CONTEXT_NORMAL are defined. Falling back to OCH_ERROR_CONTEXT_NORMAL behaviour")
+	
+	#undef OCH_ERROR_CONTEXT_EXTENDED
+	#undef OCH_ERROR_CONTEXT_NONE
+	#undef OCH_ERROR_CONTEXT_NORMAL
+	
+	#define OCH_ERROR_CONTEXT_NORMAL
+	
+#endif // (defined(OCH_ERROR_CONTEXT_EXTENDED) && defined(OCH_ERROR_CONTEXT_NONE)) || (defined(OCH_ERROR_CONTEXT_EXTENDED) && defined(OCH_ERROR_CONTEXT_NORMAL)) || (defined(OCH_ERROR_CONTEXT_NORMAL) && defined(OCH_ERROR_CONTEXT_NONE))
+
+
 #if defined(OCH_ERROR_CONTEXT_EXTENDED)
 
-#pragma detect_mismatch("och_error_context", "extended")
+	#pragma detect_mismatch("och_error_context", "extended")
 
 	struct error_context
 	{
-		const char* file;
-		const uint32_t line;
+	private:
+
+		const char* m_filename;
+		const char* m_function;
+		const char* m_line_content;
+		uint32_t m_line_number;
+
+	public:
+
+		explicit error_context() noexcept = default;
+
+		explicit error_context(const char* filename, const char* function, const char* line_content, uint32_t line_number) noexcept
+			: m_filename{ filename }, m_function{ function }, m_line_content{ line_content }, m_line_number{ line_number } {}
+
+		const char* filename() const noexcept
+		{
+			return m_filename;
+		}
+
+		const char* function() const noexcept
+		{
+			return m_function;
+		}
+
+		const char* line_content() const noexcept
+		{
+			return m_line_content;
+		}
+
+		uint32_t line_number() const noexcept
+		{
+			return m_line_number;
+		}
 	};
 
-	#define make_error_context(line_content) och::error_context(__FILE__, CONSTEXPR_LINE_NUM)
+	#define make_error_context(arg) och::error_context(__FILE__, __FUNCTION__, #arg, CONSTEXPR_LINE_NUM)
 
 #elif defined(OCH_ERROR_CONTEXT_NONE)
 
-#pragma detect_mismatch("och_error_context", "none")
+	#pragma detect_mismatch("och_error_context", "none")
 
-	struct error_context {};
+	struct error_context
+	{
+		explicit error_context() noexcept = default;
+
+		const char* filename() const noexcept
+		{
+			return "[[Unknown]]";
+		}
+
+		const char* function() const noexcept
+		{
+			return "[[Unknown]]";
+		}
+
+		const char* line_content() const noexcept
+		{
+			return "[[Unknown]]";
+		}
+
+		uint32_t line_number() const noexcept
+		{
+			return "[[Unknown]]";
+		}
+	};
 
 	#define make_error_context(line_content) och::error_context()
 
 #else
-
-#pragma detect_mismatch("och_error_context", "normal")
-
+	
+	#pragma detect_mismatch("och_error_context", "normal")
+	
+	#if !defined(OCH_ERROR_CONTEXT_NORMAL)
+		#pragma message("warning: None of OCH_ERROR_CONTEXT_NORMAL, OCH_ERROR_CONTEXT_EXTENDED and OCH_ERROR_CONTEXT_NONE are defined. Falling back to OCH_ERROR_CONTEXT_NORMAL behaviour.")
+	#endif // !defined(OCH_ERROR_CONTEXT_NORMAL)
+	
 	struct error_context
 	{
-		const char* file;
-		const char* function;
-		const char* line_content;
-		uint32_t line;
+	private:
+
+		const char* m_filename;
+		uint32_t m_line_number;
+
+	public:
+
+		explicit error_context() noexcept = default;
+
+		explicit error_context(const char* filename, uint32_t line_number) noexcept
+			: m_filename{ filename }, m_line_number{ line_number } {}
+
+		const char* filename() const noexcept
+		{
+			return m_filename;
+		}
+
+		const char* function() const noexcept
+		{
+			return "[[Unknown]]";
+		}
+
+		const char* line_content() const noexcept
+		{
+			return "[[Unknown]]";
+		}
+
+		uint32_t line_number() const noexcept
+		{
+			return m_line_number;
+		}
 	};
 
-	#define make_error_context(arg) och::error_context(__FILE__, __FUNCTION__, #arg, CONSTEXPR_LINE_NUM)
+#define make_error_context(line_content) och::error_context(__FILE__, CONSTEXPR_LINE_NUM)
 
 #endif // defined(OCH_ERROR_CONTEXT_[EXTENDED, NONE, NORMAL])
 
@@ -58,6 +156,8 @@ namespace och
 #define make_status(arg) och::to_status(arg, make_error_context(arg))
 
 #define make_status_msg(arg, msg) och::to_status(arg, make_error_context(arg), msg)
+
+#define msg_error(msg) och::to_status(make_error_context([[Unknown]]), msg)
 
 #define ignore_status(s) if(s) och::err::reset_status();
 
@@ -85,11 +185,13 @@ namespace och
 
 		const error_context& get_error_context(uint32_t idx) noexcept;
 
-		const char* get_error_message() noexcept;
+		och::utf8_view get_error_message() noexcept;
 
 		void set_error_message(const char* msg) noexcept;
 
 		och::utf8_string get_error_description() noexcept;
+
+		och::utf8_view get_error_type_name() noexcept;
 	}
 
 	struct status
@@ -125,6 +227,13 @@ namespace och
 
 		return rst;
 	}
+
+	__forceinline status to_status(const error_context& ctx, const char* custom_message) noexcept
+	{
+		err::push_error(ctx, 1ull, error_type::och, custom_message);
+
+		return status(true);
+	}
 }
 
 #endif // !OCH_ERR_INCLUDE_GUARD
@@ -138,7 +247,7 @@ namespace och
 		if (rst != S_OK)
 			err::push_error(ctx, static_cast<uint64_t>(static_cast<uint32_t>(rst)), error_type::hresult);
 
-		return status(true);
+		return status(rst != S_OK);
 	}
 
 	__forceinline status to_status(HRESULT rst, const error_context& ctx, const char* custom_message) noexcept
@@ -146,28 +255,29 @@ namespace och
 		if (rst != S_OK)
 			err::push_error(ctx, static_cast<uint64_t>(static_cast<uint32_t>(rst)), error_type::hresult, custom_message);
 
-		return status(true);
+		return status(rst != S_OK);
 	}
 }
 #endif // !defined(OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD) && defined(_WINDOWS_)
 
 #if !defined(OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD) && defined(OCH_USING_VULKAN) && (defined(VULKAN_CORE_H_) || defined(VULKAN_H_))
+#define OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD
 namespace och
 {
 	__forceinline status to_status(VkResult rst, const error_context& ctx) noexcept
 	{
-		if (rst != S_OK)
+		if (rst != VK_SUCCESS)
 			err::push_error(ctx, static_cast<uint64_t>(static_cast<uint32_t>(rst)), error_type::vkresult);
 
-		return status(true);
+		return status(rst != VK_SUCCESS);
 	}
 
 	__forceinline status to_status(VkResult rst, const error_context& ctx, const char* custom_message) noexcept
 	{
-		if (rst != S_OK)
+		if (rst != VK_SUCCESS)
 			err::push_error(ctx, static_cast<uint64_t>(static_cast<uint32_t>(rst)), error_type::vkresult, custom_message);
 
-		return status(true);
+		return status(rst != VK_SUCCESS);
 	}
 }
 #endif // !defined(OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD) && defined(OCH_USING_VULKAN) && (defined(VULKAN_CORE_H_) || defined(VULKAN_H_))

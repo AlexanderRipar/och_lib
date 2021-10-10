@@ -6,13 +6,13 @@
 #include <vulkan/vulkan.h>
 #endif // defined(OCH_USING_VULKAN)
 
-struct
+struct error_data_t
 {
 	static constexpr size_t MAX_CONTEXT_STACK_DEPTH = 16;
 
 	static constexpr size_t MAX_CUSTOM_MESSAGE_CHARS = 255;
 
-	och::error_context m_context_stack[MAX_CONTEXT_STACK_DEPTH];
+	och::error_context m_context_stack[MAX_CONTEXT_STACK_DEPTH]{};
 
 	uint32_t m_context_stack_depth = 0;
 
@@ -21,8 +21,9 @@ struct
 	uint64_t m_native_error_code = 0;
 
 	char m_custom_message[MAX_CUSTOM_MESSAGE_CHARS + 1]{};
-} 
-thread_local error_data;
+};
+
+thread_local error_data_t error_data;
 
 
 
@@ -81,9 +82,10 @@ const och::error_context& och::err::get_error_context(uint32_t idx) noexcept
 {
 	return error_data.m_context_stack[idx];
 }
-const char* och::err::get_error_message() noexcept
+
+och::utf8_view och::err::get_error_message() noexcept
 {
-	return error_data.m_custom_message;
+	return och::utf8_view(error_data.m_custom_message);
 }
 
 void och::err::set_error_message(const char* msg) noexcept
@@ -130,4 +132,21 @@ och::utf8_string och::err::get_error_description() noexcept
 	}
 
 	return "[[No description]]";
+}
+
+och::utf8_view och::err::get_error_type_name() noexcept
+{
+	switch (error_data.m_native_error_source)
+	{
+	case error_type::NONE:
+		return "NONE";
+	case error_type::och:
+		return "och::status";
+	case error_type::hresult:
+		return "HRESULT";
+	case error_type::vkresult:
+		return "VkResult";
+	}
+
+	return "[[Unknown]]";
 }
