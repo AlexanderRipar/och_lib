@@ -16,7 +16,11 @@
 
 och::status s2()
 {
-	error(E_ABORT);
+	och::iohandle h;
+
+	check(och::open_file(h, "PLOOBL", och::fio::access::read, och::fio::open::append, och::fio::open::fail));
+
+	return {};
 }
 
 och::status s1()
