@@ -45,6 +45,11 @@ int main()
 
 		och::range<const och::error_context> callstack = och::err::get_callstack();
 
+		if (callstack.len())
+			och::print("\nCallstack:\n\n");
+		else
+			och::print("\nNo callstack information available.\n\n");
+
 		for(auto& ctx : callstack)
 			och::print("File: {}\nFunction: {}\nLine: {} ({})\n\n", ctx.filename(), ctx.function(), ctx.line_number(), ctx.line_content());
 	}

@@ -143,7 +143,7 @@ och::utf8_string och::status::description() const noexcept
 	{
 		char* message_buffer;
 
-		if (!FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, static_cast<DWORD>(m_errcode), SUBLANG_NEUTRAL, reinterpret_cast<LPSTR>(&message_buffer), 0, nullptr))
+		if (!FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, static_cast<DWORD>(m_errcode), SUBLANG_NEUTRAL, reinterpret_cast<LPSTR>(&message_buffer), 0, nullptr))
 			break;
 
 		och::utf8_string ret_str(message_buffer);
