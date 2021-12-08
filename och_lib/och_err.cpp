@@ -60,11 +60,11 @@ uint32_t och::error_context::line_number() const noexcept
 }
 
 
+#if !defined(OCH_ERROR_CONTEXT_NONE)
+
 struct error_data_t
 {
 	static constexpr size_t MAX_CUSTOM_MESSAGE_CHARS = 255;
-
-#if !defined(OCH_ERROR_CONTEXT_NONE)
 
 	static constexpr size_t MAX_CONTEXT_STACK_DEPTH = 16;
 
@@ -72,30 +72,21 @@ struct error_data_t
 
 	uint32_t m_context_stack_depth = 0;
 
-#endif
 
 	char m_custom_message[MAX_CUSTOM_MESSAGE_CHARS + 1]{};
 };
 
 thread_local error_data_t error_data;
 
+#endif // !defined(OCH_ERROR_CONTEXT_NONE)
 
 
-#if !defined(OCH_ERROR_CONTEXT_NONE)
-__declspec(noinline) void och::err::push_error(const error_context& ctx) noexcept
-{
-	if (error_data.m_context_stack_depth < error_data.MAX_CONTEXT_STACK_DEPTH)
-		error_data.m_context_stack[error_data.m_context_stack_depth++] = ctx;
-}
-#endif
 
-void och::err::reset_status() noexcept
+void och::err::reset_callstack() noexcept
 {
 #if !defined(OCH_ERROR_CONTEXT_NONE)
 	error_data.m_context_stack_depth = 0;
 #endif
-
-	error_data.m_custom_message[0] = '\0';
 }
 
 och::range<const och::error_context> och::err::get_callstack() noexcept
@@ -107,28 +98,13 @@ och::range<const och::error_context> och::err::get_callstack() noexcept
 #endif
 }
 
-och::utf8_view och::err::get_error_message() noexcept
+#if !defined(OCH_ERROR_CONTEXT_NONE)
+__declspec(noinline) void och::err::impl::push_error_(const error_context& ctx) noexcept
 {
-	if(!error_data.m_custom_message[0])
-		return och::utf8_view("[[No message registered]]");
-
-	return och::utf8_view(error_data.m_custom_message);
+	if (error_data.m_context_stack_depth < error_data.MAX_CONTEXT_STACK_DEPTH)
+		error_data.m_context_stack[error_data.m_context_stack_depth++] = ctx;
 }
-
-void och::err::set_error_message(const char* msg) noexcept
-{
-	if (msg)
-	{
-		size_t i = 0;
-
-		for (; i != error_data.MAX_CUSTOM_MESSAGE_CHARS && msg[i]; ++i)
-			error_data.m_custom_message[i] = msg[i];
-
-		error_data.m_custom_message[i] = '\0';
-	}
-	else
-		error_data.m_custom_message[0] = '\0';
-}
+#endif
 
 
 

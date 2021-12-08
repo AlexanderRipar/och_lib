@@ -9,21 +9,15 @@
 #include "och_range.h"
 
 #if defined(OCH_ERROR_CONTEXT_EXTENDED)
-
 #pragma detect_mismatch("och_error_context", "extended")
-
 #endif
 
 #if defined(OCH_ERROR_CONTEXT_NONE)
-
 #pragma detect_mismatch("och_error_context", "none")
-
 #endif
 
 #if defined(OCH_ERROR_CONTEXT_NORMAL)
-
 #pragma detect_mismatch("och_error_context", "normal")
-
 #endif
 
 
@@ -115,17 +109,11 @@ namespace och
 
 #endif
 
-#define check(arg) do { if(och::status s = och::register_status(och::to_status(arg), make_error_context(arg))) return s; } while (false)
+#define to_status(arg) och::err::as_status(arg, make_error_context(arg))
 
-#define check_msg(arg, msg) do { if(och::status s = och::register_status(och::to_status(arg), maker_error_context(arg), msg)) return s; } while (false)
+#define check(arg) do { if(och::status s = to_status(arg)) return s; } while (false)
 
-#define error(arg) do { return och::register_status(och::to_status(arg), make_error_context(arg)); } while (false)
-
-#define error_msg(arg, msg) do { return och::register_status(och::to_status(arg), make_error_context(arg), msg); } while (false)
-
-#define msg_error(msg) static_assert(false, "The msg_error is no longer supported.")
-
-#define ignore_status(s) if(s) och::err::reset_status();
+#define ignore_status(s) if(s) och::err::reset_callstack();
 
 	enum class error_type
 	{
@@ -147,7 +135,7 @@ namespace och
 
 		__forceinline status() noexcept : m_errcode{ 0ull } {}
 
-		__forceinline explicit status(uint64_t errcode) noexcept : m_errcode{ errcode } {}
+		__forceinline explicit status(uint32_t errcode, error_type type) noexcept : m_errcode{ static_cast<uint32_t>(errcode) | (static_cast<uint64_t>(type) << 32) } {}
 
 
 
@@ -162,52 +150,40 @@ namespace och
 
 	namespace err
 	{
-		__declspec(noinline) void push_error(const error_context& ctx) noexcept;
+		namespace impl
+		{
+#if !defined(OCH_ERROR_CONTEXT_NONE)
+			__declspec(noinline) void push_error_(const error_context& ctx) noexcept;
+#endif
 
-		void reset_status() noexcept;
+			__forceinline void register_status_(status s, const error_context& ctx) noexcept
+			{
+#if !defined(OCH_ERROR_CONTEXT_NONE)
+				if (s)
+					err::impl::push_error_(ctx);
+#else
+				s; ctx; // To suppress unused arguments warning
+#endif
+			}
+		}
+
+		void reset_callstack() noexcept;
 
 		och::range<const error_context> get_callstack() noexcept;
 
-		och::utf8_view get_error_message() noexcept;
-
-		void set_error_message(const char* msg) noexcept;
-
-	}
-
-	__forceinline status to_status() noexcept
-	{
-		return status(1ull | (static_cast<uint64_t>(error_type::och) << 32));
-	}
-
-	__forceinline status to_status(status rst) noexcept
-	{
-		return rst;
-	}
-
-	__forceinline status register_status(status s, const och::error_context& ctx) noexcept
-	{
-#if !defined(OCH_ERROR_CONTEXT_NONE)
-		if (s)
-			err::push_error(ctx);
-#else
-		ctx;
-#endif
-		return s;
-	}
-
-	__forceinline status register_status(status s, const och::error_context& ctx, const char* message) noexcept
-	{
-		if (s)
+		template<typename T>
+		__forceinline status as_status(T rst, const och::error_context& ctx) noexcept
 		{
-#if !defined(OCH_ERROR_CONTEXT_NONE)
-			err::push_error(ctx);
-#else
-			ctx;
-#endif
-			err::set_error_message(message);
+			static_assert(false, "Could not find matching status_from_(T, ctx) specialization.");
 		}
 
-		return s;
+		template<>
+		__forceinline status as_status(status rst, const och::error_context& ctx) noexcept
+		{
+			err::impl::register_status_(rst, ctx);
+
+			return rst;
+		}
 	}
 }
 
@@ -215,22 +191,32 @@ namespace och
 
 #if !defined(OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD) && defined(_WINDOWS_)
 #define OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD
-namespace och
+namespace och::err
 {
-	__forceinline status to_status(HRESULT rst) noexcept
+	template<>
+	__forceinline status as_status(HRESULT rst, const och::error_context& ctx) noexcept
 	{
-		return status(static_cast<uint32_t>(rst) | (static_cast<uint64_t>(error_type::hresult) << 32));
+		status s(rst, error_type::hresult);
+
+		err::impl::register_status_(s, ctx);
+
+		return s;
 	}
 }
 #endif // !defined(OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD) && defined(_WINDOWS_)
 
 #if !defined(OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD) && defined(OCH_USING_VULKAN) && (defined(VULKAN_CORE_H_) || defined(VULKAN_H_))
 #define OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD
-namespace och
+namespace och::err
 {
-	__forceinline status to_status(VkResult rst) noexcept
+	template<>
+	__forceinline status as_status(VkResult rst) noexcept
 	{
-		return status(static_cast<uint32_t>(rst) | (static_cast<uint64_t>(error_type::vkresult) << 32));
+		status s(rst, error_type::vkresult);
+
+		err::impl::register_status_(s, ctx);
+
+		return s;
 	}
 }
 #endif // !defined(OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD) && defined(OCH_USING_VULKAN) && (defined(VULKAN_CORE_H_) || defined(VULKAN_H_))
