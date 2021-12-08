@@ -14,10 +14,9 @@
 #include "och_err.h"
 #include "och_fmt.h"
 
-
 och::status s2()
 {
-	return make_status(0x0101);
+	error(E_ABORT);
 }
 
 och::status s1()
@@ -36,9 +35,9 @@ och::status s0()
 
 int main()
 {
-	if (s0())
+	if (och::status s = s0())
 	{
-		och::print("Error 0x{:X} from {}\n\n{}\n\n", och::err::get_native_error_code(), static_cast<uint32_t>(och::err::get_error_type()), och::err::get_error_description());
+		och::print("Error 0x{:X} from {}\n\n{}\n\n", s.errcode(), s.errtype_name(), s.description());
 
 		och::range<const och::error_context> callstack = och::err::get_callstack();
 

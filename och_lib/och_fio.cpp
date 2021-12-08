@@ -77,7 +77,7 @@ namespace och
 		{
 			out_handle = iohandle(nullptr);
 
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 		}
 
 		if (existing_mode == fio::open::append)
@@ -95,7 +95,7 @@ namespace och
 		out_handle = iohandle(CreateFileMappingA(file.ptr, nullptr, access_interp_page(page_mode), _size.HighPart, _size.LowPart, mapping_name));
 
 		if (!out_handle.ptr)
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		return {};
 	}
@@ -109,7 +109,7 @@ namespace och
 		out_handle = file_array_handle(MapViewOfFile(file_mapping.ptr, access_interp_fmap(filemap_mode), _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg)));
 
 		if(!out_handle.ptr)
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		return {};
 	}
@@ -127,7 +127,7 @@ namespace och
 	[[nodiscard]] status delete_file(const char* filename) noexcept
 	{
 		if (!DeleteFileA(filename))
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			return och::status(HRESULT_FROM_WIN32(GetLastError()));
 
 		return {};
 	}
@@ -137,7 +137,7 @@ namespace och
 		uint32_t bytes_read = 0;
 
 		if (!ReadFile(file.ptr, buf.beg, static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_read), nullptr))
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		out_read = och::range<char>(buf.beg, bytes_read);
 
@@ -149,7 +149,7 @@ namespace och
 		uint32_t bytes_written = 0;
 
 		if (!WriteFile(file.ptr, reinterpret_cast<const void*>(buf.beg), static_cast<DWORD>(buf.len()), reinterpret_cast<LPDWORD>(&bytes_written), nullptr))
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		out_written = bytes_written;
 
@@ -163,7 +163,7 @@ namespace och
 		_set_to.QuadPart = set_to;
 
 		if (!SetFilePointerEx(file.ptr, _set_to, nullptr, static_cast<uint32_t>(setptr_mode)))
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		return {};
 	}
@@ -173,7 +173,7 @@ namespace och
 		LARGE_INTEGER filesize;
 
 		if (!GetFileSizeEx(file.ptr, &filesize))
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		out_size = filesize.QuadPart;
 
@@ -189,17 +189,17 @@ namespace och
 		_set_to.QuadPart = 0;
 
 		if (!SetFilePointerEx(file.ptr, _set_to, &old_fileptr, FILE_CURRENT))//Save current file-pointer-position into old_fileptr
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		_set_to.QuadPart = bytes;
 
 		if (!SetFilePointerEx(file.ptr, _set_to, nullptr, FILE_BEGIN))//Set file-pointer to new EOF
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		SetEndOfFile(file.ptr);
 
 		if (!SetFilePointerEx(file.ptr, old_fileptr, nullptr, FILE_BEGIN))//Restore initial file-pointer-position
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		return {};
 	}
@@ -209,10 +209,10 @@ namespace och
 		DWORD path_chars = GetFinalPathNameByHandleA(file.ptr, buf.beg, (DWORD)buf.len(), 0);
 
 		if (path_chars > buf.len())
-			return make_status(HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
+			error(HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
 		
 		if (!path_chars)
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		out_path = och::range<char>(buf.beg, path_chars);
 
@@ -224,7 +224,7 @@ namespace och
 		FILE_BASIC_INFO info;
 
 		if (!GetFileInformationByHandleEx(file.ptr, FileBasicInfo, &info, sizeof(info)))
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		out_time = { static_cast<uint64_t>(info.LastWriteTime.QuadPart) };
 
@@ -238,7 +238,7 @@ namespace och
 		char filename[MAX_PATH + 1];
 
 		if (!GetTempFileNameA(".", "och", 0, filename))
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 
 		check(open_file(out_handle, filename, fio::access::readwrite, fio::open::normal, fio::open::fail, share_mode, fio::flag::temporary));
 
@@ -497,7 +497,7 @@ namespace och
 
 			m_info_data.flags_and_padding &= ~1;
 
-			return make_status(HRESULT_FROM_WIN32(GetLastError()));
+			error(HRESULT_FROM_WIN32(GetLastError()));
 		}
 
 		// Skip to first valid file.
