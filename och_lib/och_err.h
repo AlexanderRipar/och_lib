@@ -121,6 +121,17 @@ namespace och
 		och = 1,
 		hresult = 2,
 		vkresult = 3,
+		errnum = 4,
+	};
+
+	enum class error
+	{
+		ok = 0,
+		insufficient_buffer,
+		invalid_argument,
+		unavailable,
+		null_argument,
+		too_large,
 	};
 
 	struct status
@@ -137,6 +148,7 @@ namespace och
 
 		__forceinline explicit status(uint32_t errcode, error_type type) noexcept : m_errcode{ static_cast<uint32_t>(errcode) | (static_cast<uint64_t>(type) << 32) } {}
 
+		__forceinline status(och::error err) noexcept : m_errcode{ static_cast<uint32_t>(err) | static_cast<uint64_t>(error_type::och) << 32 } {}
 
 
 		uint32_t errcode() const noexcept;
@@ -184,6 +196,16 @@ namespace och
 
 			return rst;
 		}
+
+		template<>
+		__forceinline status as_status(error rst, const och::error_context& ctx) noexcept
+		{
+			status s(rst);
+
+			err::impl::register_status_(s, ctx);
+
+			return s;
+		}
 	}
 }
 
@@ -210,7 +232,7 @@ namespace och::err
 namespace och::err
 {
 	template<>
-	__forceinline status as_status(VkResult rst) noexcept
+	__forceinline status as_status(VkResult rst, const och::error_context& ctx) noexcept
 	{
 		status s(rst, error_type::vkresult);
 
@@ -220,3 +242,19 @@ namespace och::err
 	}
 }
 #endif // !defined(OCH_ERR_VULKAN_INTEROP_INCLUDE_GUARD) && defined(OCH_USING_VULKAN) && (defined(VULKAN_CORE_H_) || defined(VULKAN_H_))
+
+#if !defined(OCH_ERR_LINUX_INTEROP_INCLUDE_GUARD) && defined(__linux__)
+#define OCH_ERR_LINUX_INTEROP_INCLUDE_GUARD
+namespace och::err
+{
+	template<>
+	__forceinline status as_status(errno_t rst, const och::error_context& ctx) noexcept
+	{
+		status s(rst, error_type::errnum);
+
+		err::impl::register_status_(s, ctx);
+
+		return s;
+	}
+}
+#endif // !defined(OCH_ERR_UNIX_INTEROP_INCLUDE_GUARD) && defined(__linux__)
