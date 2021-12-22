@@ -108,7 +108,7 @@ namespace och
 
 namespace och
 {
-	uint32_t vprint(iohandle out, const stringview& format, const range<const arg_wrapper>& argv, uint32_t buffer_bytes = 0xFFFF'FFFF);
+	uint32_t vprint(uint64_t out, const stringview& format, const range<const arg_wrapper>& argv, uint32_t buffer_bytes = 0xFFFF'FFFF);
 
 	//{[argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [format specifier]]}
 	template<typename... Args>
@@ -116,7 +116,7 @@ namespace och
 	{
 		const arg_wrapper argv[]{ create_fmt_arg_wrapper(args)... };
 
-		vprint(out, format, och::range<const arg_wrapper>(argv));
+		vprint(reinterpret_cast<uint64_t>(out.get_()), format, och::range<const arg_wrapper>(argv));
 	}
 
 	template<typename... Args>
@@ -136,19 +136,19 @@ namespace och
 	template<typename... Args>
 	void print(const filehandle& out, const stringview& format, Args... args)
 	{
-		print(out.handle, format, args...);
+		print(out.get_handle_(), format, args...);
 	}
 
 	template<typename... Args>
 	void print(const filehandle& out, const char* format, Args... args)
 	{
-		print(out.handle, och::stringview(format), args...);
+		print(out.get_handle_(), och::stringview(format), args...);
 	}
 
 	template<typename... Args>
 	void print(const filehandle& out, const utf8_string& format, Args... args)
 	{
-		print(out.handle, och::stringview(format), args...);
+		print(out.get_handle_(), och::stringview(format), args...);
 	}
 
 
@@ -156,28 +156,28 @@ namespace och
 	template<typename... Args>
 	void print(const stringview& format, Args... args)
 	{
-		print(och::standard_out, format, args...);
+		print(och::get_stdout(), format, args...);
 	}
 
 	template<typename... Args>
 	void print(const char* format, Args... args)
 	{
-		print(och::standard_out, och::stringview(format), args...);
+		print(och::get_stdout(), och::stringview(format), args...);
 	}
 
 	template<typename... Args>
 	void print(const utf8_string& format, Args... args)
 	{
-		print(och::standard_out, och::stringview(format), args...);
+		print(och::get_stdout(), och::stringview(format), args...);
 	}
 
 
 
-	void print(iohandle out, const stringview& format);
+	void print(const iohandle& out, const stringview& format);
 
-	void print(iohandle out, const char* format);
+	void print(const iohandle& out, const char* format);
 
-	void print(iohandle out, const utf8_string& format);
+	void print(const iohandle& out, const utf8_string& format);
 
 
 
@@ -203,7 +203,7 @@ namespace och
 	{
 		const arg_wrapper argv[]{ create_fmt_arg_wrapper(args)... };
 
-		return vprint(och::iohandle(static_cast<void*>(buf.beg)), format, och::range<const arg_wrapper>(argv), static_cast<uint32_t>(buf.len()));
+		return vprint(reinterpret_cast<uint64_t>(buf.beg), format, och::range<const arg_wrapper>(argv), static_cast<uint32_t>(buf.len()));
 	}
 
 	template<typename... Args>
@@ -233,7 +233,7 @@ namespace och
 	{
 		const arg_wrapper argv[]{ create_fmt_arg_wrapper(args)... };
 
-		return vprint(och::iohandle(static_cast<void*>(&buf)), format, och::range<const arg_wrapper>(argv), 0xFFFF'FFFE);
+		return vprint(reinterpret_cast<uint64_t>(&buf), format, och::range<const arg_wrapper>(argv), 0xFFFF'FFFE);
 	}
 
 	template<typename... Args>

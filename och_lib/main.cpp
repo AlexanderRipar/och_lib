@@ -39,6 +39,8 @@ och::status s0()
 
 int main()
 {
+	och::iohandle h = och::get_stdout();
+
 	if (och::status s = s0())
 	{
 		och::print("Error 0x{:X} from {}\n\n{}\n\n", s.errcode(), s.errtype_name(), s.description());

@@ -33,13 +33,19 @@ namespace och
 			och::utf8_string* backing_string;
 		};
 
-		uint64_t overrun_count{};
+		uint64_t overrun_count = 0;
 
-		output_buffer(och::range<char> buffer, och::iohandle backing_file) : buffer{ buffer }, backing_file{ backing_file } {}
+		output_buffer(och::range<char> buffer, void* backing_file) : buffer{ buffer }, backing_string{ reinterpret_cast<och::utf8_string*>(backing_file) } {}
 		
+		bool has_file() const noexcept
+		{
+			return buffer.beg;
+		}
+
 		char* reserve(uint32_t codeunits)
 		{
-			if(buffer.beg)
+			if (buffer.beg)
+			{
 				if (buffer.len() >= codeunits)
 				{
 					char* retval = buffer.beg;
@@ -48,13 +54,9 @@ namespace och
 
 					return retval;
 				}
-				else if (backing_file.ptr)
+				else if (backing_file)
 				{
-					uint32_t bytes_written;
-
-					ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
-
-					buffer.beg = buffer.end - file_buffer_capacity;
+					flush_to_file();
 
 					if (codeunits <= file_buffer_capacity)
 						return buffer.beg;
@@ -65,73 +67,67 @@ namespace och
 
 					buffer.beg = buffer.end;
 				}
-			else
+			}
+			else if (backing_string->reserve(backing_string->get_codeunits() + codeunits))
 			{
-				if (backing_string->reserve(backing_string->get_codeunits() + codeunits))
-				{
 					char* ret = backing_string->raw_end();
 
 					backing_string->fmt_prepare_for_raw_write(codeunits);
 
 					return ret;
-				}
 			}
 
 			return nullptr;
 		}
 
-		void flush()
+		void flush_to_file()
 		{
-			if (buffer.beg)
-				if (backing_file.ptr && buffer.len() != file_buffer_capacity)
-				{
-					uint32_t bytes_written;
-					ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
+			uint32_t bytes_written;
 
-					buffer.beg = buffer.end - file_buffer_capacity;
-				}
-				else
-					put(utf8_char('\0'));
-			else if (backing_string->raw_cend()[-1] != '\0')
-				backing_string += '\0';
+			ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const uint8_t>(reinterpret_cast<const uint8_t*>(buffer.end - file_buffer_capacity), reinterpret_cast<const uint8_t*>(buffer.beg))));
+			
+			buffer.beg = buffer.end - file_buffer_capacity;
 		}
 
 		void put(utf8_char c)
 		{
 			if (buffer.beg)
+			{
 				if (buffer.len() < c.get_codeunits())
-					if (backing_file.ptr)
-					{
-						uint32_t bytes_written;
-						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
-
-						buffer.beg = buffer.end - file_buffer_capacity;
-					}
+				{
+					if (backing_file)
+						flush_to_file();
 					else
 					{
 						overrun_count += c.get_codeunits() - buffer.len();
 
 						buffer.beg = buffer.end;
+
+						return;
 					}
-				else
-					for (uint32_t i = 0; i != c.get_codeunits(); ++i)
-						*buffer.beg++ = c.cbegin()[i];
+				}
+
+				for (uint32_t i = 0; i != c.get_codeunits(); ++i)
+					*buffer.beg++ = c.cbegin()[i];
+			}
 			else
+			{
 				backing_string->operator+=(c);
+			}
 		}
 
 		void put(const och::stringview& v)
 		{
 			if (buffer.beg)
+			{
 				if (buffer.len() < v.get_codeunits())
-					if (backing_file.ptr)
+				{
+					if (backing_file)
 					{
+						flush_to_file();
+
 						uint32_t bytes_written;
-						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
-
-						buffer.beg = buffer.end - file_buffer_capacity;
-
-						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(v.raw_cbegin(), v.raw_cend())));
+						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const uint8_t>(reinterpret_cast<const uint8_t*>(v.raw_cbegin()), reinterpret_cast<const uint8_t*>(v.raw_cend()))));
 					}
 					else
 					{
@@ -139,11 +135,17 @@ namespace och
 
 						buffer.beg = buffer.end;
 					}
+				}
 				else
+				{
 					for (uint32_t i = 0; i != v.get_codeunits(); ++i)
 						*buffer.beg++ = v.raw_cbegin()[i];
+				}
+			}
 			else
+			{
 				backing_string->operator+=(v);
+			}
 		}
 
 		void pad(uint32_t text_codepoints, const och::parsed_context& context)
@@ -160,10 +162,10 @@ namespace och
 			if (buffer.beg)
 			{
 				if (filler_cunits > buffer.len())
-					if (backing_file.ptr)
+					if (backing_file)
 					{
 						uint32_t bytes_written;
-						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.end - file_buffer_capacity, buffer.beg)));
+						ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const uint8_t>(reinterpret_cast<const uint8_t*>(buffer.end - file_buffer_capacity), reinterpret_cast<const uint8_t*>(buffer.beg))));
 
 						buffer.beg = buffer.end - file_buffer_capacity;
 
@@ -179,7 +181,7 @@ namespace och
 
 							filler_cunits -= i;
 
-							ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const char>(buffer.beg, buffer.beg + i)));
+							ignore_status(och::write_to_file(bytes_written, backing_file, och::range<const uint8_t>(reinterpret_cast<const uint8_t*>(buffer.beg), reinterpret_cast<const uint8_t*>(buffer.beg + i))));
 
 							buffer.beg = buffer.end - file_buffer_capacity;
 						}
@@ -226,6 +228,16 @@ namespace och
 
 			if (!is_rightadj(context))
 				pad(v.get_codepoints(), context);
+		}
+
+		void finalize()
+		{
+			if (buffer.beg && backing_file && buffer.len() != file_buffer_capacity)
+				flush_to_file();
+			else if (buffer.beg)
+				put(utf8_char('\0'));
+			else
+				backing_string += '\0';
 		}
 	};
 
@@ -1826,11 +1838,11 @@ namespace och
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 	//{[argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [formatmode]]}
-	uint32_t vprint(och::iohandle out, const och::stringview& format, const och::range<const arg_wrapper>& argv, uint32_t buffer_bytes)
+	uint32_t vprint(uint64_t out, const och::stringview& format, const och::range<const arg_wrapper>& argv, uint32_t buffer_bytes)
 	{
 		och::range<char> buffer;
 
-		och::iohandle backing_file(nullptr);
+		void* backing_structure = nullptr;
 
 		if (buffer_bytes == 0xFFFF'FFFF)
 		{
@@ -1838,18 +1850,18 @@ namespace och
 
 			buffer = buffer_array;
 
-			backing_file = out;
+			backing_structure = reinterpret_cast<void*>(out);
 		}
 		else if (buffer_bytes == 0xFFFF'FFFE)
 		{
 			buffer = och::range<char>(nullptr, nullptr);
 
-			backing_file = out;
+			backing_structure = reinterpret_cast<void*>(out);
 		}
 		else
-			buffer = och::range<char>(static_cast<char*>(out.ptr), buffer_bytes);
+			buffer = och::range<char>(reinterpret_cast<char*>(out), buffer_bytes);
 
-		output_buffer output(buffer, backing_file);
+		output_buffer output(buffer, backing_structure);
 
 		uint32_t arg_counter = 0;
 
@@ -1893,7 +1905,7 @@ namespace och
 
 		output.put(och::stringview(last_fmt_end, static_cast<uint32_t>(curr - last_fmt_end), 1));
 
-		output.flush();
+		output.finalize();
 
 		if (output.overrun_count)
 			return static_cast<uint32_t>(output.buffer.beg - initial_buffer_start + output.overrun_count);
@@ -1907,18 +1919,18 @@ namespace och
 	/*///////////////////////////////////////////////////////print///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	void print(och::iohandle out, const och::stringview& format)
+	void print(const och::iohandle& out, const och::stringview& format)
 	{
 		uint32_t bytes_written;
-		ignore_status(och::write_to_file(bytes_written, out, och::range(format.raw_cbegin(), format.raw_cend())));
+		ignore_status(och::write_to_file(bytes_written, out, och::range<const uint8_t>(reinterpret_cast<const uint8_t*>(format.raw_cbegin()), reinterpret_cast<const uint8_t*>(format.raw_cend()))));
 	}
 
-	void print(och::iohandle out, const char* format)
+	void print(const och::iohandle& out, const char* format)
 	{
 		print(out, och::stringview(format));
 	}
 
-	void print(och::iohandle out, const och::utf8_string& format)
+	void print(const och::iohandle& out, const och::utf8_string& format)
 	{
 		print(out, och::stringview(format));
 	}
@@ -1926,33 +1938,33 @@ namespace och
 
 	void print(const och::filehandle& out, const och::stringview& format)
 	{
-		print(out.handle, format);
+		print(out.get_handle_(), format);
 	}
 
 	void print(const och::filehandle& out, const char* format)
 	{
-		print(out.handle, format);
+		print(out.get_handle_(), format);
 	}
 
 	void print(const och::filehandle& out, const och::utf8_string& format)
 	{
-		print(out.handle, format);
+		print(out.get_handle_(), format);
 	}
 
 
 	void print(const och::stringview& format)
 	{
-		print(och::standard_out, format);
+		print(och::get_stdout(), format);
 	}
 
 	void print(const char* format)
 	{
-		print(och::standard_out, format);
+		print(och::get_stdout(), format);
 	}
 
 	void print(const och::utf8_string& format)
 	{
-		print(och::standard_out, format);
+		print(och::get_stdout(), format);
 	}
 
 
