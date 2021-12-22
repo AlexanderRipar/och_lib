@@ -68,8 +68,6 @@ namespace och
 			// temporary = 256,
 		};
 
-		constexpr flag all_flags = fio::flag::normal | fio::flag::temporary | fio::flag::async | fio::flag::hidden;
-
 		constexpr flag operator|(flag l, flag r) noexcept
 		{
 			return static_cast<flag>(static_cast<uint32_t>(l) | static_cast<uint32_t>(r));
@@ -84,6 +82,8 @@ namespace och
 		{
 			return static_cast<flag>(static_cast<uint32_t>(l) ^ static_cast<uint32_t>(r));
 		}
+
+		constexpr flag all_flags = fio::flag::normal | fio::flag::temporary | fio::flag::async | fio::flag::hidden;
 	}
 
 #if defined(_WIN32)
@@ -470,102 +470,51 @@ namespace och
 
 	struct file_search
 	{
-		struct file_info_data
-		{
-			uint32_t flags_and_padding alignas(8);
-			fio::flag attributes;
-			och::time creation_time;
-			och::time last_access_time;
-			och::time last_write_time;
-			uint64_t size;
-			uint64_t _reserved;
-			char name[260];//MAX_PATH
-			char alt_name[14];
-		};
+		static constexpr size_t MAX_EXTENSION_FILTER_CNT = 4;
 
-		struct file_info
-		{
-		private:
-
-			const file_search& m_data;
-
-		public:
-
-			file_info(const file_search& data) noexcept;
-
-			och::string name() const noexcept;
-
-			och::time creation_time() const noexcept;
-
-			och::time last_access_time() const noexcept;
-
-			och::time last_modification_time() const noexcept;
-
-			uint64_t size() const noexcept;
-
-			bool is_directory() const noexcept;
-
-			och::string ending() const noexcept;
-
-			och::utf8_string absolute_name() const noexcept;
-		};
-
-		struct file_iterator
-		{
-		private:
-
-			file_search* m_search;
-
-		public:
-
-			file_iterator(file_search* search) noexcept;
-
-			void operator++() noexcept;
-
-			bool operator!=(const file_iterator& rhs) const noexcept;
-
-			file_info operator*() const noexcept;
-		};
+		static constexpr size_t MAX_EXTENSION_FILTER_CUNITS = 4;
 
 	private:
 
-		iohandle search_handle;
+		iohandle m_search_handle;
 
-		file_info_data m_info_data;
+		fio::search m_search_mode;
 
-		char m_ending_filters[8][8];
+		utf8_string m_path;
 
-		char m_search_path[260];
+		wchar_t m_ext_filters[MAX_EXTENSION_FILTER_CNT][MAX_EXTENSION_FILTER_CUNITS];
+
+		uint64_t m_internal_buf[74];
 
 	public:
 
-		status create(const char* path, fio::search search_mode = fio::search::all, const char* ending_filters = nullptr) noexcept;
+		file_search() noexcept = default;
 
-		status create(const och::utf8_string& path, fio::search search_mode = fio::search::all, const char* ending_filters = nullptr) noexcept;
+		file_search(const file_search&) = delete;
 
-		status create(const och::stringview& path, fio::search search_mode = fio::search::all, const char* ending_filters = nullptr) noexcept;
-		
-		void close() noexcept;
+		file_search(file_search&&) = delete;
 
-		file_search(const file_search& rhs) = delete;
+		[[nodiscard]] status create(const char* directory, fio::search search_mode, const char* ext_filter) noexcept;
 
-		status advance() noexcept;
+		[[nodiscard]] status close() noexcept;
 
-		bool has_next() const noexcept;
+		[[nodiscard]] status advance() noexcept;
 
-		file_info get_info() const noexcept;
+		[[nodiscard]] bool has_more() const noexcept;
 
-		file_iterator begin() noexcept;
+		[[nodiscard]] utf8_string curr_name() const noexcept;
 
-		file_iterator end() noexcept;
+		[[nodiscard]] utf8_string curr_path() const noexcept;
+
+		[[nodiscard]] bool curr_is_directory() const noexcept;
+
+		[[nodiscard]] och::time curr_creation_time() const noexcept;
+
+		[[nodiscard]] och::time curr_modification_time() const noexcept;
+
+		[[nodiscard]] uint64_t curr_size() const noexcept;
 
 		~file_search() noexcept;
-
-	private:
-
-		uint32_t single_advance() noexcept;
-
-		bool matches_ending_filter(const char* ending) const noexcept;
 	};
 
 	

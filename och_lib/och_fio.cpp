@@ -219,7 +219,7 @@ namespace och
 
 	[[nodiscard]] status close_file(iohandle& file) noexcept
 	{
-		if (!CloseHandle(file.get_()))
+		if (file.get_() && !CloseHandle(file.get_()))
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
 
 		file.invalidate_();
@@ -229,7 +229,7 @@ namespace och
 
 	[[nodiscard]] status close_file_mapper(file_mapper_handle& mapper) noexcept
 	{
-		if (!CloseHandle(mapper.get_()))
+		if (mapper.get_() && !CloseHandle(mapper.get_()))
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
 
 		mapper.invalidate_();
@@ -239,7 +239,7 @@ namespace och
 
 	[[nodiscard]] status close_file_array(file_array_handle& file_array) noexcept
 	{
-		if (!UnmapViewOfFile(file_array.ptr()))
+		if (file_array.ptr() && !UnmapViewOfFile(file_array.ptr()))
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
 
 		file_array.invalidate_();
@@ -356,7 +356,7 @@ namespace och
 		if (utf16_cus == 0 || utf16_cus > 32767)
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
 
-		DWORD utf8_cus = WideCharToMultiByte(CP_UTF8, 0, path_buf, -1, buf.beg, buf.len(), nullptr, nullptr);
+		DWORD utf8_cus = WideCharToMultiByte(CP_UTF8, 0, path_buf, -1, buf.beg, static_cast<int>(buf.len()), nullptr, nullptr);
 
 		if (utf8_cus == 0)
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
@@ -408,297 +408,291 @@ namespace och
 		return {};
 	}
 
-	
-
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*/////////////////////////////////////////////////file_search///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-	WIN32_FIND_DATAW
-	file_search::file_info::file_info(const file_search& data) noexcept : m_data{ data } {}
 
-	och::string file_search::file_info::name() const noexcept
+	void append_wildcard_to_search_path(wchar_t* buf, uint32_t cus) noexcept
 	{
-		return och::string(m_data.m_info_data.name);
-	}
+		if (buf[cus - 2] == '*' && (buf[cus - 3] == '\\' || buf[cus - 3] == '/'))
+			return;
 
-	och::time file_search::file_info::creation_time() const noexcept
-	{
-		return m_data.m_info_data.creation_time;
-	}
-
-	och::time file_search::file_info::last_access_time() const noexcept
-	{
-		return m_data.m_info_data.last_access_time;
-	}
-
-	och::time file_search::file_info::last_modification_time() const noexcept
-	{
-		return m_data.m_info_data.last_write_time;
-	}
-
-	uint64_t file_search::file_info::size() const noexcept
-	{
-		return m_data.m_info_data.size;
-	}
-
-	bool file_search::file_info::is_directory() const noexcept
-	{
-		return static_cast<uint32_t>(m_data.m_info_data.attributes & fio::flag::directory);
-	}
-
-	och::string file_search::file_info::ending() const noexcept
-	{
-		if (static_cast<uint32_t>(m_data.m_info_data.attributes & fio::flag::directory))
-			return och::string("");
-		
-		const char* beg = m_data.m_info_data.name;
-
-		while (*beg != '.')
-			if (!*beg++)
-				return och::string("");
-		
-		return och::string(beg + 1);
-	}
-
-	och::string file_search::file_info::absolute_name() const noexcept
-	{
-		och::string str(m_data.m_search_path);
-
-		str += och::stringview(m_data.m_info_data.name);
-
-		return std::move(str);
-	}
-
-
-
-	void file_search::file_iterator::operator++() noexcept
-	{
-		m_search->advance();
-	}
-
-	bool file_search::file_iterator::operator!=(const file_iterator& rhs) const noexcept
-	{
-		rhs; return m_search->has_next();
-	}
-
-	file_search::file_info file_search::file_iterator::operator*() const noexcept
-	{
-		return file_info(*m_search);
-	}
-
-	file_search::file_iterator::file_iterator(file_search* search) noexcept : m_search{ search } {}
-
-
-
-	och::status file_search::create(const char* path, fio::search search_mode, const char* ending_filters) noexcept
-	{
-		check(create(och::stringview(path), search_mode, ending_filters));
-
-		return {};
-	}
-
-	och::status file_search::create(const och::utf8_string& path, fio::search search_mode, const char* ending_filters) noexcept
-	{
-		check(create(och::stringview(path), search_mode, ending_filters));
-
-		return {};
-	}
-
-	och::status file_search::create(const och::stringview& path, fio::search search_mode, const char* ending_filters) noexcept
-	{
-		// Process Path
-
-		char* curr = m_search_path;
-
-		if (path.get_codeunits() + 2 - ((*(path.end()) == och::utf8_char('\\')) || (*(path.end()) == och::utf8_char('/'))) < static_cast<uint32_t>(sizeof(m_search_path)))
+		if (buf[cus - 2] == '\\')
 		{
-			for (uint32_t i = 0; i != path.get_codeunits(); ++i)
-			{
-				char c = path.raw_cbegin()[i];
+			buf[cus - 1] = '*';
 
-				if (c == '+')
+			buf[cus] = '\0';
+
+			return;
+		}
+
+		buf[cus - 1] = '\\';
+
+		buf[cus] = '*';
+
+		buf[cus + 1] = '\0';
+	}
+
+	bool is_valid(WIN32_FIND_DATA* find_data, fio::search mode, const wchar_t ext_filters[file_search::MAX_EXTENSION_FILTER_CNT][file_search::MAX_EXTENSION_FILTER_CUNITS]) noexcept
+	{
+		if ((find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && mode == fio::search::files)
+			return false;
+
+		if (!(find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && mode == fio::search::directories)
+			return false;
+
+		if (find_data->cFileName[0] == L'.' && (find_data->cFileName[1] == L'\0' || (find_data->cFileName[1] == L'.' && find_data->cFileName[2] == L'\0')))
+			return false;
+
+		if (!ext_filters[0][0])
+			return true;
+
+		wchar_t* dot = find_data->cFileName;
+
+		while (*dot != L'.')
+			if (*dot++ == L'\0')
+				return false;
+
+		++dot;
+
+		wchar_t* end = dot;
+
+		while (*end)
+			++end;
+
+		for (int i = 0; i != file_search::MAX_EXTENSION_FILTER_CNT && ext_filters[i * file_search::MAX_EXTENSION_FILTER_CUNITS]; ++i)
+			for (int j = 0; j != file_search::MAX_EXTENSION_FILTER_CUNITS; ++j)
+			{
+				if (dot[j] == L'\0')
+					return ext_filters[i][j] == L'\0';
+
+				if(ext_filters[i][j] != dot[j])
 					break;
 
-				if (c == '/')
-					c = '\\';
-
-				*curr++ = c;
+				if (j == file_search::MAX_EXTENSION_FILTER_CUNITS - 1)
+					if (dot[j + 1] == L'\0')
+						return true;
 			}
 
-			if(*(curr - 1) != '\\')
-				*curr++ = '\\';
+		return false;
+	}
 
-			*curr++ = '*';
-		}
+	[[nodiscard]] DWORD advance_until_valid(HANDLE search_handle, WIN32_FIND_DATAW* find_data, fio::search mode, const wchar_t ext_filter[file_search::MAX_EXTENSION_FILTER_CNT][file_search::MAX_EXTENSION_FILTER_CUNITS]) noexcept
+	{
+		while (!is_valid(find_data, mode, ext_filter))
+			if (!FindNextFileW(search_handle, find_data))
+				return GetLastError();
 
-		*curr = '\0';
+		return S_OK;
+	}
+
+	[[nodiscard]] status file_search::create(const char* directory, fio::search search_mode, const char* ext_filters) noexcept
+	{
+		m_search_handle.invalidate_();
+
+		m_search_mode = search_mode;
+
+		wchar_t path_buf[32768];
 
 
-		// Process filters
+		for (int i = 0; i != MAX_EXTENSION_FILTER_CNT; ++i)
+			for (int j = 0; j != MAX_EXTENSION_FILTER_CUNITS; ++j)
+				m_ext_filters[i][j] = L'\0';
 
-		uint32_t filter_idx = 0;
-
-		if (ending_filters)
+		if (ext_filters)
 		{
-			const char* f = ending_filters;
+			DWORD ext_cus = MultiByteToWideChar(CP_UTF8, 0, ext_filters, -1, path_buf, 32768);
 
-			while (*f && filter_idx != sizeof(m_ending_filters) / sizeof(m_ending_filters[0]))
+			if (ext_cus == 0)
+				return to_status(HRESULT_FROM_WIN32(GetLastError()));
+
+			const wchar_t* curr = path_buf;
+
+			for (int i = 0; i != MAX_EXTENSION_FILTER_CNT; ++i)
 			{
-				if (*f == '.')
-					++f;
+				if (*curr == L'.')
+					++curr;
 
-				uint32_t char_idx = 0;
+				const wchar_t* prev = curr;
 
-				while (*f && *f != '\\' && *f != '/' && char_idx < sizeof(m_ending_filters[0]))
-					m_ending_filters[filter_idx][char_idx++] = *f++;
+				while (*curr != L'.' && *curr != L'\0')
+				{
+					m_ext_filters[i][curr - prev] = *curr;
 
-				if (char_idx != sizeof(m_ending_filters[0]) && char_idx != 0 && !(char_idx == 1 && m_ending_filters[filter_idx][0] == '?'))
-					m_ending_filters[filter_idx++][char_idx] = '\0';
-				else
-					m_ending_filters[filter_idx][0] = '\0';
+					++curr;
+				}
 
-				if (*f == '\\' || *f == '/')
-					++f;
+				if (*curr == L'\0')
+					break;
 			}
+
+			if (*curr != L'\0')
+				return to_status(error::too_large);
 		}
 
-		m_ending_filters[filter_idx][0] = '\0';
+		m_path = directory;
 
+		size_t dir_len = m_path.get_codeunits();
 
-		// Write search mode and 
+		if(m_path.back() != utf8_char('\\'))
+			m_path += '\\';
 
-		m_info_data.flags_and_padding = 1 | (static_cast<uint32_t>(search_mode) << 1);
+		int32_t buf_offset;
 
-
-		// Check if the search handle can actually be created
-
-		search_handle.set_(FindFirstFileA(m_search_path, reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4)));
-
-		if (search_handle.get_() == INVALID_HANDLE_VALUE)
+		if (dir_len > 3 && (directory[dir_len - 1] == '\\' || directory[dir_len - 1] == '/') && directory[dir_len - 2] == ':')
 		{
-			search_handle.set_(nullptr);
+			buf_offset = 0;
+		}
+		else
+		{
+			path_buf[0] = path_buf[1] = path_buf[3] = L'\\';
 
-			m_info_data.flags_and_padding &= ~1;
+			path_buf[2] = L'?';
 
+			buf_offset = 4;
+		}
+
+		DWORD path_cus = MultiByteToWideChar(CP_UTF8, 0, directory, -1, path_buf + buf_offset, 32768 - buf_offset);
+			
+		if(path_cus == 0)
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
+
+		path_cus += buf_offset;
+
+		if (path_cus > 32766)
+			return to_status(error::insufficient_buffer);
+
+		append_wildcard_to_search_path(path_buf, path_cus);
+
+		HANDLE h = FindFirstFileW(path_buf, reinterpret_cast<LPWIN32_FIND_DATAW>(m_internal_buf));
+
+		if (h == INVALID_HANDLE_VALUE)
+		{
+			DWORD err = GetLastError();
+
+			if (err == ERROR_FILE_NOT_FOUND)
+				return error::unavailable;
+
+			return to_status(HRESULT_FROM_WIN32(err));
 		}
 
-		// Skip to first valid file.
+		m_search_handle.set_(h);
 
-		while (has_next() && get_info().name() == ".." || get_info().name() == ".")
-			advance();
+		DWORD err = advance_until_valid(m_search_handle.get_(), reinterpret_cast<WIN32_FIND_DATAW*>(m_internal_buf), m_search_mode, m_ext_filters);
 
-		*(curr - 1) = '\0';
+		if (err == ERROR_NO_MORE_FILES)
+		{
+			m_search_mode = static_cast<fio::search>((1 << 31) | static_cast<uint32_t>(m_search_mode));
 
-		return {};
-	}
+			return {};
+		}
 
-	void file_search::close() noexcept
-	{
-		FindClose(search_handle.get_());
-
-		search_handle.set_(nullptr);
-	}
-
-	och::status file_search::advance() noexcept
-	{
-		check(HRESULT_FROM_WIN32(single_advance()));
+		if (err)
+			return to_status(HRESULT_FROM_WIN32(err));
 		
-		const fio::search mode = static_cast<fio::search>(m_info_data.flags_and_padding >> 1);
+		return {};
+	}
 
-		if (mode == fio::search::directories)
-		{
-			while (has_next() && (!static_cast<uint32_t>(m_info_data.attributes & fio::flag::directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
-				check(HRESULT_FROM_WIN32(single_advance()));
-		}
-		else if (mode == fio::search::files)
-		{
-			while (has_next() && (static_cast<uint32_t>(m_info_data.attributes & fio::flag::directory) || !matches_ending_filter(get_info().ending().raw_cbegin())))
-				check(HRESULT_FROM_WIN32(single_advance()));
-		}
+	[[nodiscard]] status file_search::close() noexcept
+	{
+		if (m_search_handle.get_() && !FindClose(m_search_handle.get_()))
+			return to_status(HRESULT_FROM_WIN32(GetLastError()));
+
+		m_search_handle.invalidate_();
 
 		return {};
 	}
 
-	bool file_search::has_next() const noexcept
+	[[nodiscard]] status file_search::advance() noexcept
 	{
-		return m_info_data.flags_and_padding & 1;
+		if (!FindNextFileW(m_search_handle.get_(), reinterpret_cast<WIN32_FIND_DATAW*>(m_internal_buf)))
+		{
+			DWORD err = GetLastError();
+
+			if (err == ERROR_NO_MORE_FILES)
+			{
+				m_search_mode = static_cast<fio::search>((1 << 31) | static_cast<uint32_t>(m_search_mode));
+
+				return {};
+			}
+			
+			return to_status(HRESULT_FROM_WIN32(err));
+		}
+
+		DWORD err = advance_until_valid(m_search_handle.get_(), reinterpret_cast<WIN32_FIND_DATAW*>(m_internal_buf), m_search_mode, m_ext_filters);
+
+		if (err == S_OK)
+			return {};
+
+		if (err == ERROR_NO_MORE_FILES)
+		{
+			m_search_mode = static_cast<fio::search>((1 << 31) | static_cast<uint32_t>(m_search_mode));
+
+			return {};
+		}
+
+		return to_status(HRESULT_FROM_WIN32(err));
 	}
 
-	file_search::file_info file_search::get_info() const noexcept
+	[[nodiscard]] bool file_search::has_more() const noexcept
 	{
-		return file_info(*this);
+		return !(static_cast<uint32_t>(m_search_mode) >> 31);
 	}
 
-	file_search::file_iterator file_search::begin() noexcept
+	[[nodiscard]] utf8_string file_search::curr_name() const noexcept
 	{
-		return file_iterator(this);
+		const WIN32_FIND_DATAW* find_data = reinterpret_cast<const WIN32_FIND_DATAW*>(m_internal_buf);
+
+		char name_buf[260 * 4];
+
+		if (!WideCharToMultiByte(CP_UTF8, 0, find_data->cFileName, -1, name_buf, 260 * 4, nullptr, nullptr))
+			return utf8_string();
+
+		return utf8_string(name_buf);
 	}
 
-	file_search::file_iterator file_search::end() noexcept
+	[[nodiscard]] utf8_string file_search::curr_path() const noexcept
 	{
-		return file_iterator(nullptr);
+		och::utf8_string path = m_path;
+
+		path += curr_name();
+
+		return std::move(path);
+	}
+
+	[[nodiscard]] bool file_search::curr_is_directory() const noexcept
+	{
+		const WIN32_FIND_DATAW* find_data = reinterpret_cast<const WIN32_FIND_DATAW*>(m_internal_buf);
+
+		return find_data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+	}
+
+	[[nodiscard]] och::time file_search::curr_creation_time() const noexcept
+	{
+		const WIN32_FIND_DATAW* find_data = reinterpret_cast<const WIN32_FIND_DATAW*>(m_internal_buf);
+
+		return och::time((static_cast<uint64_t>(find_data->ftCreationTime.dwHighDateTime) << 32) | find_data->ftCreationTime.dwLowDateTime);
+	}
+
+	[[nodiscard]] och::time file_search::curr_modification_time() const noexcept
+	{
+		const WIN32_FIND_DATAW* find_data = reinterpret_cast<const WIN32_FIND_DATAW*>(m_internal_buf);
+
+		return och::time((static_cast<uint64_t>(find_data->ftLastWriteTime.dwHighDateTime) << 32) | find_data->ftLastWriteTime.dwLowDateTime);
+	}
+	
+	[[nodiscard]] uint64_t file_search::curr_size() const noexcept
+	{
+		const WIN32_FIND_DATAW* find_data = reinterpret_cast<const WIN32_FIND_DATAW*>(m_internal_buf);
+
+		return (static_cast<uint64_t>(find_data->nFileSizeHigh) << 32) | find_data->nFileSizeLow;
 	}
 
 	file_search::~file_search() noexcept
 	{
-		close();
+		ignore_status(close());
 	}
 
-	uint32_t file_search::single_advance() noexcept
-	{
-		BOOL find_result = FindNextFileA(search_handle.get_(), reinterpret_cast<WIN32_FIND_DATAA*>(reinterpret_cast<char*>(&m_info_data) + 4));
-
-		if (!find_result)
-		{
-			m_info_data.flags_and_padding &= ~1u;
-
-			DWORD last_error = GetLastError();
-
-			if (last_error != ERROR_NO_MORE_FILES)
-				return last_error;
-		}
-
-		return 0;
-	}
-
-	bool file_search::matches_ending_filter(const char* ending) const noexcept
-	{
-		if (!m_ending_filters[0][0])
-			return true;
-
-		for (uint32_t i = 0; i != sizeof(m_ending_filters) / sizeof(m_ending_filters[0]); ++i)
-		{
-			if (!m_ending_filters[i][0])
-				break;
-
-			if (m_ending_filters[i][0] == '?')
-				for (uint32_t j = 0; ending[j] && j != sizeof(m_ending_filters[0] - 1); ++j)
-				{
-					char f = m_ending_filters[i][j + 1];
-					char e = ending[j];
-
-					if (f >= 'a' && f <= 'z')
-						f += 'A' - 'a';
-
-					if (e >= 'a' && e <= 'z')
-						e += 'A' - 'a';
-
-					if(f != e)
-						goto NO_MATCH;
-				}
-			else
-				for (uint32_t j = 0; ending[j] && j != sizeof(m_ending_filters[0]); ++j)
-					if (ending[j] != m_ending_filters[i][j])
-						goto NO_MATCH;
-
-			return true;
-
-		NO_MATCH:;
-		}
-
-		return false;
-	}
 
 
 

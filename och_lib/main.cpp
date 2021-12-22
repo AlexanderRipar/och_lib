@@ -39,22 +39,25 @@ och::status s0()
 
 int main()
 {
-	och::iohandle h = och::get_stdout();
+	//och::file_search search1;
+	//
+	//och::status s1 = search1.create("Hello", och::fio::search::all, nullptr);
 
-	if (och::status s = s0())
+	och::file_search search2;
+
+	och::status s2 = search2.create("C:\\Users\\alex_2\\Documents\\_Programming\\incomplete_and_ideas", och::fio::search::all, ".txt");
+
+	if (!s2)
 	{
-		och::print("Error 0x{:X} from {}\n\n{}\n\n", s.errcode(), s.errtype_name(), s.description());
+		while (search2.has_more())
+		{
+			och::print("{}\n", search2.curr_name());
 
-		och::range<const och::error_context> callstack = och::err::get_callstack();
-
-		if (callstack.len())
-			och::print("\nCallstack:\n\n");
-		else
-			och::print("\nNo callstack information available.\n\n");
-
-		for(auto& ctx : callstack)
-			och::print("File: {}\nFunction: {}\nLine: {} ({})\n\n", ctx.filename(), ctx.function(), ctx.line_number(), ctx.line_content());
+			check(search2.advance());
+		}
 	}
 	else
-		och::print("All good");
+	{
+		och::print("{}\n", s2.description());
+	}
 }
