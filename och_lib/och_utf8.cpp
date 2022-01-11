@@ -258,7 +258,7 @@ namespace och
 
 	bool utf8_string::reserve(uint32_t n) noexcept
 	{
-		if (n <= get_capacity())
+		if (n < get_capacity())
 			return true;				//min_capacity already exceeded; Nothing to do
 
 		if (is_sso())
@@ -732,9 +732,7 @@ namespace och
 
 	bool utf8_string::try_activate_sso() noexcept
 	{
-		bool can_activate_sso = !is_sso() && get_capacity() <= internal_buf_max;
-
-		if (can_activate_sso)
+		if (!is_sso() && get_codeunits() <= internal_buf_max)
 		{
 			char* tmp_ptr = ls.m_ptr;
 
@@ -750,7 +748,7 @@ namespace och
 			return true;
 		}
 
-		return can_activate_sso;
+		return false;
 	}
 
 	bool utf8_string::change_heap_cap(uint32_t cunits) noexcept
@@ -770,10 +768,8 @@ namespace och
 
 	uint32_t utf8_string::least_bigger_cap(uint32_t required) noexcept
 	{
-		required -= 1;
-
-		if (required <= min_heap_cap)
-			return min_heap_cap - 1;
+		if (required < min_heap_cap)
+			return min_heap_cap;
 
 		required |= required >> 1;
 		required |= required >> 2;
