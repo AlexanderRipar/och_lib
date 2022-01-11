@@ -307,9 +307,9 @@ namespace och
 			} ss;
 		};
 
-		static constexpr uint32_t min_heap_cap = 128;
-		static constexpr uint32_t internal_buf_max = sizeof(ss.m_internal_buf);
-		static constexpr uint8_t long_string_id = 0xFF;
+		static constexpr uint32_t MIN_HEAP_CAPACITY = 128;
+		static constexpr uint32_t MAX_SSO_CUNITS = sizeof(ss.m_internal_buf);
+		static constexpr uint8_t LONG_STRING_MARKER = 0xFF;
 
 		////////////////////////////////////////////////////Constructor////////////////////////////////////////////////////////////
 
@@ -347,9 +347,9 @@ namespace och
 
 		uint32_t shrink_to_fit() noexcept;
 
-		bool reserve(uint32_t n) noexcept;
+		bool reserve(uint32_t cunits) noexcept;
 
-		bool resize(uint32_t n) noexcept;
+		bool resize(uint32_t cunits) noexcept;
 
 		bool empty() const noexcept;
 
@@ -419,19 +419,19 @@ namespace och
 
 	private:
 
-		utf8_string(const char* cstr, uint32_t wds, uint32_t cps) noexcept;
+		utf8_string(const char* cstr, uint32_t cunits, uint32_t cpoints) noexcept;
 
-		void construct_ss(const char* cstring, uint32_t words) noexcept;
+		void construct_ss(const char* cstring, uint32_t cunits) noexcept;
 
-		void construct_ls(const char* cstring, uint32_t words, uint32_t codepoints) noexcept;
+		void construct_ls(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept;
 
-		bool set_to(const char* cstring, uint32_t words, uint32_t codepts) noexcept;
+		bool set_to(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept;
 
-		bool append(const char* cstring, uint32_t words, uint32_t codepts) noexcept;
+		bool append(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept;
 
-		bool insert(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos) noexcept;
+		bool insert(const char* cstring, uint32_t new_cunits, uint32_t new_cpoints, uint32_t pos) noexcept;
 
-		bool replace(const char* cstring, uint32_t new_words, uint32_t new_codepts, uint32_t pos) noexcept;
+		bool replace(const char* cstring, uint32_t new_units, uint32_t new_cpoints, uint32_t pos) noexcept;
 
 		void step(uint32_t& wd_idx, uint32_t& cp_idx, uint32_t last_cp_idx) const noexcept;
 
@@ -439,13 +439,13 @@ namespace och
 
 		bool try_activate_sso() noexcept;
 
-		bool change_heap_cap(uint32_t new_cap) noexcept;
+		bool change_heap_cap(uint32_t bytes) noexcept;
 
-		uint32_t least_bigger_cap(uint32_t required) noexcept;
+		uint32_t least_bigger_capacity(uint32_t required_bytes) noexcept;
 
-		void set_codeunits(uint32_t wds) noexcept;
+		void set_codeunits(uint32_t cpoints) noexcept;
 
-		void set_codepoints(uint32_t cps) noexcept;
+		void set_codepoints(uint32_t cunits) noexcept;
 	};
 
 	using string = utf8_string;

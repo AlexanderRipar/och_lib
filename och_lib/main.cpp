@@ -16,23 +16,11 @@
 
 int main()
 {
-	och::utf8_string s1;
-
-	for (int i = 0; i != 106; ++i)
-		s1 += 'X';
-
-	och::utf8_string s2;
-
-	for (int i = 0; i != 23; ++i)
-		s2 += 'Y';
-
-	s1 += s2;
-
-	const char* directory = "C:\\"; // "C:\\Users\\alex_2\\Documents\\_TU_Informatik"; // "C:\\Users\\alex_2\\Documents\\_Programming\\incomplete_and_ideas\\";
+	const char* directory = "C:\\Users\\alex_2\\Documents\\_TU_Informatik"; // "C:\\Users\\alex_2\\Documents\\_Programming\\incomplete_and_ideas\\";
 
 	och::recursive_file_search search;
 
-	if (och::status rst = search.create(directory, och::fio::search::all, nullptr, 2))
+	if (och::status rst = search.create(directory, och::fio::search::all, nullptr, 0))
 	{
 		och::print("Could not create search: {}\n", rst.description());
 
@@ -50,8 +38,6 @@ int main()
 		dir_cnt += search.curr_is_directory();
 
 		hidden_cnt += search.curr_is_hidden();
-
-		search.curr_path();
 
 		och::print("{} {}\n", search.curr_is_directory() ? "[[D]]" : "[[F]]", search.curr_path());
 

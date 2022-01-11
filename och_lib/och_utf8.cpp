@@ -170,25 +170,38 @@ namespace och
 
 	//////////////////////////////////////////////////Constructor//////////////////////////////////////////////////////////////
 
-	utf8_string::utf8_string() noexcept : ss{ {0}, internal_buf_max } {}
+	utf8_string::utf8_string() noexcept : ss{ { '\0' }, MAX_SSO_CUNITS } {}
 
 	utf8_string::utf8_string(const utf8_view& view) noexcept
 	{
-		view.get_codeunits() <= internal_buf_max ? construct_ss(view.raw_cbegin(), view.get_codeunits()) : construct_ls(view.raw_cbegin(), view.get_codeunits(), view.get_codepoints());
+		const uint32_t cunits = view.get_codeunits();
+
+		if (cunits <= MAX_SSO_CUNITS)
+			construct_ss(view.raw_cbegin(), cunits);
+		else
+			construct_ls(view.raw_cbegin(), cunits, view.get_codepoints());
 	}
 
 	utf8_string::utf8_string(const utf8_string& str) noexcept
 	{
-		str.get_codeunits() <= internal_buf_max ? construct_ss(str.raw_cbegin(), str.get_codeunits()) : construct_ls(str.raw_cbegin(), str.get_codeunits(), str.get_codepoints());
+		const uint32_t cunits = str.get_codeunits();
+
+		if (cunits <= MAX_SSO_CUNITS)
+			construct_ss(str.raw_cbegin(), cunits);
+		else
+			construct_ls(str.raw_cbegin(), cunits, str.get_codepoints());
 	}
 
 	utf8_string::utf8_string(const char* cstring) noexcept
 	{
-		uint32_t words = 0, codepts = 0;
+		uint32_t cunits = 0, cpoints = 0;
 
-		_utf8_len(cstring, words, codepts);
+		_utf8_len(cstring, cunits, cpoints);
 
-		words <= internal_buf_max ? construct_ss(cstring, words) : construct_ls(cstring, words, codepts);
+		if (cunits <= MAX_SSO_CUNITS)
+			construct_ss(cstring, cunits);
+		else
+			construct_ls(cstring, cunits, cpoints);
 	}
 
 	utf8_string::~utf8_string() noexcept
@@ -201,22 +214,34 @@ namespace och
 
 	char* utf8_string::raw_begin() noexcept
 	{
-		return is_sso() ? ss.m_internal_buf : ls.m_ptr;
+		if (is_sso())
+			return ss.m_internal_buf;
+		else
+			return ls.m_ptr;
 	}
 
 	const char* utf8_string::raw_cbegin() const noexcept
 	{
-		return is_sso() ? ss.m_internal_buf : ls.m_ptr;
+		if (is_sso())
+			return ss.m_internal_buf;
+		else
+			return ls.m_ptr;
 	}
 
 	char* utf8_string::raw_end() noexcept
 	{
-		return is_sso() ? ss.m_internal_buf + internal_buf_max - ss.m_internal_cap : ls.m_ptr + ls.m_codeunits;
+		if (is_sso())
+			return ss.m_internal_buf + MAX_SSO_CUNITS - ss.m_internal_cap;
+		else
+			return ls.m_ptr + ls.m_codeunits;
 	}
 
 	const char* utf8_string::raw_cend() const noexcept
 	{
-		return is_sso() ? ss.m_internal_buf + internal_buf_max - ss.m_internal_cap : ls.m_ptr + ls.m_codeunits;
+		if (is_sso())
+			return ss.m_internal_buf + MAX_SSO_CUNITS - ss.m_internal_cap;
+		else
+			return ls.m_ptr + ls.m_codeunits;
 	}
 
 	utf8_iterator utf8_string::begin() const noexcept
@@ -233,49 +258,86 @@ namespace och
 
 	uint32_t utf8_string::get_codeunits() const noexcept
 	{
-		return is_sso() ? internal_buf_max - ss.m_internal_cap : ls.m_codeunits;
+		if (is_sso())
+			return MAX_SSO_CUNITS - ss.m_internal_cap;
+		else
+			return ls.m_codeunits;
 	}
 
 	uint32_t utf8_string::get_codepoints() const noexcept
 	{
-		return is_sso() ? [](const char* str) {uint32_t cps = 0; while (*str)cps += ((*(str++) & 0xC0) != 0x80); return cps; }(ss.m_internal_buf) : ls.m_codepoints;
+		if (is_sso())
+		{
+			uint32_t cpoints = 0;
+
+			for (const char* str = ss.m_internal_buf; *str != '\0'; ++str)
+				cpoints += (*str++ & 0xC0) != 0x80;
+
+			return cpoints;
+		}
+		else
+		{
+			return ls.m_codepoints;
+		}
 	}
 
 	uint32_t utf8_string::get_capacity() const noexcept
 	{
-		return is_sso() ? internal_buf_max : ls.m_capacity;
+		if (is_sso())
+			return MAX_SSO_CUNITS;
+		else
+			return ls.m_capacity;
 	}
 
 	uint32_t utf8_string::shrink_to_fit() noexcept
 	{
 		if (is_sso() || try_activate_sso())
-			return internal_buf_max;
+			return MAX_SSO_CUNITS;
 
-		change_heap_cap(get_codeunits());
+		change_heap_cap(get_codeunits() + 1);
 
 		return ls.m_capacity;
 	}
 
-	bool utf8_string::reserve(uint32_t n) noexcept
+	bool utf8_string::reserve(uint32_t cunits) noexcept
 	{
-		if (n < get_capacity())
-			return true;				//min_capacity already exceeded; Nothing to do
+		if (cunits < get_capacity())
+			return true;						//min_capacity already exceeded; Nothing to do
 
 		if (is_sso())
-			return deactivate_sso(n);	//min_capacity not reached and SSO active
+			return deactivate_sso(cunits + 1);	//min_capacity not reached and SSO active
 
-		return change_heap_cap(n);		//min_capacity not reached and SSO inactive
+		return change_heap_cap(cunits + 1);		//min_capacity not reached and SSO inactive
 	}
 
-	bool utf8_string::resize(uint32_t n) noexcept
+	bool utf8_string::resize(uint32_t cunits) noexcept
 	{
-		if (get_capacity() == least_bigger_cap(n) || (is_sso() && n <= internal_buf_max))
-			return true;				//If capacity is already matched, or sso is active and a fitting capacity is requested, return true
+		if (get_capacity() == least_bigger_capacity(cunits + 1))
+			return true;							//If capacity is already matched, or sso is active and a fitting capacity is requested, return true
 
 		if (is_sso())
-			return deactivate_sso(n);	//Requested capacity does not fit internal buffer; Deactivate sso
+		{
+			if (cunits <= MAX_SSO_CUNITS)
+			{
+				ss.m_internal_cap = static_cast<uint8_t>(MAX_SSO_CUNITS - cunits);
 
-		return change_heap_cap(n);		//sso already inactive and size actually changed; Change capacity
+				ss.m_internal_buf[cunits] = '\0';
+
+				return true;
+			}
+
+			if (!deactivate_sso(cunits + 1))		//Requested capacity does not fit internal buffer; Deactivate sso
+				return false;
+		}
+		else
+		{
+			if (!change_heap_cap(cunits + 1))			//sso already inactive and size actually changed; Change capacity
+				return false;
+		}
+
+		ls.m_ptr[cunits] = '\0';
+
+		return true;
 	}
 
 	bool utf8_string::empty() const noexcept
@@ -285,7 +347,7 @@ namespace och
 
 	bool utf8_string::is_sso() const noexcept
 	{
-		return ss.m_internal_cap != long_string_id;
+		return ss.m_internal_cap != LONG_STRING_MARKER;
 	}
 
 	//////////////////////////////////////////////Element Acess////////////////////////////////////////////////////////////////
@@ -401,7 +463,7 @@ namespace och
 
 		ss.m_internal_buf[0] = '\0';
 
-		ss.m_internal_cap = internal_buf_max;
+		ss.m_internal_cap = MAX_SSO_CUNITS;
 	}
 
 	void utf8_string::erase(uint32_t pos, uint32_t len) noexcept
@@ -560,7 +622,10 @@ namespace och
 
 	utf8_string::utf8_string(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept
 	{
-		cunits <= internal_buf_max ? construct_ss(cstring, cunits) : construct_ls(cstring, cunits, cpoints);
+		if (cunits <= MAX_SSO_CUNITS)
+			construct_ss(cstring, cunits);
+		else
+			construct_ls(cstring, cunits, cpoints);
 	}
 
 	void utf8_string::construct_ss(const char* cstring, uint32_t cunits) noexcept
@@ -570,18 +635,18 @@ namespace och
 
 		ss.m_internal_buf[cunits] = '\0';
 
-		ss.m_internal_cap = static_cast<uint8_t>(internal_buf_max - cunits);
+		ss.m_internal_cap = static_cast<uint8_t>(MAX_SSO_CUNITS - cunits);
 	}
 
 	void utf8_string::construct_ls(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept
 	{
-		ls.m_capacity = least_bigger_cap(cunits);
+		ls.m_capacity = least_bigger_capacity(cunits + 1);
 
-		ls.m_ptr = (char*)malloc(ls.m_capacity * sizeof(char));
+		ls.m_ptr = static_cast<char*>(malloc(ls.m_capacity * sizeof(char)));
 
 		if (!ls.m_ptr)
 		{
-			ss.m_internal_cap = internal_buf_max;
+			ss.m_internal_cap = MAX_SSO_CUNITS;
 
 			return;
 		}
@@ -595,7 +660,7 @@ namespace och
 
 		ls.m_codepoints = cpoints;
 
-		ss.m_internal_cap = long_string_id;
+		ss.m_internal_cap = LONG_STRING_MARKER;
 	}
 
 	bool utf8_string::set_to(const char* cstring, uint32_t cunits, uint32_t cpoints) noexcept
@@ -709,30 +774,37 @@ namespace och
 		}
 	}
 
-	bool utf8_string::deactivate_sso(uint32_t cunits) noexcept
+	bool utf8_string::deactivate_sso(uint32_t bytes) noexcept
 	{
-		uint32_t alloc_size = least_bigger_cap(cunits);
+		uint32_t alloc_size = least_bigger_capacity(bytes);
 
-		char* tmp_ptr = (char*)malloc(alloc_size * sizeof(char));
+		char* tmp_ptr = static_cast<char*>(malloc(alloc_size * sizeof(char)));
 
 		if (!tmp_ptr)			//Allocation failed...
 			return false;
 
-		for (uint32_t i = 0; i != internal_buf_max - ss.m_internal_cap + 1; ++i)
+		const uint32_t curr_cunits = MAX_SSO_CUNITS - ss.m_internal_cap;
+
+		uint32_t curr_cpoints = 0;
+
+		for (const char* str = ss.m_internal_buf; *str != '\0'; ++str)
+			curr_cpoints += (*str++ & 0xC0) != 0x80;
+
+		for (uint32_t i = 0; i != curr_cunits + 1; ++i)
 			tmp_ptr[i] = ss.m_internal_buf[i];
 
 		ls.m_ptr = tmp_ptr;
-		ls.m_codeunits = internal_buf_max - ss.m_internal_cap;
+		ls.m_codeunits = curr_cunits;
+		ls.m_codepoints = curr_cpoints;
 		ls.m_capacity = alloc_size;
-		ls.m_codepoints = [](const char* str) {uint32_t cps = 0; while (*str)cps += ((*(str++) & 0xC0) != 0x80); return cps; }(tmp_ptr);
-		ss.m_internal_cap = long_string_id;
+		ss.m_internal_cap = LONG_STRING_MARKER;
 
 		return true;
 	}
 
 	bool utf8_string::try_activate_sso() noexcept
 	{
-		if (!is_sso() && get_codeunits() <= internal_buf_max)
+		if (!is_sso() && get_codeunits() <= MAX_SSO_CUNITS)
 		{
 			char* tmp_ptr = ls.m_ptr;
 
@@ -741,7 +813,7 @@ namespace och
 			for (uint32_t i = 0; i != tmp_len + 1; ++i)
 				ss.m_internal_buf[i] = tmp_ptr[i];
 
-			ss.m_internal_cap = static_cast<uint8_t>(internal_buf_max - tmp_len);
+			ss.m_internal_cap = static_cast<uint8_t>(MAX_SSO_CUNITS - tmp_len);
 
 			free(tmp_ptr);
 
@@ -751,11 +823,11 @@ namespace och
 		return false;
 	}
 
-	bool utf8_string::change_heap_cap(uint32_t cunits) noexcept
+	bool utf8_string::change_heap_cap(uint32_t bytes) noexcept
 	{
-		uint32_t alloc_size = least_bigger_cap(cunits);
+		uint32_t alloc_size = least_bigger_capacity(bytes);
 
-		char* tmp_ptr = (char*)realloc(ls.m_ptr, alloc_size * sizeof(char));
+		char* tmp_ptr = static_cast<char*>(realloc(ls.m_ptr, alloc_size));
 
 		if (!tmp_ptr)
 			return false;		//Reallocation failed...
@@ -766,27 +838,33 @@ namespace och
 		return true;
 	}
 
-	uint32_t utf8_string::least_bigger_cap(uint32_t required) noexcept
+	uint32_t utf8_string::least_bigger_capacity(uint32_t required_bytes) noexcept
 	{
-		if (required < min_heap_cap)
-			return min_heap_cap;
+		if (required_bytes <= MIN_HEAP_CAPACITY)
+			return MIN_HEAP_CAPACITY;
 
-		required |= required >> 1;
-		required |= required >> 2;
-		required |= required >> 4;
-		required |= required >> 8;
-		required |= required >> 16;
+		--required_bytes;
 
-		return ++required;
+		required_bytes |= required_bytes >> 1;
+		required_bytes |= required_bytes >> 2;
+		required_bytes |= required_bytes >> 4;
+		required_bytes |= required_bytes >> 8;
+		required_bytes |= required_bytes >> 16;
+
+		return ++required_bytes;
 	}
 
 	void utf8_string::set_codeunits(uint32_t cunits) noexcept
 	{
-		is_sso() ? ss.m_internal_cap = static_cast<uint8_t>(internal_buf_max - cunits) : ls.m_codeunits = cunits;
+		if (is_sso())
+			ss.m_internal_cap = static_cast<uint8_t>(MAX_SSO_CUNITS - cunits);
+		else
+			ls.m_codeunits = cunits;
 	}
 
 	void utf8_string::set_codepoints(uint32_t cpoints) noexcept
 	{
-		if (!is_sso()) ls.m_codepoints = cpoints;
+		if (!is_sso())
+			ls.m_codepoints = cpoints;
 	}
 }
