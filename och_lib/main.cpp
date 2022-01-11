@@ -14,50 +14,63 @@
 #include "och_err.h"
 #include "och_fmt.h"
 
-och::status s2()
-{
-	och::iohandle h;
-
-	check(och::open_file(h, "PLOOBL", och::fio::access::read, och::fio::open::append, och::fio::open::fail));
-
-	return {};
-}
-
-och::status s1()
-{
-	check(s2());
-
-	return {};
-}
-
-och::status s0()
-{
-	check(s1());
-
-	return {};
-}
-
 int main()
 {
-	//och::file_search search1;
-	//
-	//och::status s1 = search1.create("Hello", och::fio::search::all, nullptr);
+	och::utf8_string s1;
 
-	och::file_search search2;
+	for (int i = 0; i != 106; ++i)
+		s1 += 'X';
 
-	och::status s2 = search2.create("C:\\Users\\alex_2\\Documents\\_Programming\\incomplete_and_ideas", och::fio::search::all, ".txt");
+	och::utf8_string s2;
 
-	if (!s2)
+	for (int i = 0; i != 23; ++i)
+		s2 += 'Y';
+
+	s1 += s2;
+
+	const char* directory = "C:\\"; // "C:\\Users\\alex_2\\Documents\\_TU_Informatik"; // "C:\\Users\\alex_2\\Documents\\_Programming\\incomplete_and_ideas\\";
+
+	och::recursive_file_search search;
+
+	if (och::status rst = search.create(directory, och::fio::search::all, nullptr, 2))
 	{
-		while (search2.has_more())
-		{
-			och::print("{}\n", search2.curr_name());
+		och::print("Could not create search: {}\n", rst.description());
 
-			check(search2.advance());
+		return 0;
+	}
+
+	och::print("Starting enumeration:\n\n");
+
+	uint32_t file_cnt = 0, dir_cnt = 0, hidden_cnt = 0;
+
+	while (search.has_more())
+	{
+		file_cnt += search.curr_is_file();
+
+		dir_cnt += search.curr_is_directory();
+
+		hidden_cnt += search.curr_is_hidden();
+
+		search.curr_path();
+
+		och::print("{} {}\n", search.curr_is_directory() ? "[[D]]" : "[[F]]", search.curr_path());
+
+		if (och::status rst = search.advance())
+		{
+			och::print("Could not advance: {} ({})\n", rst.description(), rst.errcode());
+
+			break;
 		}
 	}
-	else
-	{
-		och::print("{}\n", s2.description());
-	}
+
+	och::print("\n\n{} elements found in total.\n", file_cnt + dir_cnt);
+
+	if(file_cnt)
+		och::print("{} of which were files.\n", file_cnt);
+
+	if (dir_cnt)
+		och::print("{} of which were directories.\n", dir_cnt);
+
+	if (hidden_cnt)
+		och::print("{} of which were hidden.\n", hidden_cnt);
 }

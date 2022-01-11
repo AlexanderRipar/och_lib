@@ -87,13 +87,85 @@ namespace och
 	}
 
 #if defined(_WIN32)
+
 	using iohandle_rep = void*;
+
 	constexpr iohandle_rep invalid_iohandle = nullptr;
-	constexpr void* invalid_file_array_ptr = nullptr;
+
+	constexpr size_t MAX_FILENAME_CHARS = 32768;
+
+	struct file_search_result
+	{
+	private:
+
+		uint8_t m_win32_find_dataw[592] alignas(8);
+
+	public:
+
+		[[nodiscard]] utf8_string name() const noexcept;
+
+		[[nodiscard]] bool is_directory() const noexcept;
+
+		[[nodiscard]] bool is_file() const noexcept;
+
+		[[nodiscard]] bool is_hidden() const noexcept;
+
+		[[nodiscard]] uint64_t size() const noexcept;
+
+		[[nodiscard]] time creation_time() const noexcept;
+
+		[[nodiscard]] time modification_time() const noexcept;
+	};
+
 #elif defined(__linux__)
+
 	using iohandle_rep = int;
+
 	constexpr iohandle_rep invalid_iohandle = -1;
-	constexpr void* invalid_file_array_ptr = nullptr;
+
+	constexpr size_t MAX_FILENAME_CHARS = 4095;
+
+	struct file_search_result
+	{
+	private:
+
+		void* m_dirent_ptr;
+
+		uint64_t m_stat[512] alignas(8);
+
+	public:
+
+		[[nodiscard]] utf8_string name() const noexcept;
+
+		[[nodiscard]] bool is_directory() const noexcept;
+
+		[[nodiscard]] bool is_file() const noexcept;
+
+		[[nodiscard]] bool is_hidden() const noexcept;
+
+		[[nodiscard]] uint64_t size() const noexcept;
+
+		[[nodiscard]] time creation_time() const noexcept;
+
+		[[nodiscard]] time modification_time() const noexcept;
+
+		void* get_dirent_ptr_() noexcept
+		{
+			return m_dirent_ptr;
+		}
+
+		void set_dirent_ptr_raw_(void* ptr) noexcept
+		{
+			m_dirent_ptr = ptr;
+		}
+
+		void* get_stat_ptr_raw_() noexcept
+		{
+			return static_cast<void*>(&m_stat);
+		}
+	};
+
+
 #endif
 
 	struct iohandle
@@ -104,7 +176,7 @@ namespace och
 
 	public:
 
-		iohandle() = default;
+		iohandle() : m_val{ invalid_iohandle } {};
 
 		iohandle(const iohandle&) = delete;
 
@@ -141,7 +213,7 @@ namespace och
 
 	public:
 
-		file_mapper_handle() = default;
+		file_mapper_handle() : m_val{ invalid_iohandle } {}
 
 		file_mapper_handle(const file_mapper_handle&) = delete;
 
@@ -180,7 +252,7 @@ namespace och
 
 	public:
 
-		file_array_handle() = default;
+		file_array_handle() : m_ptr{ nullptr }, m_bytes{ 0ull } {}
 
 		file_array_handle(const file_array_handle&) = delete;
 
@@ -190,7 +262,7 @@ namespace och
 
 		operator bool() const noexcept
 		{
-			return m_ptr != invalid_file_array_ptr;
+			return m_ptr != nullptr;
 		}
 
 		void* ptr() const noexcept
@@ -216,6 +288,43 @@ namespace och
 		}
 	};
 
+	struct file_search_handle
+	{
+	private:
+
+		void* m_val;
+
+	public:
+
+		file_search_handle() : m_val{ nullptr } {}
+
+		file_search_handle(const file_array_handle&) = delete;
+
+		file_search_handle(file_array_handle&&) = delete;
+
+		explicit file_search_handle(void* val) noexcept : m_val{ val } {};
+
+		operator bool() const noexcept
+		{
+			return m_val != nullptr;
+		}
+
+		void* get_() const noexcept
+		{
+			return m_val;
+		}
+
+		void set_(void* ptr) noexcept
+		{
+			m_val = ptr;
+		}
+
+		void invalidate_() noexcept
+		{
+			set_(nullptr);
+		}
+	};
+
 
 
 	[[nodiscard]] status open_file(iohandle& out_handle, const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode = fio::share::none, fio::flag flags = fio::flag::normal) noexcept;
@@ -224,11 +333,15 @@ namespace och
 
 	[[nodiscard]] status file_as_array(file_array_handle& out_handle, const file_mapper_handle& file_mapper, fio::access access_rights, uint64_t beg, uint64_t end) noexcept;
 
+	[[nodiscard]] status create_file_search(file_search_handle& out_handle, file_search_result& out_result, const char* directory) noexcept;
+
 	[[nodiscard]] status close_file(iohandle& file) noexcept;
 
 	[[nodiscard]] status close_file_mapper(file_mapper_handle& mapper) noexcept;
 
 	[[nodiscard]] status close_file_array(file_array_handle& file_array) noexcept;
+
+	[[nodiscard]] status close_file_search(file_search_handle& file_search) noexcept;
 
 	[[nodiscard]] status delete_file(const char* filename) noexcept;
 
@@ -252,7 +365,7 @@ namespace och
 
 	[[nodiscard]] status create_tempfile(iohandle& out_handle) noexcept;
 
-
+	[[nodiscard]] status advance_file_search(file_search_result& out_result, const file_search_handle& file_search) noexcept;
 
 	struct filehandle
 	{
@@ -271,20 +384,6 @@ namespace och
 		[[nodiscard]] status create(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
 		{
 			check(open_file(m_file, filename, access_rights, existing_mode, new_mode, share_mode));
-
-			return {};
-		}
-
-		[[nodiscard]] status create(const och::stringview& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
-		{
-			check(create(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode));
-
-			return {};
-		}
-
-		[[nodiscard]] status create(const och::string& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode) noexcept
-		{
-			check(create(filename.raw_cbegin(), access_rights, existing_mode, new_mode, share_mode));
 
 			return {};
 		}
@@ -400,20 +499,6 @@ namespace och
 			return {};
 		}
 		
-		status create(const och::stringview& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, uint64_t mapping_size = 0, uint64_t mapping_offset = 0, fio::share share_mode = fio::share::none) noexcept
-		{
-			check(create(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset, share_mode));
-
-			return {};
-		}
-		
-		status create(const och::string& filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, uint64_t mapping_size = 0, uint64_t mapping_offset = 0, fio::share share_mode = fio::share::none) noexcept
-		{
-			check(create(filename.raw_cbegin(), access_rights, existing_mode, new_mode, mapping_size, mapping_offset, share_mode));
-
-			return {};
-		}
-
 		void close() noexcept
 		{
 			close_file_array(m_data);
@@ -476,25 +561,29 @@ namespace och
 
 	private:
 
-		iohandle m_search_handle;
+		file_search_handle m_handle;
+
+		file_search_result m_result;
 
 		fio::search m_search_mode;
 
 		utf8_string m_path;
 
+#if defined(__linux__)
+		char m_ext_filters[MAX_EXTENSION_FILTER_CNT][MAX_EXTENSION_FILTER_CUNITS];
+#elif defined(_WIN32)
 		wchar_t m_ext_filters[MAX_EXTENSION_FILTER_CNT][MAX_EXTENSION_FILTER_CUNITS];
-
-		uint64_t m_internal_buf[74];
+#endif
 
 	public:
 
 		file_search() noexcept = default;
 
 		file_search(const file_search&) = delete;
-
+		
 		file_search(file_search&&) = delete;
 
-		[[nodiscard]] status create(const char* directory, fio::search search_mode, const char* ext_filter) noexcept;
+		[[nodiscard]] status create(const char* directory, fio::search search_mode, const char* ext_filters) noexcept;
 
 		[[nodiscard]] status close() noexcept;
 
@@ -508,6 +597,10 @@ namespace och
 
 		[[nodiscard]] bool curr_is_directory() const noexcept;
 
+		[[nodiscard]] bool curr_is_file() const noexcept;
+
+		[[nodiscard]] bool curr_is_hidden() const noexcept;
+
 		[[nodiscard]] och::time curr_creation_time() const noexcept;
 
 		[[nodiscard]] och::time curr_modification_time() const noexcept;
@@ -515,6 +608,69 @@ namespace och
 		[[nodiscard]] uint64_t curr_size() const noexcept;
 
 		~file_search() noexcept;
+	};
+
+	struct recursive_file_search
+	{
+		static constexpr size_t MAX_EXTENSION_FILTER_CNT = 4;
+
+		static constexpr size_t MAX_EXTENSION_FILTER_CUNITS = 4;
+
+		static constexpr size_t MAX_RECURSION_DEPTH = 32;
+
+	private:
+
+		file_search_result m_result;
+
+		uint32_t m_curr_recursion_level;
+
+		uint32_t m_max_recursion_level;
+
+		fio::search m_search_mode;
+
+		utf8_string m_path;
+
+#if defined(__linux__)
+		char m_ext_filters[MAX_EXTENSION_FILTER_CNT][MAX_EXTENSION_FILTER_CUNITS];
+#elif defined(_WIN32)
+		wchar_t m_ext_filters[MAX_EXTENSION_FILTER_CNT][MAX_EXTENSION_FILTER_CUNITS];
+#endif
+
+		file_search_handle m_handle_stack[MAX_RECURSION_DEPTH];
+
+	public:
+
+		recursive_file_search() noexcept = default;
+
+		recursive_file_search(const recursive_file_search&) = delete;
+
+		recursive_file_search(recursive_file_search&&) = delete;
+
+		[[nodiscard]] status create(const char* directory, fio::search search_mode, const char* ext_filters, uint32_t max_recursion_level) noexcept;
+
+		[[nodiscard]] status close() noexcept;
+
+		[[nodiscard]] status advance() noexcept;
+
+		[[nodiscard]] bool has_more() const noexcept;
+
+		[[nodiscard]] utf8_string curr_name() const noexcept;
+
+		[[nodiscard]] utf8_string curr_path() const noexcept;
+
+		[[nodiscard]] bool curr_is_directory() const noexcept;
+
+		[[nodiscard]] bool curr_is_file() const noexcept;
+
+		[[nodiscard]] bool curr_is_hidden() const noexcept;
+
+		[[nodiscard]] och::time curr_creation_time() const noexcept;
+
+		[[nodiscard]] och::time curr_modification_time() const noexcept;
+
+		[[nodiscard]] uint64_t curr_size() const noexcept;
+
+		~recursive_file_search() noexcept;
 	};
 
 	

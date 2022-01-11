@@ -116,14 +116,17 @@ och::utf8_view och::status::errtype_name() const noexcept
 {
 	switch (static_cast<och::error_type>(m_errcode >> 32))
 	{
-	case error_type::NONE:
-		return "NONE";
 	case error_type::och:
 		return "och::status";
+
 	case error_type::hresult:
 		return "HRESULT";
+
 	case error_type::vkresult:
 		return "VkResult";
+
+	case error_type::errnum:
+		return "errnum";
 	}
 
 	return "[[Unknown]]";
@@ -133,10 +136,34 @@ och::utf8_string och::status::description() const noexcept
 {
 	switch (static_cast<och::error_type>(m_errcode >> 32))
 	{
-	case och::error_type::NONE:
-		return och::utf8_string("[[No error]]");
-
 	case och::error_type::och:
+		
+		switch (static_cast<och::error>(m_errcode))
+		{
+		case och::error::ok:
+			return utf8_string("[[No error]]");
+
+		case och::error::insufficient_buffer:
+			return utf8_string("A buffer was too small to hold the given contents");
+
+		case och::error::argument_invalid:
+			return utf8_string("An invalid argument was passed to a function");
+
+		case och::error::function_unavailable:
+			return utf8_string("The function is not available on this system");
+
+		case och::error::argument_too_large:
+			return utf8_string("A function argument was too large");
+
+		case och::error::no_memory:
+			return utf8_string("There is not enough memory available to complete the operation");
+
+		case och::error::no_more_data:
+			return utf8_string("No more data could be found");
+
+		default:
+			break;
+		}
 		break;
 
 	case och::error_type::hresult:

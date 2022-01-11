@@ -115,23 +115,23 @@ namespace och
 
 #define ignore_status(s) if(s) och::err::reset_callstack();
 
-	enum class error_type
+	enum class error_type : uint32_t
 	{
-		NONE = 0,
-		och = 1,
-		hresult = 2,
-		vkresult = 3,
-		errnum = 4,
+		och = 0,
+		hresult = 1,
+		vkresult = 2,
+		errnum = 3,
 	};
 
-	enum class error
+	enum class error : uint32_t
 	{
 		ok = 0,
 		insufficient_buffer,
-		invalid_argument,
-		unavailable,
-		null_argument,
-		too_large,
+		argument_invalid,
+		argument_too_large,
+		function_unavailable,
+		no_memory,
+		no_more_data,
 	};
 
 	struct status
@@ -158,6 +158,16 @@ namespace och
 		och::utf8_view errtype_name() const noexcept;
 
 		och::utf8_string description() const noexcept;
+
+		bool operator==(const error& rhs) const noexcept
+		{
+			return m_errcode == static_cast<uint64_t>(rhs);
+		}
+
+		bool operator!=(const error& rhs) const noexcept
+		{
+			return m_errcode != static_cast<uint64_t>(rhs);
+		}
 	};
 
 	namespace err
