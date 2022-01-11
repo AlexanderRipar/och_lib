@@ -913,8 +913,6 @@ namespace och
 
 	[[nodiscard]] status recursive_file_search::advance() noexcept
 	{
-		const WIN32_FIND_DATAW* debug_helper_data = get_fsr_data_ptr(&m_result);
-
 		do
 		{
 			if (curr_is_directory() && m_curr_recursion_level + 1 < m_max_recursion_level)
@@ -928,7 +926,7 @@ namespace och
 
 				if (status rst_push = create_file_search(m_handle_stack[++m_curr_recursion_level], m_result, m_path.raw_cbegin()))
 				{
-					if (rst_push != error::no_more_data && rst_push.errcode() != HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED))
+					if (rst_push != error::no_more_data && rst_push.errcode() != static_cast<uint32_t>(HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED)))
 						return to_status(rst_push);
 
 					check(close_file_search(m_handle_stack[m_curr_recursion_level--]));
