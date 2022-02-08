@@ -28,7 +28,13 @@ namespace och
 
 		int32_t chars_written = MultiByteToWideChar(CP_UTF8, 0, str, -1, buf + 4, MAX_FILENAME_CHARS - 4);
 
-		return chars_written + ((chars_written != 0) << 2);
+		int32_t total_written = chars_written + ((chars_written != 0) << 2);
+
+		for (int32_t i = 4; i < total_written; ++i)
+			if (buf[i] == L'/')
+				buf[i] = L'\\';
+
+		return total_written;
 	}
 
 
@@ -229,6 +235,8 @@ namespace och
 		if (!utf8_str_to_utf16_filename(filename, wide_filename))
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
 
+
+
 		HANDLE h = CreateFileW(wide_filename, access, static_cast<uint32_t>(share_mode), nullptr, openmode, fileflags, nullptr);
 
 		if (h == INVALID_HANDLE_VALUE)
@@ -239,71 +247,47 @@ namespace och
 		return {};
 	}
 
-	[[nodiscard]] status create_file_mapper(file_mapper_handle& out_handle, const iohandle& file, uint64_t size, fio::access page_mode, const char* mapping_name) noexcept
+	[[nodiscard]] status file_as_array(file_array_handle& out_handle, const iohandle& file, fio::access access_rights, uint64_t offset, uint64_t mapped_bytes) noexcept
 	{
 		out_handle.invalidate_();
 
 		LARGE_INTEGER _size;
 
-		_size.QuadPart = size;
+		_size.QuadPart = mapped_bytes;
 
-		uint32_t access = access_interp_page(page_mode);
+		uint32_t access_page = access_interp_page(access_rights);
 
-		if (access == ~0u)
+		if (access_page == ~0u)
 			return to_status(error::argument_invalid);
 
-		wchar_t path_buf[MAX_FILENAME_CHARS];
+		HANDLE mapping_handle = CreateFileMappingW(file.get_(), nullptr, access_page, _size.HighPart, _size.LowPart, nullptr);
 
-		const wchar_t* final_mapping_name = nullptr;
-
-		if (mapping_name)
-		{
-			if (!MultiByteToWideChar(CP_UTF8, 0, mapping_name, -1, path_buf, MAX_FILENAME_CHARS))
-				return to_status(HRESULT_FROM_WIN32(GetLastError()));
-
-			final_mapping_name = path_buf;
-		}
-
-		HANDLE h = CreateFileMappingW(file.get_(), nullptr, access, _size.HighPart, _size.LowPart, final_mapping_name);
-
-		if (!h)
+		if (!mapping_handle)
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
-
-		out_handle.set_(h);
-
-		return {};
-	}
-
-	[[nodiscard]] status file_as_array(file_array_handle& out_handle, const file_mapper_handle& file_mapping, fio::access filemap_mode, uint64_t beg, uint64_t end) noexcept
-	{
-		out_handle.invalidate_();
 
 		LARGE_INTEGER _beg;
 
-		_beg.QuadPart = beg;
+		_beg.QuadPart = offset;
 
-		uint32_t access = access_interp_fmap(filemap_mode);
+		uint32_t access_view = access_interp_fmap(access_rights);
 
-		if (access == ~0u)
-			return to_status(error::argument_invalid);
-
-		void* ptr = MapViewOfFile(file_mapping.get_(), access, _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(end - beg));
-
-		if(!ptr)
-			return to_status(HRESULT_FROM_WIN32(GetLastError()));
-
-		MEMORY_BASIC_INFORMATION mem_info;
-
-		if (!VirtualQuery(ptr, &mem_info, sizeof(mem_info)))
+		if (access_view == ~0u)
 		{
-			status rst = to_status(HRESULT_FROM_WIN32(GetLastError()));
+			CloseHandle(mapping_handle);
 
-			UnmapViewOfFile(ptr);
-
-			return rst;
+			return to_status(error::argument_invalid);
 		}
 
-		out_handle.set_(ptr, mem_info.RegionSize);
+		void* ptr = MapViewOfFile(mapping_handle, access_view, _beg.HighPart, _beg.LowPart, static_cast<SIZE_T>(mapped_bytes));
+
+		if (!ptr)
+		{
+			CloseHandle(mapping_handle);
+
+			return to_status(HRESULT_FROM_WIN32(GetLastError()));
+		}
+
+		out_handle.set_(ptr, reinterpret_cast<uint64_t>(mapping_handle));
 
 		return {};
 	}
@@ -375,20 +359,23 @@ namespace och
 		return {};
 	}
 
-	[[nodiscard]] status close_file_mapper(file_mapper_handle& mapper) noexcept
-	{
-		if (mapper.get_() && !CloseHandle(mapper.get_()))
-			return to_status(HRESULT_FROM_WIN32(GetLastError()));
-
-		mapper.invalidate_();
-
-		return {};
-	}
-
 	[[nodiscard]] status close_file_array(file_array_handle& file_array) noexcept
 	{
-		if (file_array.ptr() && !UnmapViewOfFile(file_array.ptr()))
-			return to_status(HRESULT_FROM_WIN32(GetLastError()));
+		if (!file_array)
+			return {};
+
+		HRESULT error = 0;
+
+		if (file_array.ptr() != nullptr)
+			if (!UnmapViewOfFile(file_array.ptr()))
+				error = HRESULT_FROM_WIN32(GetLastError());
+
+		if (file_array.bookkeeping_() != 0)
+			if (!CloseHandle(reinterpret_cast<HANDLE>(file_array.bookkeeping_())))
+				error = HRESULT_FROM_WIN32(GetLastError());
+
+		if (error != 0)
+			return to_status(error);
 
 		file_array.invalidate_();
 

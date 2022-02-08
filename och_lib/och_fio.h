@@ -205,60 +205,23 @@ namespace och
 		}
 	};
 
-	struct file_mapper_handle
-	{
-	private:
-
-		iohandle_rep m_val;
-
-	public:
-
-		file_mapper_handle() : m_val{ invalid_iohandle } {}
-
-		file_mapper_handle(const file_mapper_handle&) = delete;
-
-		file_mapper_handle(file_mapper_handle&&) = delete;
-
-		explicit file_mapper_handle(iohandle_rep h) noexcept : m_val{ h } {};
-
-		operator bool() const noexcept
-		{
-			return m_val != invalid_iohandle;
-		}
-
-		iohandle_rep get_() const noexcept
-		{
-			return m_val;
-		}
-
-		void set_(iohandle_rep val) noexcept
-		{
-			m_val = val;
-		}
-
-		void invalidate_() noexcept
-		{
-			set_(invalid_iohandle);
-		}
-	};
-
 	struct file_array_handle
 	{
 	private:
 
 		void* m_ptr;
 
-		uint64_t m_bytes;
+		uint64_t m_bookkeeping;
 
 	public:
 
-		file_array_handle() : m_ptr{ nullptr }, m_bytes{ 0ull } {}
+		file_array_handle() : m_ptr{ nullptr }, m_bookkeeping{ 0ull } {}
 
 		file_array_handle(const file_array_handle&) = delete;
 
 		file_array_handle(file_array_handle&&) = delete;
 
-		explicit file_array_handle(void* ptr, uint64_t bytes) noexcept : m_ptr{ ptr }, m_bytes{ bytes } {};
+		explicit file_array_handle(void* ptr, uint64_t bytes) noexcept : m_ptr{ ptr }, m_bookkeeping{ bytes } {};
 
 		operator bool() const noexcept
 		{
@@ -270,16 +233,16 @@ namespace och
 			return m_ptr;
 		}
 
-		uint64_t bytes() const noexcept
-		{
-			return m_bytes;
-		}
-
-		void set_(void* ptr, uint64_t bytes) noexcept
+		void set_(void* ptr, uint64_t bookkeeping) noexcept
 		{
 			m_ptr = ptr;
 
-			m_bytes = bytes;
+			m_bookkeeping = bookkeeping;
+		}
+
+		uint64_t bookkeeping_() const noexcept
+		{
+			return m_bookkeeping;
 		}
 
 		void invalidate_() noexcept
@@ -329,15 +292,11 @@ namespace och
 
 	[[nodiscard]] status open_file(iohandle& out_handle, const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, fio::share share_mode = fio::share::none, fio::flag flags = fio::flag::normal) noexcept;
 
-	[[nodiscard]] status create_file_mapper(file_mapper_handle& out_handle, const iohandle& file, uint64_t size, fio::access access_rights, const char* mapping_name = nullptr) noexcept;
-
-	[[nodiscard]] status file_as_array(file_array_handle& out_handle, const file_mapper_handle& file_mapper, fio::access access_rights, uint64_t beg, uint64_t end) noexcept;
+	[[nodiscard]] status file_as_array(file_array_handle& out_handle, const iohandle& file, fio::access access_rights, uint64_t beg, uint64_t end) noexcept;
 
 	[[nodiscard]] status create_file_search(file_search_handle& out_handle, file_search_result& out_result, const char* directory) noexcept;
 
 	[[nodiscard]] status close_file(iohandle& file) noexcept;
-
-	[[nodiscard]] status close_file_mapper(file_mapper_handle& mapper) noexcept;
 
 	[[nodiscard]] status close_file_array(file_array_handle& file_array) noexcept;
 
@@ -482,45 +441,46 @@ namespace och
 	{
 	private:
 
-		iohandle m_file = iohandle(nullptr);
-		file_mapper_handle m_mapper = iohandle(nullptr);
-		file_array_handle m_data = file_array_handle(nullptr);
+		iohandle m_file;
+		file_array_handle m_data;
+		uint64_t m_bytes;
 
 	public:
 
-		status create(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, uint64_t mapping_size = 0, uint64_t mapping_offset = 0, fio::share share_mode = fio::share::none) noexcept
+		status create(const char* filename, fio::access access_rights, fio::open existing_mode, fio::open new_mode, uint64_t mapping_offset = 0, uint64_t mapping_size = 0, fio::share share_mode = fio::share::none) noexcept
 		{
 			check(open_file(m_file, filename, access_rights, existing_mode, new_mode, share_mode));
 
-			check(create_file_mapper(m_mapper, m_file, mapping_size + mapping_offset, access_rights));
+			check(file_as_array(m_data, m_file, access_rights, mapping_offset, mapping_offset + mapping_size));
 
-			check(file_as_array(m_data, m_mapper, access_rights, mapping_offset, mapping_offset + mapping_size));
+			if (mapping_size == 0)
+				check(get_filesize(m_bytes, m_file));
+			else
+				m_bytes = mapping_size;
 
 			return {};
 		}
 		
 		void close() noexcept
 		{
-			close_file_array(m_data);
+			ignore_status(close_file_array(m_data));
 			
-			close_file_mapper(m_mapper);
-
-			close_file(m_file);
+			ignore_status(close_file(m_file));
 		}
 
 		[[nodiscard]] T* data() const noexcept
 		{
-			return static_cast<T*>(m_data.ptr);
+			return static_cast<T*>(m_data.ptr());
 		}
 
 		[[nodiscard]] T& operator[](uint64_t idx) noexcept
 		{
-			return static_cast<T*>(m_data.ptr)[idx];
+			return static_cast<T*>(m_data.ptr())[idx];
 		}
 
 		[[nodiscard]] const T& operator[](uint64_t idx) const noexcept
 		{
-			return static_cast<T*>(m_data.ptr)[idx];
+			return static_cast<T*>(m_data.ptr())[idx];
 		}
 
 		[[nodiscard]] range<T> range() const noexcept
