@@ -112,7 +112,7 @@ namespace och
 
 	//{[argindex] [:[width] [.precision] [rightadj] [~filler] [signmode] [format specifier]]}
 	template<typename... Args>
-	void print(iohandle out, const stringview& format, Args... args)
+	void print(const iohandle& out, const stringview& format, Args... args)
 	{
 		const arg_wrapper argv[]{ create_fmt_arg_wrapper(args)... };
 
@@ -120,13 +120,13 @@ namespace och
 	}
 
 	template<typename... Args>
-	void print(iohandle out, const char* format, Args... args)
+	void print(const iohandle& out, const char* format, Args... args)
 	{
 		print(out, och::stringview(format), args...);
 	}
 
 	template<typename... Args>
-	void print(iohandle out, const utf8_string& format, Args... args)
+	void print(const iohandle& out, const utf8_string& format, Args... args)
 	{
 		print(out, och::stringview(format), args...);
 	}
