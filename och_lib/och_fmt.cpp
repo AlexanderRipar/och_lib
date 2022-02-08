@@ -155,7 +155,7 @@ namespace och
 			if (filler_cpoints < 0)
 				return;
 
-			int32_t filler_cunits = filler_cpoints * context.filler.get_codeunits();
+			uint32_t filler_cunits = static_cast<uint32_t>(filler_cpoints) * context.filler.get_codeunits();
 
 			utf8_char c = context.filler;
 
@@ -195,7 +195,7 @@ namespace och
 						return;
 					}
 
-				for (int i = 0; i != filler_cunits; i += c.get_codeunits())
+				for (uint32_t i = 0; i != filler_cunits; i += c.get_codeunits())
 					for (uint32_t j = 0; j != c.get_codeunits(); ++j)
 						*buffer.beg++ = c.cbegin()[j];
 			}
@@ -203,7 +203,7 @@ namespace och
 			{
 				backing_string->reserve(backing_string->get_codeunits() + filler_cunits);
 
-				for (int i = 0; i != filler_cpoints; ++i)
+				for (int32_t i = 0; i != filler_cpoints; ++i)
 					backing_string->operator+=(c);
 			}
 		}
