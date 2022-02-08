@@ -223,6 +223,9 @@ namespace och
 
 #if !defined(OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD) && defined(_WINDOWS_)
 #define OCH_ERR_WINDOWS_INTEROP_INCLUDE_GUARD
+
+#define status_from_lasterr to_status(HRESULT_FROM_WIN32(GetLastError()))
+
 namespace och::err
 {
 	template<>
