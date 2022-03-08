@@ -415,7 +415,9 @@ namespace och
 
 		utf8_string substr(uint32_t pos, uint32_t len = ~0) const noexcept;
 
-		void fmt_prepare_for_raw_write(uint32_t n);
+		void fmt_prepare_for_raw_write(uint32_t n) noexcept;
+
+		void recount_codepoints_and_codeunits() noexcept;
 
 	private:
 

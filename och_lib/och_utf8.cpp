@@ -612,10 +612,21 @@ namespace och
 		return utf8_string(raw_cbegin() + first_cunit, last_cunit - first_cunit, len);
 	}
 
-	void utf8_string::fmt_prepare_for_raw_write(uint32_t n)
+	void utf8_string::fmt_prepare_for_raw_write(uint32_t n) noexcept
 	{
 		set_codeunits(get_codeunits() + n);
 		set_codepoints(get_codepoints() + n);
+	}
+
+	void utf8_string::recount_codepoints_and_codeunits() noexcept
+	{
+		uint32_t total_cunits = 0, total_cpoints = 0;
+
+		_utf8_len(raw_begin(), total_cunits, total_cpoints);
+
+		set_codeunits(total_cunits);
+
+		set_codepoints(total_cpoints);
 	}
 
 	/////////////////////////////////////////////////Private///////////////////////////////////////////////////////////////////
