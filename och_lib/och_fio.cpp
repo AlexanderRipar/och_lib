@@ -311,8 +311,6 @@ namespace och
 
 		filename_buf wide_filename;
 
-		size_t filename_bytes = strlen(filename);
-
 		wchar_t* final_filename;
 
 		uint32_t final_charcnt;
@@ -409,7 +407,7 @@ namespace och
 			final_path[final_charcnt + 2] = L'\0';
 		}
 
-		HANDLE h = FindFirstFileW(final_path, rst);
+		HANDLE h = FindFirstFileExW(final_path, FindExInfoBasic, rst, FindExSearchNameMatch, nullptr, 0);
 
 		if (final_path != wide_path)
 			free(final_path);
