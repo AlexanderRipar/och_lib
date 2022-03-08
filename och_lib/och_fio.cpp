@@ -18,25 +18,104 @@ namespace och
 	/*////////////////////////////////////////////////////Helpers////////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-	using filename_buf = wchar_t[MAX_FILENAME_CHARS];
-
-	[[nodiscard]] static int32_t utf8_str_to_utf16_filename(const char* str, filename_buf buf)
+	using filename_buf = wchar_t[MAX_PATH + 1];
+	
+	[[nodiscard]] static status utf8_str_to_short_path(const char* str, filename_buf buf, uint32_t* out_chars) noexcept
 	{
-		buf[0] = buf[1] = buf[3] = '\\';
+		if ((*out_chars = MultiByteToWideChar(CP_UTF8, 0, str, -1, buf, MAX_FILENAME_CHARS) - 1) == -1)
+			return status_from_lasterr;
 
-		buf[2] = '?';
-
-		int32_t chars_written = MultiByteToWideChar(CP_UTF8, 0, str, -1, buf + 4, MAX_FILENAME_CHARS - 4);
-
-		int32_t total_written = chars_written + ((chars_written != 0) << 2);
-
-		for (int32_t i = 4; i < total_written; ++i)
-			if (buf[i] == L'/')
-				buf[i] = L'\\';
-
-		return total_written;
+		return {};
 	}
 
+	[[nodiscard]] static status utf8_str_to_long_path(const char* str, uint32_t mbtowc_chars, wchar_t** out_str, uint32_t* out_chars) noexcept
+	{
+		wchar_t* path = static_cast<wchar_t*>(malloc(mbtowc_chars * sizeof(wchar_t)));
+
+		if (path == nullptr)
+			return to_status(error::no_memory);
+
+		if (MultiByteToWideChar(CP_UTF8, 0, str, -1, path, mbtowc_chars) == 0)
+		{
+			free(path);
+
+			return status_from_lasterr;
+		}
+
+		uint32_t full_wchars = GetFullPathNameW(path, 0, path, nullptr);
+
+		if (full_wchars == 0)
+		{
+			free(path);
+
+			return status_from_lasterr;
+		}
+
+		wchar_t* full_path = static_cast<wchar_t*>(malloc((full_wchars + 4) * sizeof(wchar_t)));
+
+		if (full_path == nullptr)
+		{
+			free(path);
+
+			return to_status(error::no_memory);
+		}
+
+		full_path[0] = '\\';
+		full_path[1] = '\\';
+		full_path[2] = '?';
+		full_path[3] = '\\';
+
+		if ((*out_chars = GetFullPathNameW(path, full_wchars, full_path + 4, nullptr) + 4) == 4)
+		{
+			free(path);
+
+			free(full_path);
+
+			return status_from_lasterr;
+		}
+
+		free(path);
+
+		*out_str = full_path;
+
+		return {};
+	}
+
+	[[nodiscard]] static status utf8_str_to_path(const char* str, filename_buf buf, wchar_t** out_str, uint32_t* out_chars, uint32_t alloc_extra = 0) noexcept
+	{
+		int32_t required_chars = MultiByteToWideChar(CP_UTF8, 0, str, -1, nullptr, 0);
+
+		if (required_chars == 0)
+			return status_from_lasterr;
+
+		if (required_chars < MAX_PATH)
+		{
+			check(utf8_str_to_short_path(str, buf, out_chars));
+
+			if (*out_chars + alloc_extra >= MAX_PATH)
+			{
+				*out_str = static_cast<wchar_t*>(malloc((static_cast<size_t>(*out_chars) + 1 + alloc_extra) * sizeof(wchar_t)));
+
+				if (*out_str == nullptr)
+					return to_status(error::no_memory);
+
+				memcpy(out_str, buf, (static_cast<size_t>(*out_chars) + 1) * sizeof(wchar_t));
+
+				return {};
+			}
+			else
+			{
+				*out_str = buf;
+			}
+		}
+		else
+		{
+			check(utf8_str_to_long_path(str, required_chars, out_str, out_chars));
+		}
+
+
+		return {};
+	}
 
 
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
@@ -232,12 +311,18 @@ namespace och
 
 		filename_buf wide_filename;
 
-		if (!utf8_str_to_utf16_filename(filename, wide_filename))
-			return to_status(HRESULT_FROM_WIN32(GetLastError()));
+		size_t filename_bytes = strlen(filename);
 
+		wchar_t* final_filename;
 
+		uint32_t final_charcnt;
 
-		HANDLE h = CreateFileW(wide_filename, access, static_cast<uint32_t>(share_mode), nullptr, openmode, fileflags, nullptr);
+		check(utf8_str_to_path(filename, wide_filename, &final_filename, &final_charcnt));
+
+		HANDLE h = CreateFileW(final_filename, access, static_cast<uint32_t>(share_mode), nullptr, openmode, fileflags, nullptr);
+
+		if (final_filename != wide_filename)
+			free(final_filename);
 
 		if (h == INVALID_HANDLE_VALUE)
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
@@ -298,38 +383,36 @@ namespace och
 
 		WIN32_FIND_DATAW* rst = get_fsr_data_ptr(&out_result);
 
-		filename_buf wide_directory;
+		filename_buf wide_path;
 
-		int32_t dir_chars = utf8_str_to_utf16_filename(directory, wide_directory);
-		
-		if (!dir_chars)
-			return to_status(HRESULT_FROM_WIN32(GetLastError()));
+		wchar_t* final_path;
 
-		if (dir_chars < 2)
+		uint32_t final_charcnt;
+
+		check(utf8_str_to_path(directory, wide_path, &final_path, &final_charcnt, 2));
+
+		if (final_charcnt < 2)
 			return to_status(error::argument_invalid);
 
-		if (wide_directory[dir_chars - 2] == '\\' || wide_directory[dir_chars - 2] == '//')
+		if (final_path[final_charcnt - 1] == '\\' || final_path[final_charcnt - 1] == '//')
 		{
-			if (dir_chars + 1 > MAX_FILENAME_CHARS)
-				return to_status(error::argument_too_large);
+			final_path[final_charcnt] = L'*';
 
-			wide_directory[dir_chars - 1] = L'*';
-
-			wide_directory[dir_chars] = L'\0';
+			final_path[final_charcnt + 1] = L'\0';
 		}
 		else
 		{
-			if (dir_chars + 2 > MAX_FILENAME_CHARS)
-				return to_status(error::argument_too_large);
+			final_path[final_charcnt] = L'\\';
 
-			wide_directory[dir_chars - 1] = L'\\';
+			final_path[final_charcnt + 1] = L'*';
 
-			wide_directory[dir_chars] = L'*';
-
-			wide_directory[dir_chars + 1] = L'\0';
+			final_path[final_charcnt + 2] = L'\0';
 		}
 
-		HANDLE h = FindFirstFileW(wide_directory, rst);
+		HANDLE h = FindFirstFileW(final_path, rst);
+
+		if (final_path != wide_path)
+			free(final_path);
 
 		if (h == INVALID_HANDLE_VALUE)
 		{
@@ -394,14 +477,22 @@ namespace och
 
 	[[nodiscard]] status delete_file(const char* filename) noexcept
 	{
-		filename_buf wide_filename;
+		filename_buf wide_path;
 
-		if (!utf8_str_to_utf16_filename(filename, wide_filename))
+		wchar_t* final_path;
+
+		uint32_t final_charcnt;
+
+		check(utf8_str_to_path(filename, wide_path, &final_path, &final_charcnt));
+
+		BOOL rst = DeleteFileW(final_path);
+		
+		if (final_path != wide_path)
+			free(final_path);
+
+		if (!rst)
 			return to_status(HRESULT_FROM_WIN32(GetLastError()));
-
-		if (!DeleteFileW(wide_filename))
-			return to_status(HRESULT_FROM_WIN32(GetLastError()));
-
+		
 		return {};
 	}
 
@@ -484,29 +575,62 @@ namespace och
 		return {};
 	}
 
-	[[nodiscard]] status get_filepath(och::range<char>& out_path, const iohandle& file, och::range<char> buf) noexcept
+	[[nodiscard]] status get_filepath(och::utf8_string& out_path, const iohandle& file) noexcept
 	{
-		out_path = och::range<char>(nullptr, nullptr);
-
 		if (!file)
 			return to_status(error::argument_invalid);
 
-		if (buf.len() == 0)
-			return to_status(error::insufficient_buffer);
+		filename_buf wide_path;
 
-		wchar_t path_buf[MAX_FILENAME_CHARS];
+		uint32_t required_wchars = GetFinalPathNameByHandleW(file.get_(), wide_path, sizeof(wide_path) / sizeof(wchar_t), FILE_NAME_NORMALIZED);
 
-		DWORD utf16_cus = GetFinalPathNameByHandleW(file.get_(), path_buf, MAX_FILENAME_CHARS, 0);
+		if (required_wchars == 0)
+			return status_from_lasterr;
 
-		if (utf16_cus == 0 || utf16_cus > 32767)
-			return to_status(HRESULT_FROM_WIN32(GetLastError()));
+		wchar_t* final_path;
 
-		DWORD utf8_cus = WideCharToMultiByte(CP_UTF8, 0, path_buf, -1, buf.beg, static_cast<int>(buf.len()), nullptr, nullptr);
+		if (required_wchars < sizeof(wide_path) / sizeof(wchar_t))
+		{
+			final_path = wide_path;
+		}
+		else
+		{
+			final_path = static_cast<wchar_t*>(malloc(required_wchars * sizeof(wchar_t)));
+
+			if (final_path == nullptr)
+				return to_status(error::no_memory);
+
+			if (GetFinalPathNameByHandleW(file.get_(), final_path, required_wchars, FILE_NAME_NORMALIZED) == 0)
+			{
+				free(final_path);
+
+				return status_from_lasterr;
+			}
+		}
+
+		DWORD utf8_cus = WideCharToMultiByte(CP_UTF8, 0, final_path, -1, nullptr, 0, nullptr, nullptr);
 
 		if (utf8_cus == 0)
-			return to_status(HRESULT_FROM_WIN32(GetLastError()));
+		{
+			if (final_path != wide_path)
+				free(final_path);
 
-		out_path = och::range<char>(buf.beg, utf8_cus + 1);
+			return status_from_lasterr;
+		}
+
+		out_path.clear();
+
+		out_path.reserve(utf8_cus);
+
+		uint32_t cus_written = WideCharToMultiByte(CP_UTF8, 0, final_path, -1, out_path.raw_begin(), utf8_cus, nullptr, nullptr);
+
+		if (final_path != wide_path)
+			free(final_path);
+
+		if (cus_written == 0)
+			return status_from_lasterr;
+
+		out_path.recount_codepoints_and_codeunits();
 
 		return {};
 	}
@@ -634,21 +758,20 @@ namespace och
 			for (int j = 0; j != MAX_EXTENSION_FILTER_CUNITS; ++j)
 				m_ext_filters[i][j] = L'\0';
 
-		wchar_t path_buf[MAX_FILENAME_CHARS];
-
 		if (ext_filters)
 		{
-			DWORD ext_cus = MultiByteToWideChar(CP_UTF8, 0, ext_filters, -1, path_buf, MAX_FILENAME_CHARS);
+			wchar_t ext_buf[MAX_EXTENSION_FILTER_CNT * (MAX_EXTENSION_FILTER_CUNITS + 1) + 1];
 
-			if (ext_cus == 0)
-				return to_status(HRESULT_FROM_WIN32(GetLastError()));
+			if (MultiByteToWideChar(CP_UTF8, 0, ext_filters, -1, ext_buf, sizeof(ext_buf) / sizeof(*ext_buf)) == 0)
+				return status_from_lasterr;
 
-			const wchar_t* curr = path_buf;
+			const wchar_t* curr = ext_buf;
+
+			if (*curr == L'.')
+				++curr;
 
 			for (int i = 0; i != MAX_EXTENSION_FILTER_CNT; ++i)
 			{
-				if (*curr == L'.')
-					++curr;
 
 				const wchar_t* prev = curr;
 
@@ -820,22 +943,20 @@ namespace och
 			for (int j = 0; j != MAX_EXTENSION_FILTER_CUNITS; ++j)
 				m_ext_filters[i][j] = L'\0';
 
-		wchar_t path_buf[MAX_FILENAME_CHARS];
-
 		if (ext_filters)
 		{
-			DWORD ext_cus = MultiByteToWideChar(CP_UTF8, 0, ext_filters, -1, path_buf, MAX_FILENAME_CHARS);
+			wchar_t ext_buf[MAX_EXTENSION_FILTER_CNT * (MAX_EXTENSION_FILTER_CUNITS + 1) + 1];
 
-			if (ext_cus == 0)
-				return to_status(HRESULT_FROM_WIN32(GetLastError()));
+			if (MultiByteToWideChar(CP_UTF8, 0, ext_filters, -1, ext_buf, sizeof(ext_buf) / sizeof(*ext_buf)) == 0)
+				return status_from_lasterr;
 
-			const wchar_t* curr = path_buf;
+			const wchar_t* curr = ext_buf;
+
+			if (*curr == L'.')
+				++curr;
 
 			for (int i = 0; i != MAX_EXTENSION_FILTER_CNT; ++i)
 			{
-				if (*curr == L'.')
-					++curr;
-
 				const wchar_t* prev = curr;
 
 				while (*curr != L'.' && *curr != L'\0')

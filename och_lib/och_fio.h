@@ -92,7 +92,14 @@ namespace och
 
 	constexpr iohandle_rep invalid_iohandle = nullptr;
 
-	constexpr size_t MAX_FILENAME_CHARS = 32768;
+	// 32767 - 4 chars for the \\?\ prefix for long paths. 
+	// This is still only approximate according to the MSDN documentation at
+	// https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=cmd
+	//
+	// The maximum path of 32,767 characters is approximate, because the "\\?\" prefix may be 
+	// expanded to a longer string by the system at run time, and this expansion applies 
+	// to the total length.
+	constexpr size_t MAX_FILENAME_CHARS = 32763;
 
 	struct file_search_result
 	{
@@ -178,10 +185,6 @@ namespace och
 
 		iohandle() : m_val{ invalid_iohandle } {};
 
-		iohandle(const iohandle&) = delete;
-
-		iohandle(iohandle&&) = delete;
-
 		explicit iohandle(iohandle_rep h) noexcept : m_val{ h } {};
 
 		operator bool() const noexcept
@@ -216,10 +219,6 @@ namespace och
 	public:
 
 		file_array_handle() : m_ptr{ nullptr }, m_bookkeeping{ 0ull } {}
-
-		file_array_handle(const file_array_handle&) = delete;
-
-		file_array_handle(file_array_handle&&) = delete;
 
 		explicit file_array_handle(void* ptr, uint64_t bytes) noexcept : m_ptr{ ptr }, m_bookkeeping{ bytes } {};
 
@@ -260,10 +259,6 @@ namespace och
 	public:
 
 		file_search_handle() : m_val{ nullptr } {}
-
-		file_search_handle(const file_array_handle&) = delete;
-
-		file_search_handle(file_array_handle&&) = delete;
 
 		explicit file_search_handle(void* val) noexcept : m_val{ val } {};
 
@@ -485,7 +480,7 @@ namespace och
 
 		[[nodiscard]] range<T> range() const noexcept
 		{
-			return range<T>(static_cast<T*>(m_data.ptr()), m_data.bytes() / sizeof(T));
+			return range<T>(static_cast<T*>(m_data.ptr()), m_bytes / sizeof(T));
 		}
 
 		[[nodiscard]] status path(och::range<char>& out_path, och::range<char> buf) const noexcept
@@ -497,12 +492,12 @@ namespace och
 
 		[[nodiscard]] uint64_t size() const noexcept
 		{
-			return m_data.bytes() / sizeof(T);
+			return m_bytes / sizeof(T);
 		}
 
 		[[nodiscard]] uint64_t bytes() const noexcept
 		{
-			return m_data.bytes();
+			return m_bytes;
 		}
 
 		~mapped_file() noexcept
