@@ -69,9 +69,9 @@ namespace och
 
 		constexpr float operator()(size_t i) const noexcept { return f[i]; }
 
-		constexpr float& operator()(size_t x, size_t y) noexcept { return f[x + 4 * y]; }
+		constexpr float& operator()(size_t x, size_t y) noexcept { return f[x + 3 * y]; }
 
-		constexpr float operator()(size_t x, size_t y) const noexcept { return f[x + 4 * y]; }
+		constexpr float operator()(size_t x, size_t y) const noexcept { return f[x + 3 * y]; }
 
 		constexpr static mat3 identity() noexcept
 		{
@@ -79,7 +79,89 @@ namespace och
 			{
 				1.0F, 0.0F, 0.0F,
 				0.0F, 1.0F, 0.0F,
-				0.0F, 0.0F, 1.0F,
+				0.0F, 0.0F, 1.0F
+			};
+		}
+
+		constexpr static mat3 scale(float sx, float sy, float sz) noexcept
+		{
+			return
+			{
+				  sx, 0.0F, 0.0F,
+				0.0F,   sy, 0.0F,
+				0.0F, 0.0F,   sz
+			};
+		}
+
+		inline static mat3 rotate_x(float angle) noexcept
+		{
+			float cv = cosf(angle);
+
+			float sv = sinf(angle);
+
+			return
+			{
+				1.0F, 0.0F, 0.0F,
+				0.0F,   cv,   sv,
+				0.0F,  -sv,   cv
+			};
+		}
+
+		inline static mat3 rotate_y(float angle) noexcept
+		{
+			float cv = cosf(angle);
+
+			float sv = sinf(angle);
+
+			return
+			{
+				  cv, 0.0F,  -sv,
+				0.0F, 1.0F, 0.0F,
+				  sv, 0.0F,   cv
+			};
+		}
+
+		inline static mat3 rotate_z(float angle) noexcept
+		{
+			float cv = cosf(angle);
+
+			float sv = sinf(angle);
+
+			return
+			{
+				  cv,   sv, 0.0F,
+				 -sv,   cv, 0.0F,
+				0.0F, 0.0F, 1.0F
+			};
+		}
+
+		constexpr static mat3 mirror_yz() noexcept
+		{
+			return
+			{
+				-1.0F, 0.0F, 0.0F,
+				 0.0F, 1.0F, 0.0F,
+				 0.0F, 0.0F, 1.0F
+			};
+		}
+
+		constexpr static mat3 mirror_xz() noexcept
+		{
+			return
+			{
+				1.0F,  0.0F, 0.0F,
+				0.0F, -1.0F, 0.0F,
+				0.0F,  0.0F, 1.0F
+			};
+		}
+
+		constexpr static mat3 mirror_xy() noexcept
+		{
+			return
+			{
+				1.0F, 0.0F,  0.0F,
+				0.0F, 1.0F,  0.0F,
+				0.0F, 0.0F, -1.0F
 			};
 		}
 	};
@@ -88,7 +170,7 @@ namespace och
 	{
 		union
 		{
-			float f[3] alignas(16);
+			float f[3];
 
 			struct { float x, y, z; };
 		};
@@ -472,11 +554,50 @@ namespace och
 
 
 
+	constexpr mat3 operator-(const mat3& l, const mat3& r) noexcept
+	{
+		och::mat3 ret;
+
+		for (size_t i = 0; i != 9; ++i)
+			ret.f[i] = l.f[i] - r.f[i];
+
+		return ret;
+	};
+
+	constexpr mat3 operator+(const mat3& l, const mat3& r) noexcept
+	{
+		och::mat3 ret;
+
+		for (size_t i = 0; i != 9; ++i)
+			ret.f[i] = l.f[i] + r.f[i];
+
+		return ret;
+	};
+
+	constexpr mat3 operator*(const mat3& l, const mat3& r) noexcept
+	{
+		mat3 product;
+
+		product(0, 0) = l(0, 0) * r(0, 0) + l(1, 0) * r(0, 1) + l(2, 0) * r(0, 2);
+		product(1, 0) = l(0, 0) * r(1, 0) + l(1, 0) * r(1, 1) + l(2, 0) * r(1, 2);
+		product(2, 0) = l(0, 0) * r(2, 0) + l(1, 0) * r(2, 1) + l(2, 0) * r(2, 2);
+
+		product(0, 1) = l(0, 1) * r(0, 0) + l(1, 1) * r(0, 1) + l(2, 1) * r(0, 2);
+		product(1, 1) = l(0, 1) * r(1, 0) + l(1, 1) * r(1, 1) + l(2, 1) * r(1, 2);
+		product(2, 1) = l(0, 1) * r(2, 0) + l(1, 1) * r(2, 1) + l(2, 1) * r(2, 2);
+
+		product(0, 2) = l(0, 2) * r(0, 0) + l(1, 2) * r(0, 1) + l(2, 2) * r(0, 2);
+		product(1, 2) = l(0, 2) * r(1, 0) + l(1, 2) * r(1, 1) + l(2, 2) * r(1, 2);
+		product(2, 2) = l(0, 2) * r(2, 0) + l(1, 2) * r(2, 1) + l(2, 2) * r(2, 2);
+
+		return product;
+	}
+
 	constexpr vec3 operator*(const mat3& l, const vec3& r) noexcept
 	{
-		const float x = l(0, 0) * r.x + l(1, 0) * r.y + l(2, 0) + r.z;
-		const float y = l(0, 1) * r.x + l(1, 1) * r.y + l(2, 1) + r.z;
-		const float z = l(0, 2) * r.x + l(1, 2) * r.y + l(2, 2) + r.z;
+		const float x = l(0, 0) * r.x + l(1, 0) * r.y + l(2, 0) * r.z;
+		const float y = l(0, 1) * r.x + l(1, 1) * r.y + l(2, 1) * r.z;
+		const float z = l(0, 2) * r.x + l(1, 2) * r.y + l(2, 2) * r.z;
 
 		return vec3(x, y, z);
 	}
