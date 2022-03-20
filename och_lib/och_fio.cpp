@@ -703,6 +703,157 @@ namespace och
 		return {};
 	}
 
+	[[nodiscard]] status get_current_directory(och::utf8_string& out_directory) noexcept
+	{
+		filename_buf buf;
+
+		wchar_t* final_dir = buf;
+
+		DWORD rst = GetCurrentDirectoryW(_countof(buf), buf);
+
+		if (rst == 0)
+			return status_from_lasterr;
+
+		if (rst > _countof(buf))
+		{
+			final_dir = static_cast<wchar_t*>(malloc(rst * sizeof(wchar_t)));
+
+			if (final_dir == nullptr)
+				return to_status(och::error::no_memory);
+
+			DWORD second_rst = GetCurrentDirectoryW(rst, final_dir);
+
+			if (second_rst > rst || second_rst == 0)
+			{
+				free(final_dir);
+
+				return status_from_lasterr;
+			}
+		}
+
+		int required_utf8_cpoints = WideCharToMultiByte(CP_UTF8, 0, final_dir, -1, nullptr, 0, nullptr, nullptr);
+
+		if (required_utf8_cpoints == 0)
+		{
+			if (final_dir != buf)
+				free(final_dir);
+
+			return status_from_lasterr;
+		}
+
+		out_directory.clear();
+
+		out_directory.reserve(required_utf8_cpoints);
+
+		if (WideCharToMultiByte(CP_UTF8, 0, final_dir, -1, out_directory.raw_begin(), required_utf8_cpoints, nullptr, nullptr) == 0)
+		{
+			if (final_dir != buf)
+				free(final_dir);
+
+			return status_from_lasterr;
+		}
+
+		out_directory.recount_codepoints_and_codeunits();
+
+		if (final_dir != buf)
+			free(final_dir);
+
+		return {};
+	}
+
+	[[nodiscard]] status get_application_directory(och::utf8_string& out_directory) noexcept
+	{
+		filename_buf buf;
+
+		wchar_t* final_dir = buf;
+
+		DWORD rst = GetModuleFileNameW(nullptr, buf, _countof(buf));
+
+		if (rst == 0)
+		{
+			return status_from_lasterr;
+		}
+		else if (rst == _countof(buf))
+		{
+			DWORD buffer_size = 1024;
+
+			final_dir = static_cast<wchar_t*>(malloc(buffer_size * sizeof(wchar_t)));
+
+			if (final_dir == nullptr)
+				return to_status(och::error::no_memory);
+
+			do {
+				rst = GetModuleFileNameW(nullptr, final_dir, buffer_size);
+
+				if (rst == 0)
+				{
+					free(final_dir);
+					
+					return status_from_lasterr;
+				}
+
+				if (rst != buffer_size)
+					break;
+
+				if (buffer_size >= 1 << 16)
+					return to_status(och::error::insufficient_buffer);
+
+				buffer_size *= 2;
+
+				wchar_t* tmp = static_cast<wchar_t*>(realloc(final_dir, buffer_size * sizeof(wchar_t)));
+
+				if (tmp == nullptr)
+				{
+					free(final_dir);
+
+					return to_status(och::error::no_memory);
+				}
+
+				final_dir = tmp;
+			} 
+			while (true);
+		}
+
+		int required_utf8_chars = WideCharToMultiByte(CP_UTF8, 0, final_dir, -1, nullptr, 0, nullptr, nullptr);
+
+		if (required_utf8_chars == 0)
+		{
+			if (final_dir != buf)
+				free(final_dir);
+
+			return status_from_lasterr;
+		}
+
+		out_directory.clear();
+
+		out_directory.reserve(required_utf8_chars);
+
+		if (WideCharToMultiByte(CP_UTF8, 0, final_dir, -1, out_directory.raw_begin(), required_utf8_chars, nullptr, nullptr) == 0)
+		{
+			if (final_dir != buf)
+				free(final_dir);
+
+			return status_from_lasterr;
+		}
+
+		if (final_dir != buf)
+			free(final_dir);
+
+		int32_t before_filename = required_utf8_chars - 1;
+
+		for (; before_filename >= 0 && out_directory.raw_cbegin()[before_filename] != '\\' && out_directory.raw_cbegin()[before_filename] != '/'; --before_filename)
+			out_directory.raw_begin()[before_filename] = '\0';
+
+		if (before_filename == 0)
+			return to_status(och::error::not_found);
+
+		out_directory.raw_begin()[before_filename] = '\0';
+
+		out_directory.recount_codepoints_and_codeunits();
+
+		return {};
+	}
+
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*/////////////////////////////////////////////////file_search///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/

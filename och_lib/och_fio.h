@@ -321,6 +321,10 @@ namespace och
 
 	[[nodiscard]] status advance_file_search(file_search_result& out_result, const file_search_handle& file_search) noexcept;
 
+	[[nodiscard]] status get_current_directory(och::utf8_string& out_directory) noexcept;
+
+	[[nodiscard]] status get_application_directory(och::utf8_string& out_directory) noexcept;
+
 	struct filehandle
 	{
 	private:
