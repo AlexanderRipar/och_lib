@@ -14,8 +14,37 @@
 #include "och_err.h"
 #include "och_fmt.h"
 
+och::status test_directory_functions() noexcept
+{
+	och::utf8_string app_directory;
+
+	if (och::status rst = och::get_application_directory(app_directory))
+	{
+		och::print("Could not find application directory: {}\n", rst.description());
+
+		return rst;
+	}
+
+	och::print("App directory: {}\n", app_directory);
+
+	och::utf8_string curr_directory;
+
+	if (och::status rst = och::get_current_directory(curr_directory))
+	{
+		och::print("Could not find current directory: {}\n", rst.description());
+
+		return rst;
+	}
+
+	och::print("Current directory: {}\n", curr_directory);
+
+	return {};
+}
+
 int main()
 {
+	test_directory_functions();
+
 	const char* directory = "C:\\Users\\alex_2\\Documents\\_TU_Informatik"; // "C:\\Users\\alex_2\\Documents\\_Programming\\incomplete_and_ideas\\";
 	
 	och::recursive_file_search search;
