@@ -854,6 +854,47 @@ namespace och
 		return {};
 	}
 
+	[[nodiscard]] status set_current_directory(const char* new_directory) noexcept
+	{
+		int required_utf16_chars = MultiByteToWideChar(CP_UTF8, 0, new_directory, -1, nullptr, 0);
+
+		if (required_utf16_chars == 0)
+			return status_from_lasterr;
+
+		filename_buf buf;
+
+		wchar_t* final_dir = buf;
+
+		if (required_utf16_chars > _countof(buf))
+		{
+			final_dir = static_cast<wchar_t*>(malloc(required_utf16_chars * sizeof(wchar_t)));
+
+			if (final_dir == nullptr)
+				return to_status(och::error::no_memory);
+		}
+
+		if (MultiByteToWideChar(CP_UTF8, 0, new_directory, -1, final_dir, required_utf16_chars) == 0)
+		{
+			if (final_dir != buf)
+				free(final_dir);
+
+			return status_from_lasterr;
+		}
+
+		if (!SetCurrentDirectoryW(final_dir))
+		{
+			if (final_dir != buf)
+				free(final_dir);
+
+			return status_from_lasterr;
+		}
+		
+		if (final_dir != buf)
+			free(final_dir);
+
+		return {};
+	}
+
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	/*/////////////////////////////////////////////////file_search///////////////////////////////////////////////////////////*/
 	/*///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////*/

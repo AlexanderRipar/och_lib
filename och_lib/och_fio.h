@@ -325,6 +325,8 @@ namespace och
 
 	[[nodiscard]] status get_application_directory(och::utf8_string& out_directory) noexcept;
 
+	[[nodiscard]] status set_current_directory(const char* new_directory) noexcept;
+
 	struct filehandle
 	{
 	private:
