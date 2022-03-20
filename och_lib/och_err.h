@@ -132,6 +132,7 @@ namespace och
 		function_unavailable,
 		no_memory,
 		no_more_data,
+		not_found,
 	};
 
 	struct status
