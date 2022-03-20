@@ -1735,11 +1735,11 @@ namespace och
 
 	arg_wrapper create_fmt_arg_wrapper(const char* value) noexcept { return { (const void*)value, fmt_cstring }; }
 
-	arg_wrapper create_fmt_arg_wrapper(const och::utf8_string& value) noexcept { return { (const void*)&value, fmt_utf8_string }; }
+	arg_wrapper create_fmt_arg_wrapper(const och::utf8_string& value) noexcept { return { static_cast<const void*>(&value), fmt_utf8_string }; }
 
-	arg_wrapper create_fmt_arg_wrapper(const och::utf8_view& value) noexcept { return { (const void*)&value, fmt_utf8_view }; }
+	arg_wrapper create_fmt_arg_wrapper(const och::utf8_view& value) noexcept { return { static_cast<const void*>(&value), fmt_utf8_view }; }
 
-	arg_wrapper create_fmt_arg_wrapper(const och::date& value) noexcept { return { (const void*)&value, fmt_date }; }
+	arg_wrapper create_fmt_arg_wrapper(const och::date& value) noexcept { return { static_cast<const void*>(&value), fmt_date }; }
 
 	arg_wrapper create_fmt_arg_wrapper(char32_t value) noexcept { return { och::utf8_char(value), fmt_codepoint }; }
 
